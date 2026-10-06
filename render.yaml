@@ -1,0 +1,40 @@
+# ---------------------------------------------------------------------------
+# Project Assembly - blueprint de despliegue en Render
+# ---------------------------------------------------------------------------
+# Uso:  push a GitHub -> New -> Blueprint -> apuntar a este repositorio.
+# Render lee este fichero y crea el web service sin configuracion manual.
+#
+# Claves secretas: NO se ponen aqui. En Render se anaden en
+#   Dashboard -> Environment -> "Add a secret".
+# Como minimo hace falta YOUTUBE_API_KEY; sin ella la app arranca igual pero
+# sirve datos simulados (util para la demo, no para produccion).
+#
+# ---------------------------------------------------------------------------
+services:
+  - type: web
+    name: project-assembly
+    runtime: python
+    plan: free
+    region: oregon
+    languageVersion: "3.12"
+    buildCommand: pip install -r requirements.txt
+    # `python app.py` ya lee $PORT y activa --proxy-headers, que es
+    # obligatorio detras del proxy de Render. Equivalente a:
+    #   uvicorn app:app --host 0.0.0.0 --port $PORT \
+    #           --proxy-headers --forwarded-allow-ips='*'
+    startCommand: python app.py
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_NAME
+        value: Project Assembly
+      - key: APP_VERSION
+        value: "1.0.0"
+      - key: MAX_COMMENTS
+        value: "120"
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: SIMULATION_SALT
+        generateValue: true

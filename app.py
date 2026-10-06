@@ -12,10 +12,15 @@ Arquitectura
 
 El pipeline de analisis tiene 4 fases desacopladas y testeables por separado:
 
-    1. EXTRACCION   -> `resolve_video()` + `fetch_comments()`
+    1. EXTRACCION   -> `resolve_video()` + `fetch_youtube_comments()`
     2. INGENIERIA    -> `build_features()` (features crudas por comentario)
-    3. PUNTUACION    -> `RULES` (10 heuristicas ponderadas, 0..1 por regla)
+    3. PUNTUACION    -> `RULES` (9 heuristicas ponderadas, 0..1 por regla)
     4. AGREGACION   -> `aggregate()` (pandas) -> respuesta JSON
+
+Ademas hay un modo de demostracion (`/api/demo/*`) que genera un ataque de bots
+en memoria y lo emite en vivo por Server-Sent Events, sin tocar la red ni la
+cuota. Reutiliza EXACTAMENTE el mismo motor: las demo no tienen logica de scoring
+propia, solo una forma distinta de entregar los resultados.
 
 Diseno del scoring (importante)
 -------------------------------
@@ -28,10 +33,14 @@ ráfagas y de forma duplicada, no de manera independiente.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import math
+import os
 import random
 import re
 import statistics
+import time
 import uuid
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
@@ -42,8 +51,8 @@ from urllib.parse import parse_qs, urlparse
 
 import pandas as pd
 import requests
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import AliasChoices, BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -92,6 +101,14 @@ class Settings(BaseSettings):
     # Semilla del simulador: cambiarla cambia los datos falsos generados.
     simulation_salt: str = Field(default="assembly-v1", validation_alias=AliasChoices("SIMULATION_SALT", "simulation_salt"))
 
+    # --- Parametros de la YouTube Data API v3 ------------------------------
+    # Cada llamada a commentThreads.list cuesta 1 unidad de las 10.000/dia
+    # gratuitas, con independencia de cuantos comentarios devuelva.
+    max_api_pages: int = Field(default=5, ge=1, le=20, validation_alias=AliasChoices("MAX_API_PAGES"))
+    api_quota_per_page: int = Field(default=1, ge=1, le=100, validation_alias=AliasChoices("API_QUOTA_PER_PAGE"))
+    api_retries: int = Field(default=3, ge=1, le=6, validation_alias=AliasChoices("API_RETRIES"))
+    api_backoff_seconds: float = Field(default=1.0, ge=0.1, le=30, validation_alias=AliasChoices("API_BACKOFF_SECONDS"))
+
 
 settings = Settings()
 
@@ -138,6 +155,7 @@ class AnalyzeResponse(BaseModel):
     app_version: str
     dataset_source: str                      # "youtube_api" | "simulated"
     source: dict[str, Any]                    # video_id, url canonica, titulo, canal
+    api: dict[str, Any] = Field(default_factory=dict)  # traza de la llamada real
     metrics: dict[str, Any]                   # KPI agregados
     risk: dict[str, Any]                      # nivel + interpretacion
     distribution: dict[str, int]              # alto / medio / bajo
@@ -240,6 +258,7 @@ class RawComment:
     like_count: Optional[int]
     reply_count: Optional[int]
     has_channel: bool                  # el usuario tiene canal propio
+    author_channel_id: Optional[str] = None
     is_author: bool = False             # es el creador del video
     depth: int = 0                     # 0 = principal, 1 = respuesta
 
@@ -250,6 +269,83 @@ class Dataset:
     source: str                        # "youtube_api" | "simulated"
     warnings: list[str] = field(default_factory=list)
     video_meta: dict[str, Any] = field(default_factory=dict)
+    api_info: dict[str, Any] = field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Errores de la API: se clasifican para poder explicar QUE fallo, en vez de
+# devolver un HTTP generico que el usuario no puede interpretar.
+# ---------------------------------------------------------------------------
+
+# Traduccion de los `reason` que devuelve la API a un mensaje accionable.
+API_ERROR_HINTS: dict[str, str] = {
+    "quotaExceeded": "cuota diaria agotada (10.000 unidades/dia). Se reinicia a medianoche (hora del Pacifico).",
+    "dailyLimitExceeded": "cuota diaria agotada. Se reinicia a medianoche (hora del Pacifico).",
+    "rateLimitExceeded": "demasiadas peticiones por minuto: espera unos segundos.",
+    "userRateLimitExceeded": "demasiadas peticiones por minuto: espera unos segundos.",
+    "commentsDisabled": "el creador tiene los comentarios desactivados en este video.",
+    "commentsNotEnabled": "los comentarios no estan habilitados en este video.",
+    "commentsAreDisabled": "los comentarios estan desactivados en este video.",
+    "keyInvalid": "YOUTUBE_API_KEY no es valida: revisa que no tenga comillas ni espacios.",
+    "keyNotFound": "YOUTUBE_API_KEY no es valida o ha sido revocada.",
+    # YouTube responde `badRequest` (no `keyInvalid`) cuando la clave no existe
+    # o no tiene el formato AIza..., asi que se detecta tambien por mensaje.
+    "badRequest": "peticion rechazada por la API: revisa la clave y que la YouTube Data API v3 este habilitada.",
+    "forbidden": "la clave no tiene permiso sobre la YouTube Data API v3 (habilitala en Google Cloud Console).",
+    "accessNotConfigured": "la YouTube Data API v3 no esta habilitada en tu proyecto de Google Cloud.",
+    "videoNotFound": "el video no existe, es privado o fue eliminado.",
+    "resourceNotFound": "el video no existe o no es accesible con esta clave.",
+    "invalidParameter": "parametros no validos: revisa que el ID del video sea correcto.",
+    # Devuelto por la API real al pedir una `part` inexistente.
+    "unknownPart": "la API no reconoce alguna de las partes pedidas.",
+    "serviceUnavailable": "servicio de YouTube temporalmente no disponible.",
+    "backendError": "error interno de YouTube.",
+    "networkError": "no se pudo contactar con googleapis.com (red, DNS o proxy).",
+}
+
+
+class YouTubeApiError(Exception):
+    """Error normalizado de la YouTube Data API v3."""
+
+    def __init__(self, status_code: int, reason: str, message: str) -> None:
+        super().__init__(f"[{status_code}/{reason}] {message}")
+        self.status_code = status_code
+        self.reason = reason
+        self.message = message
+
+    @property
+    def is_quota_exhausted(self) -> bool:
+        """La cuota se ha agotado: no adianta reintentar, hay que esperar al reinicio."""
+        return self.reason in {"quotaExceeded", "dailyLimitExceeded"}
+
+    @property
+    def comments_are_disabled(self) -> bool:
+        return self.reason in {"commentsDisabled", "commentsNotEnabled", "commentsAreDisabled"}
+
+    @property
+    def is_retryable(self) -> bool:
+        """429 (rate limit) y 5xx se pueden reintentar con backoff."""
+        return self.status_code == 429 or self.status_code >= 500 or self.reason in {
+            "serviceUnavailable", "backendError", "networkError",
+        }
+
+    def human_readable(self) -> str:
+        """Mensaje para el usuario final, en castellano y sin jerga interna."""
+        # La API usa `badRequest` tanto para una clave invalida como para otros
+        # problemas de peticion: se desambigua por el texto del mensaje.
+        message_lower = self.message.lower()
+        if "api key not valid" in message_lower or "api key not authorized" in message_lower:
+            return (
+                f"HTTP {self.status_code} ({self.reason}): la clave de la API no es valida. "
+                "Comprueba YOUTUBE_API_KEY en el entorno y que la YouTube Data API v3 "
+                "esté habilitada en tu proyecto de Google Cloud."
+            )
+
+        hint = API_ERROR_HINTS.get(self.reason)
+        base = f"HTTP {self.status_code} ({self.reason})"
+        if hint:
+            return f"{base}: {hint}"
+        return f"{base}: {self.message[:160]}"
 
 
 def _http_session() -> requests.Session:
@@ -258,144 +354,402 @@ def _http_session() -> requests.Session:
     return session
 
 
-def fetch_youtube_comments(video_id: str, limit: int) -> Dataset:
-    """Descarga comentarios reales con la YouTube Data API v3 (commentThreads.list).
+def _parse_json(response: requests.Response) -> dict[str, Any]:
+    """Convierte el cuerpo a dict o lanza YouTubeApiError si no es JSON valido."""
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise YouTubeApiError(
+            response.status_code, "invalidJson",
+            f"la API no devolvio JSON (HTTP {response.status_code})",
+        ) from exc
+    if not isinstance(payload, dict):
+        raise YouTubeApiError(response.status_code, "invalidPayload", "se esperaba un objeto JSON.")
+    return payload
 
-    Maneja los errores esperables: sin clave, cuota agotada, comentarios
-    deshabilitados o video inexistente. En cualquiera de ellos cae en modo
-    simulacion para que el MVP siga siendo navegable.
+
+def _extract_error(response: requests.Response) -> tuple[str, str]:
+    """Saca (reason, message) del formato de error de Google."""
+    try:
+        payload = response.json()
+    except ValueError:
+        return "unknown", response.text[:200]
+    if not isinstance(payload, dict):
+        return "unknown", response.text[:200]
+    error = payload.get("error", {}) or {}
+    errors = error.get("errors", []) or []
+    reason = errors[0].get("reason", "unknown") if errors else "unknown"
+    message = error.get("message") or response.text[:200]
+    return reason, str(message)
+
+
+def _api_get(
+    session: requests.Session,
+    url: str,
+    params: dict[str, Any],
+) -> dict[str, Any]:
+    """GET a la API con reintentos y backoff exponencial ante 429 / 5xx / red.
+
+    Devuelve el dict JSON o lanza YouTubeApiError. Los errores de cuota
+    (quotaExceeded) NO son reintentables: reintentar solo gasta tiempo.
     """
-    if not settings.youtube_api_key:
-        ds = simulate_comments(video_id, limit)
-        ds.warnings.append(
-            "YOUTUBE_API_KEY no configurada: se Sirvio un dataset SIMULADO con fines de demo. "
-            "Define la variable para analizar comentarios reales."
-        )
-        return ds
+    last_error: Optional[YouTubeApiError] = None
 
-    session = _http_session()
-    collected: list[RawComment] = []
-    warnings: list[str] = []
+    for attempt in range(1, settings.api_retries + 1):
+        try:
+            response = session.get(url, params=params, timeout=settings.request_timeout)
+        except requests.RequestException as exc:
+            # Timeout, error de DNS, TLS o proxy: merece un reintento.
+            last_error = YouTubeApiError(0, "networkError", str(exc))
+            if attempt >= settings.api_retries:
+                raise last_error
+            time.sleep(settings.api_backoff_seconds * (2 ** (attempt - 1)))
+            continue
+
+        if response.status_code == 200:
+            return _parse_json(response)
+
+        reason, message = _extract_error(response)
+        last_error = YouTubeApiError(response.status_code, reason, message)
+
+        if not last_error.is_retryable or attempt >= settings.api_retries:
+            raise last_error
+
+        # Respeta la cabecera Retry-After si la API la envia (segundos).
+        delay = settings.api_backoff_seconds * (2 ** (attempt - 1))
+        try:
+            retry_after = float(response.headers.get("Retry-After", ""))
+            if retry_after > 0:
+                delay = min(retry_after, 30.0)
+        except (TypeError, ValueError):
+            pass
+        time.sleep(delay)
+
+    raise last_error or YouTubeApiError(0, "unknown", "fallo desconocido")
+
+
+# `reason` de la API que SI pueden deberse a la parte `replies` del recurso.
+# `unknownPart` es el que devuelve la API real (verificado contra
+# googleapis.com con part=snippet,replies(snippet)).
+# Importante: NO incluir reasons de autenticacion (keyInvalid, badRequest,
+# accessNotConfigured, forbidden) ni de cuota, porque reintentar quitando
+# `replies` no arregla nada y solo gasta una unidad de cuota.
+REPLIES_FALLBACK_REASONS = frozenset({"invalidParameter", "invalidPart", "unknownPart"})
+
+
+@dataclass
+class FetchStats:
+    """Traza de la llamada real, para poder informar de cobertura y cuota."""
+
+    pages: int = 0
+    calls: int = 0
+    top_level: int = 0
+    replies: int = 0
+    total_available: Optional[int] = None
+    replies_requested: bool = True
+    quota_units: int = 0
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    """La API serializa los int64 como string: convierte sin romper el flujo."""
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _fetch_comment_threads(
+    session: requests.Session,
+    api_key: str,
+    video_id: str,
+    limit: int,
+    owner_channel_id: Optional[str],
+    warnings: list[str],
+) -> tuple[list[RawComment], FetchStats]:
+    """Pagina commentThreads.list hasta cubrir `limit` comentarios.
+
+    Degradaciones controladas:
+      * Si la variante con `replies` es rechazada con 400, se reintenta la
+        pagina sin `replies` (algunos videos/proyectos lo rechaza).
+      * Si no hay `nextPageToken`, se para aunque queden comentarios por pedir.
+    """
+    comments: list[RawComment] = []
+    stats = FetchStats()
     page_token: Optional[str] = None
-    meta: dict[str, Any] = {}
-    hard_error: Optional[str] = None
 
-    # Pagina hasta agotar el presupuesto de comentarios o 5 paginas (cuota).
-    for _ in range(5):
-        if len(collected) >= limit:
-            break
+    while len(comments) < limit and stats.pages < settings.max_api_pages:
+        remaining = limit - len(comments)
         params: dict[str, Any] = {
-            "part": "snippet,replies(snippet)",
+            # Sintaxis verificada contra la API real: `replies` a secas, NO
+            # `replies(snippet)`. Con la variante con parentesis la API
+            # responde HTTP 400 unknownPart. El bloque `replies` ya trae el
+            # `snippet` completo de cada respuesta.
+            "part": "snippet,replies" if stats.replies_requested else "snippet",
             "videoId": video_id,
-            "maxResults": 100,
+            # La API admite 1..100. Pedir mas de lo necesario gasta cuota igual.
+            "maxResults": max(1, min(100, remaining)),
             "order": "relevance",
             "textFormat": "plainText",
-            "key": settings.youtube_api_key,
+            "key": api_key,
         }
         if page_token:
             params["pageToken"] = page_token
 
         try:
-            response = session.get(YOUTUBE_API_URL, params=params, timeout=settings.request_timeout)
-        except requests.RequestException as exc:            # timeout / DNS / TLS
-            hard_error = f"Error de red al contactar YouTube: {exc}"
-            break
+            payload = _api_get(session, YOUTUBE_API_URL, params)
+        except YouTubeApiError as exc:
+            # Degradacion 1: este video/proyecto no acepta la parte `replies`.
+            # Se reintenta la MISMA pagina como `part=snippet` (una sola vez).
+            if (
+                stats.replies_requested
+                and exc.status_code == 400
+                and exc.reason in REPLIES_FALLBACK_REASONS
+            ):
+                warnings.append(
+                    "YouTube no devolvio las respuestas de los comentarios: "
+                    "se analizan solo los comentarios principales."
+                )
+                stats.replies_requested = False
+                continue
+            raise
 
-        if response.status_code != 200:
-            payload = response.json() if response.content else {}
-            error = payload.get("error", {})
-            reason = error.get("errors", [{}])[0].get("reason", "UNKNOWN")
-            message = error.get("message", response.text[:200])
-            hard_error = f"YouTube API {response.status_code} ({reason}): {message}"
-            break
+        stats.pages += 1
+        stats.calls += 1
+        stats.quota_units += settings.api_quota_per_page
 
-        for thread in response.json().get("items", []):
-            snippet = thread.get("snippet", {}).get("topLevelComment", {}).get("snippet", {})
-            collected.append(_parse_api_comment(snippet, depth=0))
-            for reply in thread.get("replies", {}).get("comments", []):
-                collected.append(_parse_api_comment(reply.get("snippet", {}), depth=1))
+        # `pageInfo.totalResults` de commentThreads NO es el total de
+        # comentarios del video (con order=relevance devuelve como mucho la
+        # pagina pedida). El total fiable viene de videos.list, asi que aqui
+        # solo se guarda como respaldo por si faltara ese dato.
+        reported = _safe_int(payload.get("pageInfo", {}).get("totalResults"))
+        if reported and (stats.total_available is None or reported > stats.total_available):
+            stats.total_available = reported
 
-        page_token = response.json().get("nextPageToken")
+        for thread in payload.get("items", []):
+            snippet = (thread.get("snippet") or {}).get("topLevelComment", {}).get("snippet", {})
+            if not snippet:
+                continue
+            comment = _parse_api_comment(snippet, depth=0)
+            comments.append(comment)
+            stats.top_level += 1
+
+            for reply in (thread.get("replies") or {}).get("comments", []) or []:
+                comments.append(_parse_api_comment(reply.get("snippet", {}), depth=1))
+                stats.replies += 1
+
+        page_token = payload.get("nextPageToken")
         if not page_token:
             break
 
-    if hard_error:
-        ds = simulate_comments(video_id, limit)
-        ds.warnings.append(f"Fallo la API real ({hard_error}); se genero un dataset SIMULADO.")
-        return ds
+    # El propietario del video no siempre trae `authorIsChannelOwner`: se
+    # resuelve tambien comparando su authorChannelId con el del video.
+    if owner_channel_id:
+        for comment in comments:
+            if comment.author_channel_id == owner_channel_id:
+                comment.is_author = True
 
-    if not collected:
-        ds = simulate_comments(video_id, limit)
-        ds.warnings.append(
-            "YouTube no devolvio comentarios (posiblemente desactivados o video sin comentarios); "
-            "se genero un dataset SIMULADO."
+    return comments[:limit], stats
+
+
+def fetch_youtube_comments(video_id: str, limit: int) -> Dataset:
+    """Descarga comentarios REALES con la YouTube Data API v3 (commentThreads.list).
+
+    Flujo:
+      1. Sin clave            -> modo simulacion determinista.
+      2. Metadatos del video  -> titulo, canal y commentCount (1 unidad de cuota).
+      3. Hilos de comentarios -> paginados hasta `limit`.
+      4. Cualquier fallo esperable (cuota, comentarios desactivados, video
+         inexistente, red caida) cae a simulacion SIN romper la app, y el
+         motivo exacto se comunica en `warnings`.
+    """
+    api_key = (settings.youtube_api_key or "").strip()
+    if not api_key:
+        return _simulated_dataset(
+            video_id, limit,
+            "YOUTUBE_API_KEY no configurada: se sirvio un dataset SIMULADO para la demo. "
+            "Define la variable (ver .env.example) para analizar comentarios reales.",
         )
-        return ds
 
-    if not meta:
-        meta = _fetch_video_meta(session, video_id, warnings)
+    session = _http_session()
+    warnings: list[str] = []
+
+    # Los metadatos van primero: dan el canal del video, necesario para detectar
+    # al propietario, y no dependen de que haya comentarios.
+    meta = _fetch_video_meta(session, api_key, video_id, warnings)
+
+    try:
+        comments, stats = _fetch_comment_threads(
+            session, api_key, video_id, limit, meta.get("channel_id"), warnings,
+        )
+    except YouTubeApiError as exc:
+        message = (
+            f"La API real no devolvio comentarios: {exc.human_readable()}. "
+            "Se genero un dataset SIMULADO."
+        )
+        if exc.is_quota_exhausted:
+            message += " Prueba manana o usa una segunda clave."
+        return _simulated_dataset(video_id, limit, message, meta)
+
+    if not comments:
+        # Si la API responde 200 pero sin items, lo normal es que no haya
+        # comentarios publicos o que esten restringidos a respondents.
+        return _simulated_dataset(
+            video_id, limit,
+            "YouTube respondio correctamente pero devolvio 0 comentarios "
+            "(pueden estar restringidos a los que respondieron o no existir): "
+            "se genero un dataset SIMULADO.",
+            meta,
+        )
+
+    # El total fiable de comentarios del video es `commentCount` de videos.list,
+    # no `pageInfo.totalResults` de commentThreads (que con order=relevance
+    # devuelve como mucho el tamano de la pagina). Si falta, se usa el
+    # respaldo capturado al paginar.
+    available = _safe_int(meta.get("comment_count")) or stats.total_available
+    if available and available > len(comments):
+        warnings.append(
+            f"Se analizaron {len(comments):,} de {available:,} comentarios disponibles "
+            f"({stats.pages} {'pagina' if stats.pages == 1 else 'paginas'}, "
+            f"~{stats.quota_units} {'unidad' if stats.quota_units == 1 else 'unidades'} "
+            "de cuota). Los comentarios de menor relevancia quedan fuera."
+        )
+
+    coverage = (
+        # round(..., 2) porque en un video muy popular puede ser 0.005 %.
+        round(len(comments) / available * 100, 2) if available else None
+    )
 
     return Dataset(
-        comments=collected[:limit],
+        comments=comments,
         source="youtube_api",
         warnings=warnings,
         video_meta=meta,
+        api_info={
+            "endpoint": YOUTUBE_API_URL,
+            "pages_fetched": stats.pages,
+            "api_calls": stats.calls,
+            "quota_units": stats.quota_units,
+            "top_level_comments": stats.top_level,
+            "replies_included": stats.replies,
+            "replies_part_available": stats.replies_requested,
+            "total_comments_available": available,
+            "coverage_ratio": coverage,
+            "order": "relevance",
+        },
     )
 
 
+def _simulated_dataset(
+    video_id: str,
+    limit: int,
+    warning: str,
+    video_meta: Optional[dict[str, Any]] = None,
+) -> Dataset:
+    """Dataset simulado + aviso. Conserva los metadatos reales si los hubo."""
+    dataset = simulate_comments(video_id, limit)
+    dataset.warnings.append(warning)
+    if video_meta:
+        # Se mezclan: el titulo/canal reales son mejores que los inventados.
+        dataset.video_meta = {**dataset.video_meta, **{k: v for k, v in video_meta.items() if v}}
+        dataset.video_meta.pop("comment_count", None)
+        dataset.video_meta["comment_count"] = len(dataset.comments)
+    return dataset
+
+
 def _parse_api_comment(snippet: dict[str, Any], depth: int) -> RawComment:
-    """Traduce el snippet de la API a nuestro modelo interno."""
+    """Traduce el `snippet` de commentThreads.list a nuestro modelo interno.
+
+    Campos usados de la API:
+        id, authorDisplayName, authorChannelId, textOriginal, textDisplay,
+        publishedAt, likeCount, replyCount, totalReplyCount, authorIsChannelOwner.
+    """
     published: Optional[datetime] = None
     raw_date = snippet.get("publishedAt")
     if raw_date:
         try:
-            published = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
+            # La API devuelve ISO-8601 con 'Z' final.
+            published = datetime.fromisoformat(str(raw_date).replace("Z", "+00:00"))
         except ValueError:
             published = None
 
+    # textOriginal es el texto plano original; textDisplay es la version
+    # renderizada. Con textFormat=plainText no hay HTML que limpiar.
+    text = snippet.get("textOriginal") or snippet.get("textDisplay") or ""
+
+    # `authorChannelId` NO es un string: llega como {"value": "UC..."}.
+    # Aplanarlo aqui evita arrastrar dicts por todo el pipeline y que la
+    # comparacion con el canal del video falle silenciosamente.
+    channel_id = _channel_id_of(snippet)
+
     return RawComment(
-        comment_id=snippet.get("id", uuid.uuid4().hex[:12]),
+        comment_id=snippet.get("id") or uuid.uuid4().hex[:12],
         author=snippet.get("authorDisplayName") or "@desconocido",
-        text=snippet.get("textOriginal") or snippet.get("textDisplay") or "",
+        text=text,
         published_at=published,
-        like_count=int(snippet.get("likeCount") or 0),
-        reply_count=int(snippet.get("replyCount") or snippet.get("totalReplyCount") or 0),
-        has_channel=bool(snippet.get("authorChannelId")),
+        like_count=_safe_int(snippet.get("likeCount")),
+        reply_count=_safe_int(snippet.get("replyCount") or snippet.get("totalReplyCount")),
+        has_channel=bool(channel_id),
+        author_channel_id=channel_id,
         is_author=bool(snippet.get("authorIsChannelOwner")),
         depth=depth,
     )
 
 
-def _fetch_video_meta(session: requests.Session, video_id: str, warnings: list[str]) -> dict[str, Any]:
-    """Metadatos del video (titulo y canal). Degradado: no es critico."""
+def _channel_id_of(snippet: dict[str, Any]) -> Optional[str]:
+    """Extrae el ID de canal de un snippet de comentario de la API.
+
+    Segun el endpoint, `authorChannelId` llega como objeto `{"value": "UC..."}`
+    (commentThreads) y `videoChannelId` como string plano (videos). Se
+    aceptan ambas formas y cualquier otra se descarta.
+    """
+    raw = snippet.get("authorChannelId") or snippet.get("videoChannelId")
+    if isinstance(raw, dict):
+        raw = raw.get("value")
+    if isinstance(raw, str) and raw:
+        return raw
+    return None
+
+
+def _fetch_video_meta(
+    session: requests.Session,
+    api_key: str,
+    video_id: str,
+    warnings: list[str],
+) -> dict[str, Any]:
+    """Metadatos del video (videos.list). Degradado: nunca rompe el analisis."""
     try:
-        response = session.get(
+        payload = _api_get(
+            session,
             YOUTUBE_VIDEOS_URL,
-            params={
-                "part": "snippet,statistics",
-                "id": video_id,
-                "key": settings.youtube_api_key,
-            },
-            timeout=settings.request_timeout,
+            {"part": "snippet,statistics", "id": video_id, "key": api_key},
         )
-        if response.status_code == 200:
-            items = response.json().get("items", [])
-            if items:
-                snippet = items[0].get("snippet", {})
-                stats = items[0].get("statistics", {})
-                return {
-                    "title": snippet.get("title"),
-                    "channel": snippet.get("channelTitle"),
-                    "channel_id": snippet.get("channelId"),
-                    "published_at": snippet.get("publishedAt"),
-                    "view_count": int(stats.get("viewCount") or 0),
-                    "like_count": int(stats.get("likeCount") or 0),
-                    "comment_count": int(stats.get("commentCount") or 0),
-                }
-        warnings.append("No se pudieron obtener los metadatos del video (no afecta al analisis).")
-    except requests.RequestException:
-        warnings.append("Metadatos del video no disponibles por error de red (no afecta al analisis).")
-    return {}
+    except YouTubeApiError as exc:
+        warnings.append(
+            f"No se pudieron obtener los metadatos del video ({exc.reason}); "
+            "el analisis de comentarios no se ve afectado."
+        )
+        return {}
+
+    items = payload.get("items", []) or []
+    if not items:
+        warnings.append(
+            "El video no aparece en la API (puede ser privado, eliminado o de otro proyecto)."
+        )
+        return {}
+
+    snippet = items[0].get("snippet", {}) or {}
+    stats = items[0].get("statistics", {}) or {}
+    return {
+        "title": snippet.get("title"),
+        "channel": snippet.get("channelTitle"),
+        "channel_id": snippet.get("channelId"),
+        "published_at": snippet.get("publishedAt"),
+        "view_count": _safe_int(stats.get("viewCount")),
+        "like_count": _safe_int(stats.get("likeCount")),
+        "comment_count": _safe_int(stats.get("commentCount")),
+    }
 
 
 # --- 4.1 Simulador determinista -------------------------------------------
@@ -485,7 +839,10 @@ def simulate_comments(video_id: str, limit: int) -> Dataset:
 
     # Mezcla variable de bots por video: el MVP debe mostrar resultados distintos.
     bot_ratio = rng.uniform(0.18, 0.62)
-    total = min(limit, rng.randint(max(24, limit // 2), limit))
+    # El minimo nunca puede superar el maximo: con `limit` por debajo de 24
+    # (p. ej. el fallback tras un video inexistente) randrange lanzaba
+    # "empty range in randrange".
+    total = min(limit, rng.randint(min(max(24, limit // 2), limit), limit))
     bot_count = int(total * bot_ratio)
     human_count = total - bot_count
 
@@ -556,6 +913,10 @@ def simulate_comments(video_id: str, limit: int) -> Dataset:
         )
 
     comments.sort(key=lambda c: c.published_at or base_time)
+    # Las rafagas de bots pueden generar mas comentarios de los pedidos: se
+    # recorta para respetar el limite que pidio el usuario, que es el mismo
+    # contrato que cumple la ruta real de la API.
+    comments = comments[:limit]
     return Dataset(
         comments=comments,
         source="simulated",
@@ -845,7 +1206,7 @@ def _jaccard(left: frozenset, right: frozenset) -> float:
 
 
 # ===========================================================================
-# 6. MOTOR HEURISTICO (10 reglas ponderadas)
+# 6. MOTOR HEURISTICO (9 reglas ponderadas)
 # ===========================================================================
 
 @dataclass(frozen=True)
@@ -1070,7 +1431,7 @@ class Verdict:
 
 
 def score_comment(features: CommentFeatures) -> Verdict:
-    """Aplica las 10 heuristicas y devuelve el veredicto con su evidencia."""
+    """Aplica las 9 heuristicas y devuelve el veredicto con su evidencia."""
     contributions: dict[str, float] = {}
     reasons: list[str] = []
     raw = 0.0
@@ -1295,57 +1656,67 @@ def risk_profile(bot_percentage: float, source: str) -> dict[str, Any]:
 # 8. ORQUESTACION
 # ===========================================================================
 
-def run_analysis(video_id: str, limit: int, include_comments: bool = True) -> AnalyzeResponse:
-    """Pipeline completo: extraccion -> features -> scoring -> agregacion."""
-    dataset = fetch_youtube_comments(video_id, limit)
-    if not dataset.comments:
-        raise HTTPException(
-            status_code=422,
-            detail="No se obtuvo ningun comentario para analizar. Prueba con otro video.",
-        )
+def score_dataset(dataset: Dataset) -> list[Verdict]:
+    """Fase 2 + 3 del pipeline: features -> colectivo -> score.
 
+    Se extrae como funcion propia porque la demo en vivo y el analisis normal
+    deben producir EXACTAMENTE los mismos veredictos: si el motor se duplicara,
+    la demo dejaria de ser una prueba valida de la deteccion real.
+    """
     features = [build_features(comment) for comment in dataset.comments]
+    # Necesario antes de puntuar: la similitud maxima y los duplicados de autor
+    # son rasgos de_dataset, no de comentario suelto.
     enrich_collective_features(features)
-    verdicts = [score_comment(f) for f in features]
+    return [score_comment(f) for f in features]
 
+
+def comment_payload(verdict: Verdict) -> dict[str, Any]:
+    """Serializa un veredicto al mismo formato exacto que devuelve la API."""
+    f = verdict.features
+    return {
+        "comment_id": f.comment_id,
+        "author": f.author,
+        "text_preview": f.text_preview,
+        "published_at": f.published_at,
+        "bot_score": verdict.bot_score,
+        "verdict": verdict_label(verdict.bot_score),
+        "is_reply": f.depth == 1,
+        "reasons": verdict.reasons,
+        "features": {
+            "text_length": f.text_length,
+            "word_count": f.word_count,
+            "unique_word_ratio": f.unique_word_ratio,
+            "emoji_count": f.emoji_count,
+            "link_count": f.link_count,
+            "spam_score": f.spam_score,
+            "spam_terms": f.spam_terms,
+            "uppercase_ratio": f.uppercase_ratio,
+            "char_entropy": f.char_entropy,
+            "posting_hour_utc": f.posting_hour_utc,
+            "author_duplicate_count": f.author_duplicate_count,
+            "duplicate_ratio": f.duplicate_ratio,
+            "max_similarity": f.max_similarity,
+            "like_count": f.like_count,
+            "reply_count": f.reply_count,
+            "has_channel": f.has_channel,
+        },
+    }
+
+
+def build_analysis(
+    video_id: str,
+    dataset: Dataset,
+    verdicts: list[Verdict],
+    include_comments: bool = True,
+    demo: bool = False,
+) -> AnalyzeResponse:
+    """Fase 4: agrega los veredictos y arma el `AnalyzeResponse`."""
     metrics, signals, feature_averages = aggregate(verdicts, dataset.source)
     profile = risk_profile(metrics["bot_percentage"], dataset.source)
     metrics["risk_level"] = profile["level"]
 
     findings = build_findings(metrics, signals, dataset.source)
-
     ordered = sorted(verdicts, key=lambda v: v.bot_score, reverse=True)
-    comment_payload = [
-        {
-            "comment_id": v.features.comment_id,
-            "author": v.features.author,
-            "text_preview": v.features.text_preview,
-            "published_at": v.features.published_at,
-            "bot_score": v.bot_score,
-            "verdict": verdict_label(v.bot_score),
-            "is_reply": v.features.depth == 1,
-            "reasons": v.reasons,
-            "features": {
-                "text_length": v.features.text_length,
-                "word_count": v.features.word_count,
-                "unique_word_ratio": v.features.unique_word_ratio,
-                "emoji_count": v.features.emoji_count,
-                "link_count": v.features.link_count,
-                "spam_score": v.features.spam_score,
-                "spam_terms": v.features.spam_terms,
-                "uppercase_ratio": v.features.uppercase_ratio,
-                "char_entropy": v.features.char_entropy,
-                "posting_hour_utc": v.features.posting_hour_utc,
-                "author_duplicate_count": v.features.author_duplicate_count,
-                "duplicate_ratio": v.features.duplicate_ratio,
-                "max_similarity": v.features.max_similarity,
-                "like_count": v.features.like_count,
-                "reply_count": v.features.reply_count,
-                "has_channel": v.features.has_channel,
-            },
-        }
-        for v in (ordered if include_comments else [])
-    ]
 
     return AnalyzeResponse(
         analysis_id=uuid.uuid4().hex[:12],
@@ -1354,22 +1725,36 @@ def run_analysis(video_id: str, limit: int, include_comments: bool = True) -> An
         dataset_source=dataset.source,
         source={
             "video_id": video_id,
-            "url": canonical_url(video_id),
+            "url": canonical_url(video_id) if not demo else "",
             **dataset.video_meta,
         },
+        api=dataset.api_info,
         metrics=metrics,
         risk=profile,
         distribution={
             "high": sum(1 for v in verdicts if v.bot_score >= HIGH_THRESHOLD),
-            "medium": sum(1 for v in verdicts if MEDIUM_THRESHOLD <= v.bot_score < HIGH_THRESHOLD),
+            "medium": sum(1 for v in verdicts
+                          if MEDIUM_THRESHOLD <= v.bot_score < HIGH_THRESHOLD),
             "low": sum(1 for v in verdicts if v.bot_score < MEDIUM_THRESHOLD),
         },
         signals=signals,
         feature_averages=feature_averages,
         findings=findings,
-        comments=comment_payload,
+        comments=[comment_payload(v) for v in (ordered if include_comments else [])],
         warnings=dataset.warnings,
     )
+
+
+def run_analysis(video_id: str, limit: int, include_comments: bool = True) -> AnalyzeResponse:
+    """Pipeline completo: extraccion -> features -> scoring -> agregacion."""
+    dataset = fetch_youtube_comments(video_id, limit)
+    if not dataset.comments:
+        raise HTTPException(
+            status_code=422,
+            detail="No se obtuvo ningun comentario para analizar. Prueba con otro video.",
+        )
+    verdicts = score_dataset(dataset)
+    return build_analysis(video_id, dataset, verdicts, include_comments=include_comments)
 
 
 def verdict_label(score: float) -> str:
@@ -1381,7 +1766,136 @@ def verdict_label(score: float) -> str:
 
 
 # ===========================================================================
-# 9. FASTAPI
+# 9. DEMO EN VIVO (Server-Sent Events)
+# ===========================================================================
+# El enunciado pide una feria con un "muro que se actualiza solo". Este endpoint
+# es esa pared, sin instalar WebSockets: SSE viaja sobre HTTP plano, atraviesa
+# proxies sin configuracion extra y lo consume `EventSource` en el navegador.
+#
+# Decisiones de diseño:
+#   * No hay logica de scoring propia. Se generan comentarios con el MISMO
+#     `simulate_comments()` y se puntuan con el MISMO `score_dataset()`, asi que
+#     lo que se ve en la demo es literalmente lo que haria con datos reales.
+#   * El dataset se calcula COMPLETO antes de empezar a emitir. Emitirlo a
+#     medida se generaria obligando a recalcular las features colectivas
+#     (similitud maxima, duplicados de autor) en cada comentario, y los
+#     veredictos del final no cuadrarian con los intermedios.
+#   * Cada evento lleva las metricas acumuladas para que el panel pueda
+#     actualizar el porcentaje de bots sin esperar al evento final.
+
+DEMO_TITLES = (
+    "Ataque de bots en directo",
+    "Inundacion de spam en curso",
+    "Red de cuentas automatizadas",
+    "Campaña de enlaces coordinados",
+)
+
+# Fases que el frontend muestra mientras espera, para que el usuario entienda
+# que esta pasando en vez de ver un spinner mudo.
+DEMO_PHASES = (
+    "Generando comentarios sintéticos...",
+    "Extrayendo 40 features por comentario...",
+    "Aplicando 9 heurísticas ponderadas...",
+    "Calculando riesgo y distribucion...",
+)
+
+
+def build_demo_dataset(count: int, seed: Optional[str] = None) -> tuple[str, Dataset]:
+    """Dataset de demostracion: ataque de bots generado en memoria.
+
+    No toca la red ni consume cuota, asi que la demo funciona aunque no haya
+    `YOUTUBE_API_KEY` configurada (requisito para poder hacer la demo en una
+    feria recien desplegada en Render).
+    """
+    rng = random.Random(f"demo:{seed or uuid.uuid4().hex[:8]}")
+    video_id = f"demo-{rng.getrandbits(30):010d}"
+    dataset = simulate_comments(video_id, count)
+    dataset.video_meta = {
+        **dataset.video_meta,
+        "title": f"{rng.choice(DEMO_TITLES)} · ronda {rng.randint(1000, 9999)}",
+        "is_demo": True,
+    }
+    dataset.warnings = [
+        "DEMO en vivo: comentarios sinteticos generados en memoria. "
+        "No proceden de YouTube, no gastan cuota y no demuestran nada sobre "
+        "ningun video real.",
+    ]
+    return video_id, dataset
+
+
+def _sse(event: str, data: dict[str, Any]) -> str:
+    """Serializa un evento SSE. `ensure_ascii=False` para no escapar los emojis."""
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def _running_totals(verdicts: list[Verdict], up_to: int) -> dict[str, Any]:
+    """Metricas acumuladas del mural en vivo (barato: solo sobre los emitidos).
+
+    La terminologia es la MISMA que usa `aggregate()`, a proposito:
+      * `suspected_bot_comments` = high + medium, no solo high.
+      * `bot_percentage` sale de la MEDIA de scores por el amplificador de
+        cluster, no de contar comentarios sobre un umbral. Por eso aqui se
+        publica `average_score` (la base de ese porcentaje) y no un ratio,
+        que dejaria un numero que contradiria al cierre del analisis.
+    """
+    seen = verdicts[:up_to]
+    total = len(seen)
+    if not total:
+        return {"analyzed": 0, "suspected": 0, "average_score": 0.0,
+                "high": 0, "medium": 0, "low": 0}
+    high = sum(1 for v in seen if v.bot_score >= HIGH_THRESHOLD)
+    medium = sum(1 for v in seen
+                 if MEDIUM_THRESHOLD <= v.bot_score < HIGH_THRESHOLD)
+    return {
+        "analyzed": total,
+        "suspected": high + medium,
+        "average_score": round(sum(v.bot_score for v in seen) / total, 1),
+        "high": high,
+        "medium": medium,
+        "low": total - high - medium,
+    }
+
+
+async def _demo_event_stream(
+    request: Request,
+    video_id: str,
+    dataset: Dataset,
+    verdicts: list[Verdict],
+    delay: float,
+) -> Any:
+    """Generador asincrono que emite el ataque comentario a comentario."""
+    yield _sse("start", {
+        "phases": list(DEMO_PHASES),
+        "total": len(verdicts),
+        "source": {"video_id": video_id, **dataset.video_meta},
+        "warnings": dataset.warnings,
+    })
+
+    running = _running_totals(verdicts, 0)
+    for index, verdict in enumerate(verdicts, start=1):
+        # Si el usuario cierra la pestaña o pulsa "parar", se corta el stream
+        # en vez de seguir calculando y acumulando en un socket muerto.
+        if await request.is_disconnected():
+            return
+        running = _running_totals(verdicts, index)
+        yield _sse("comment", {
+            "index": index,
+            "total": len(verdicts),
+            "comment": comment_payload(verdict),
+            "running": running,
+        })
+        # El ultimo comentario no espera: ya no hay nada mas que enviar.
+        if index < len(verdicts):
+            await asyncio.sleep(delay)
+
+    # Se incluyen los comentarios para que el frontend pueda pintar el
+    # histograma de scores y reutilizar el render normal sin una ruta aparte.
+    analysis = build_analysis(video_id, dataset, verdicts, include_comments=True, demo=True)
+    yield _sse("done", json.loads(analysis.model_dump_json()))
+
+
+# ===========================================================================
+# 10. FASTAPI
 # ===========================================================================
 
 class Utf8JSONResponse(JSONResponse):
@@ -1420,7 +1934,7 @@ async def value_error_handler(_: Request, exc: ValueError) -> Utf8JSONResponse:
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def index(request: Request) -> HTMLResponse:
     """Interfaz web minima (Tailwind por CDN, sin build step)."""
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request=request,
         name="index.html",
         context={
@@ -1430,6 +1944,13 @@ async def index(request: Request) -> HTMLResponse:
             "default_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         },
     )
+    # La interfaz lleva el JS embebido: si el navegador cachea una version
+    # antigua, sigue ejecutando el codigo viejo y los errores que muestra no
+    # coinciden con el servidor. Sin cabecera de cache no hay desajuste.
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 @app.get("/health", response_model=HealthResponse, tags=["sistema"])
@@ -1446,17 +1967,33 @@ async def health() -> HealthResponse:
 @app.get("/api/config", tags=["sistema"])
 async def api_config() -> dict[str, Any]:
     """Metadatos del servicio para que el frontend se adapte."""
+    has_key = bool((settings.youtube_api_key or "").strip())
     return {
         "app_name": settings.app_name,
         "version": settings.app_version,
         "environment": settings.environment,
-        "data_mode": "youtube_api" if settings.youtube_api_key else "simulated",
+        "data_mode": "youtube_api" if has_key else "simulated",
         "max_comments": settings.max_comments,
         "supported_platforms": ["youtube"],
+        "youtube_api": {
+            "configured": has_key,
+            "endpoint": YOUTUBE_API_URL,
+            "max_api_pages": settings.max_api_pages,
+            "quota_units_per_page": settings.api_quota_per_page,
+            # Nunca se devuelve la clave, solo si existe.
+            "key_hint": f"...{(settings.youtube_api_key or '')[-4:]}" if has_key else None,
+        },
         "scoring": {
             "heuristics": [{"key": r.key, "label": r.label, "weight": r.weight} for r in RULES],
             "high_threshold": HIGH_THRESHOLD,
             "medium_threshold": MEDIUM_THRESHOLD,
+        },
+        "demo": {
+            "available": True,
+            "stream_url": "/api/demo/stream",
+            "analyze_url": "/api/demo/live",
+            "phases": list(DEMO_PHASES),
+            "requires_api_key": False,
         },
     }
 
@@ -1477,8 +2014,84 @@ async def analyze(payload: AnalyzeRequest) -> AnalyzeResponse:
     return run_analysis(video_id, limit, include_comments=payload.include_comments)
 
 
-# Ejecuta con: uvicorn app:app --reload  (desarrollo)  |  docker compose up
+@app.post("/api/demo/live", response_model=AnalyzeResponse, tags=["demo"])
+async def demo_live(
+    comment_limit: int = Query(40, ge=10, le=120, description="Comentarios de la demo."),
+) -> AnalyzeResponse:
+    """Analisis instantaneo de un ataque de bots simulado, sin pedir URL.
+
+    Es el boton "Simular ataque de bots" de la interfaz. Devuelve el mismo
+    `AnalyzeResponse` que `/api/analyze`, asi que el frontend reutiliza todo el
+    render. No consume cuota de la API ni requiere `YOUTUBE_API_KEY`.
+    """
+    video_id, dataset = build_demo_dataset(comment_limit)
+    verdicts = await asyncio.to_thread(score_dataset, dataset)
+    return build_analysis(video_id, dataset, verdicts, include_comments=True, demo=True)
+
+
+@app.get("/api/demo/stream", tags=["demo"])
+async def demo_stream(
+    request: Request,
+    comment_limit: int = Query(30, ge=4, le=120, description="comentarios a emitir."),
+    delay: float = Query(0.28, ge=0.0, le=2.0, description="segundos entre comentarios."),
+) -> StreamingResponse:
+    """Emite un ataque de bots en vivo por Server-Sent Events.
+
+    Eventos, en orden:
+      * `start`   -> fases del pipeline, total de comentarios y avisos.
+      * `comment` -> un comentario con su veredicto y las metricas acumuladas
+                    (`analyzed`, `suspected`, `average_score`, `high`,
+                    `medium`, `low`). Nota: `average_score` es la base del
+                    `bot_percentage` final; el cierre aplica ademas el
+                    amplificador de cluster sobre el conjunto completo.
+      * `done`    -> el `AnalyzeResponse` completo (mismo contrato que la API).
+
+    Cada evento lleva `data:` con JSON. El cliente lo consume con `EventSource`.
+    """
+    video_id, dataset = build_demo_dataset(comment_limit)
+    # El calculo es CPU-bound (features + pandas): fuera del event loop para no
+    # bloquear al resto de peticiones del servidor mientras se prepara la demo.
+    verdicts = await asyncio.to_thread(score_dataset, dataset)
+
+    return StreamingResponse(
+        _demo_event_stream(request, video_id, dataset, verdicts, delay),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-store",
+            "Connection": "keep-alive",
+            # Render pone nginx delante: sin esto acumula el stream en un buffer
+            # y el navegador recibe los eventos a rafagas al final.
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+def _resolve_port() -> int:
+    """Puerto de escucha.
+
+    Las PaaS (Render, Railway, Fly.io...) inyectan el puerto asignado en la
+    variable `PORT` y souvent es aleatorio. Fijar 8000 a pelo hace que el
+    contenedor levante pero el proxy no llegue a encontrarlo.
+    """
+    raw = os.environ.get("PORT", "").strip()
+    if raw.isdigit():
+        return int(raw)
+    return 8000
+
+
+# Ejecuta con:  python app.py            (usa $PORT)
+# Desarrollo:    uvicorn app:app --reload
+# Docker:        docker compose up --build
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=settings.environment == "development")
+    uvicorn.run(
+        "app:app",
+        host="0.0.0.0",           # obligatorio en contenedores: si no, escucha solo en loopback
+        port=_resolve_port(),
+        # Necesario detras del proxy de Render: sin esto `request.client.ip` es
+        # la IP del proxy y los redireccionamientos / cookies de sesion fallan.
+        proxy_headers=True,
+        forwarded_allow_ips="*",
+        reload=settings.environment == "development",
+    )

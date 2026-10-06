@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }} · Detector de bots en comentarios</title>
     <meta name="description" content="Analisis heuristico de comentarios de YouTube para estimar la presencia de bots.">
+    <meta name="color-scheme" content="dark">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
 
-    <!-- Tailwind CSS via CDN (Play CDN). Suficiente para un MVP; para produccion
-         compilarlo con el CLI de Tailwind y servir el CSS estatico. -->
+    <!-- Tailwind CSS via CDN (Play CDN). Sin build step a proposito: el
+         despliegue en Render es un `pip install` + uvicorn, y un paso de
+         compilacion de Tailwind anadiria una cadena de herramientas (Node)
+         que el proyecto no tiene ni necesita. -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -19,39 +23,151 @@
                         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace']
                     },
                     colors: {
-                        ink: { 950: '#08090c', 900: '#0d0f14', 800: '#141822', 700: '#1c2130' }
-                    },
-                    keyframes: {
-                        fadeUp: { '0%': { opacity: 0, transform: 'translateY(8px)' }, '100%': { opacity: 1, transform: 'translateY(0)' } }
-                    },
-                    animation: { fadeUp: 'fadeUp .4s ease-out both' }
+                        ink: { 950: '#07080b', 900: '#0d0f14', 800: '#141822', 700: '#1c2130' }
+                    }
                 }
             }
         };
     </script>
+
+    <style>
+        /* ------------------------------------------------------------------
+           Sistema visual. Las tarjetas, animaciones y temas de riesgo viven en
+           CSS plano (no en clases de Tailwind generadas al vuelo) porque los
+           colores de riesgo se aplican desde JS: con el Play CDN, generar
+           clases dinamicas depende del MutationObserver y es fragile.
+           ------------------------------------------------------------------ */
+        :root { --ease: cubic-bezier(.16, 1, .3, 1); }
+
+        /* --- Tarjetas "bento": sombra suave, borde tenue, lift al hover --- */
+        .card {
+            position: relative;
+            border-radius: 1.15rem;
+            border: 1px solid rgba(255, 255, 255, .07);
+            background: linear-gradient(158deg, rgba(28, 33, 48, .92) 0%, rgba(13, 15, 20, .94) 62%);
+            padding: 1.5rem;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 14px 34px -14px rgba(0, 0, 0, .8);
+            transition: transform .4s var(--ease), box-shadow .4s var(--ease), border-color .4s var(--ease);
+            overflow: hidden;
+        }
+        .card::before {
+            content: "";
+            position: absolute; inset: 0;
+            background: radial-gradient(760px 220px at 12% -12%, rgba(255, 255, 255, .055), transparent 62%);
+            pointer-events: none;
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 255, 255, .16);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, .45), 0 30px 56px -18px rgba(0, 0, 0, .92);
+        }
+        .card > * { position: relative; }
+
+        /* --- Temas de riesgo: verde / amarillo / rojo / morado critico --- */
+        [data-risk="low"]      { --r1: #34d399; --r2: #10b981; --rg: 52, 197, 153; }
+        [data-risk="medium"]   { --r1: #fbbf24; --r2: #f59e0b; --rg: 251, 191, 36; }
+        [data-risk="high"]     { --r1: #f87171; --r2: #ef4444; --rg: 248, 113, 113; }
+        [data-risk="critical"] { --r1: #c084fc; --r2: #a855f7; --rg: 192, 132, 252; }
+
+        .risk-wash  { background: radial-gradient(620px 300px at 78% -18%, rgba(var(--rg), .22), transparent 66%); }
+        .risk-ring  { box-shadow: 0 0 0 1px rgba(var(--rg), .34), 0 22px 60px -26px rgba(var(--rg), .8); }
+        .risk-chip  { background: rgba(var(--rg), .13); border-color: rgba(var(--rg), .38); color: var(--r1); }
+        .risk-text  { color: var(--r1); }
+        .grad-risk  { background-image: linear-gradient(100deg, var(--r1), var(--r2)); }
+
+        /* --- Barras de progreso animadas --- */
+        .track { height: .5rem; border-radius: 999px; background: rgba(255, 255, 255, .07); overflow: hidden; }
+        .fill {
+            height: 100%; width: 0; border-radius: 999px;
+            transition: width 1.05s var(--ease);
+        }
+        .fill-stripe {
+            background-image: linear-gradient(100deg, var(--r1), var(--r2));
+            position: relative;
+        }
+        .fill-stripe::after {
+            content: "";
+            position: absolute; inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .38), transparent);
+            transform: translateX(-100%);
+            animation: sweep 2.4s var(--ease) infinite;
+        }
+
+        /* --- Animaciones de entrada --- */
+        @keyframes fadeUp  { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: none } }
+        @keyframes fadeIn  { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes popIn   { from { opacity: 0; transform: translateY(10px) scale(.975) } to { opacity: 1; transform: none } }
+        @keyframes shimmer { from { background-position: 200% 0 } to { background-position: -200% 0 } }
+        @keyframes sweep   { to { transform: translateX(220%) } }
+        @keyframes breathe { 0%, 100% { opacity: 1; transform: scale(1) } 50% { opacity: .45; transform: scale(.82) } }
+        @keyframes halobar { 0%, 100% { box-shadow: 0 0 0 0 rgba(var(--rg), .5) } 70% { box-shadow: 0 0 0 14px rgba(var(--rg), 0) } }
+        @keyframes spin    { to { transform: rotate(360deg) } }
+
+        .anim-up  { animation: fadeUp .55s var(--ease) both; }
+        .anim-in  { animation: fadeIn .5s ease both; }
+        .anim-pop { animation: popIn .45s var(--ease) both; }
+        .breath   { animation: breathe 1.5s ease-in-out infinite; }
+        .halo     { animation: halobar 2s ease-out infinite; }
+
+        .skeleton {
+            background: linear-gradient(90deg, rgba(255,255,255,.04) 25%, rgba(255,255,255,.10) 37%, rgba(255,255,255,.04) 63%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s linear infinite;
+        }
+
+        /* --- Spinner --- */
+        .spinner {
+            width: 1.15rem; height: 1.15rem;
+            border-radius: 999px;
+            border: 2px solid rgba(255, 255, 255, .22);
+            border-top-color: #a5b4fc;
+            animation: spin .7s linear infinite;
+        }
+
+        /* --- Respeto a la preferencia del sistema: sin movimiento, sin drift --- */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: .001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: .001ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+
+        ::-webkit-scrollbar { width: 10px; height: 10px }
+        ::-webkit-scrollbar-track { background: transparent }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 999px }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.2) }
+    </style>
 </head>
 
-<body class="bg-ink-950 text-slate-200 antialiased selection:bg-indigo-500/30">
+<body class="bg-ink-950 text-slate-200 antialiased selection:bg-indigo-500/30" data-mode="{{ data_mode }}">
+
+<!-- Fondo ambiental: dos focos de color muy suaves, sin coste de red. -->
+<div aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div class="absolute -left-40 -top-40 h-[34rem] w-[34rem] rounded-full bg-indigo-600/12 blur-[120px]"></div>
+    <div class="absolute -right-40 top-1/3 h-[30rem] w-[30rem] rounded-full bg-fuchsia-600/10 blur-[120px]"></div>
+</div>
 
 <!-- ===================== NAVBAR ===================== -->
-<header class="sticky top-0 z-20 border-b border-white/5 bg-ink-950/80 backdrop-blur">
-    <div class="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
+<header class="sticky top-0 z-30 border-b border-white/5 bg-ink-950/75 backdrop-blur-xl">
+    <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3.5">
         <div class="flex items-center gap-3">
-            <div class="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-600 text-sm font-bold">A</div>
+            <div class="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-600 text-sm font-bold shadow-lg shadow-indigo-900/40">A</div>
             <div>
                 <h1 class="text-sm font-semibold tracking-tight text-white">{{ app_name }}</h1>
-                <p class="text-[11px] leading-tight text-slate-500">Bot detection · MVP</p>
+                <p class="text-[11px] leading-tight text-slate-500">Deteccion de bots · YouTube</p>
             </div>
         </div>
 
         <div class="flex items-center gap-2 text-[11px]">
             {% if data_mode == 'real' %}
                 <span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-emerald-300">
-                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span> YouTube API real
+                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 breath"></span> YouTube API real
                 </span>
             {% else %}
                 <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-300">
-                    <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span> Modo simulacion
+                    <span class="h-1.5 w-1.5 rounded-full bg-amber-400 breath"></span> Modo simulacion
                 </span>
             {% endif %}
             <span class="hidden rounded-full border border-white/10 px-2.5 py-1 text-slate-400 sm:inline">v{{ app_version }}</span>
@@ -59,168 +175,286 @@
     </div>
 </header>
 
-<main class="mx-auto max-w-6xl px-5 py-10">
+<main class="mx-auto max-w-7xl px-5 pb-20 pt-8">
 
-    <!-- ===================== FORMULARIO ===================== -->
-    <section class="animate-fadeUp">
-        <h2 class="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-            Analiza los comentarios de un video
-        </h2>
-        <p class="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
-            Pega la URL de YouTube y el servicio descargara los comentarios mas relevantes,
-            extraera <span class="text-slate-300">9 senales</span> de cada uno (spam, enlaces, emojis,
-            patron temporal, duplicados...) y devolvera un porcentaje estimado de bots.
-        </p>
+    <!-- ===================== HERO + FORMULARIO ===================== -->
+    <section class="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <article class="card card-hover anim-up lg:col-span-2">
+            <span class="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-indigo-300">
+                Analisis heuristico
+            </span>
+            <h2 class="mt-4 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                Analiza los comentarios de un video
+            </h2>
+            <p class="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
+                Pega la URL de YouTube y el servicio descargara los comentarios mas relevantes,
+                extraera <span class="text-slate-300">40 features</span> de cada uno y devolvera un
+                porcentaje estimado de bots tras aplicar <span class="text-slate-300">9 heuristicas ponderadas</span>.
+            </p>
 
-        <form id="analyze-form" class="mt-6 flex flex-col gap-3 sm:flex-row">
-            <div class="relative flex-1">
-                <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-600">
-                    <!-- YouTube-ish play glyph -->
-                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8zM9.5 15.5v-7l6.5 3.5-6.5 3.5z"/></svg>
-                </span>
-                <input id="url" name="url" type="text" required spellcheck="false"
-                       value="{{ default_url }}"
-                       placeholder="https://www.youtube.com/watch?v=..."
-                       class="w-full rounded-xl border border-white/10 bg-ink-900 py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-600 outline-none transition focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/20">
-            </div>
+            <form id="analyze-form" class="mt-6 flex flex-col gap-3 sm:flex-row">
+                <div class="relative flex-1">
+                    <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-600">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8zM9.5 15.5v-7l6.5 3.5-6.5 3.5z"/></svg>
+                    </span>
+                    <input id="url" name="url" type="text" required spellcheck="false"
+                           value="{{ default_url }}"
+                           placeholder="https://www.youtube.com/watch?v=..."
+                           class="w-full rounded-xl border border-white/10 bg-ink-900 py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-600 outline-none transition focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/20">
+                </div>
 
-            <div class="flex gap-3">
-                <select id="limit" name="comment_limit"
-                        class="rounded-xl border border-white/10 bg-ink-900 px-3 py-3.5 text-sm text-slate-300 outline-none focus:border-indigo-500/60">
-                    <option value="40">40 comentarios</option>
-                    <option value="80" selected>80 comentarios</option>
-                    <option value="150">150 comentarios</option>
-                </select>
-                <button type="submit" id="submit-btn"
-                        class="flex items-center gap-2 rounded-xl bg-indigo-500 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-50">
-                    <span id="btn-label">Analizar</span>
-                    <svg id="btn-spinner" class="hidden h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
-                    </svg>
+                <div class="flex gap-3">
+                    <select id="limit" name="comment_limit"
+                            class="rounded-xl border border-white/10 bg-ink-900 px-3 py-3.5 text-sm text-slate-300 outline-none transition focus:border-indigo-500/60">
+                        <option value="40">40 comentarios</option>
+                        <option value="80" selected>80 comentarios</option>
+                        <option value="150">150 comentarios</option>
+                    </select>
+                    <button type="submit" id="submit-btn"
+                            class="flex items-center gap-2 rounded-xl bg-indigo-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-50">
+                        <span id="btn-label">Analizar</span>
+                        <span id="btn-spinner" class="hidden spinner"></span>
+                    </button>
+                </div>
+            </form>
+
+            <p class="mt-3 text-[11px] text-slate-600">
+                Formatos aceptados: <span class="font-mono text-slate-500">/watch?v=ID</span> ·
+                <span class="font-mono text-slate-500">youtu.be/ID</span> ·
+                <span class="font-mono text-slate-500">/shorts/ID</span> ·
+                <span class="font-mono text-slate-500">/embed/ID</span> · o el ID pelado.
+            </p>
+        </article>
+
+        <!-- --- Llamada a la demo en vivo --- -->
+        <article class="card card-hover anim-up p-0" style="animation-delay:.08s">
+            <div class="grad-risk h-1 w-full rounded-none" style="background-image:linear-gradient(100deg,#6366f1,#a855f7,#ec4899)"></div>
+            <div class="p-6">
+                <p class="text-[10px] font-medium uppercase tracking-widest text-fuchsia-300">Demo interactiva</p>
+                <h3 class="mt-2 text-lg font-semibold text-white">Simular ataque de bots en directo</h3>
+                <p class="mt-2 text-xs leading-relaxed text-slate-400">
+                    Genera un ataque sintetico y lo emite comentario a comentario. Usa las mismas
+                    9 heuristicas que el analisis real: no es un video grabado, es el motor funcionando.
+                </p>
+                <button type="button" id="demo-btn"
+                        class="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 via-fuchsia-600 to-pink-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-fuchsia-900/40 transition hover:brightness-110 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50">
+                    <span id="demo-btn-dot" class="h-2 w-2 rounded-full bg-white/80"></span>
+                    <span id="demo-btn-label">Lanzar demo en directo</span>
                 </button>
+                <p class="mt-3 text-center text-[10px] text-slate-600">
+                    No requiere URL ni clave de API · no gasta cuota
+                </p>
             </div>
-        </form>
-
-        <p class="mt-3 text-[11px] text-slate-600">
-            Formatos aceptados: <span class="font-mono text-slate-500">/watch?v=ID</span> ·
-            <span class="font-mono text-slate-500">youtu.be/ID</span> ·
-            <span class="font-mono text-slate-500">/shorts/ID</span> ·
-            <span class="font-mono text-slate-500">/embed/ID</span> · o el ID pelado.
-        </p>
+        </article>
     </section>
 
     <!-- ===================== ERROR ===================== -->
     <div id="error-box" class="mt-6 hidden rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200"></div>
 
-    <!-- ===================== AVISO MODO SIMULACION ===================== -->
+    <!-- ===================== AVISO ===================== -->
     <div id="warning-box" class="mt-6 hidden rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200"></div>
 
+    <!-- ===================== LOADER ===================== -->
+    <section id="loader" class="card anim-up mt-6 hidden" style="animation-delay:.04s">
+        <div class="flex flex-col items-center gap-4 py-4 text-center sm:flex-row sm:text-left">
+            <div class="relative grid h-14 w-14 shrink-0 place-items-center">
+                <div class="absolute inset-0 rounded-full bg-indigo-500/20 halo" style="--rg: 129, 140, 248"></div>
+                <svg class="h-8 w-8 animate-spin text-indigo-300" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-opacity=".2" stroke-width="2.5"/>
+                    <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div class="min-w-0 flex-1">
+                <p class="text-[10px] uppercase tracking-widest text-slate-500">Procesando</p>
+                <p id="loader-phase" class="mt-1 truncate text-sm font-medium text-white">Conectando con YouTube API...</p>
+                <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-white/5">
+                    <div id="loader-bar" class="h-full w-0 rounded-full bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-pink-500 transition-all duration-700 ease-out"></div>
+                </div>
+            </div>
+            <p id="loader-pct" class="text-2xl font-semibold tabular-nums text-white/80">0%</p>
+        </div>
+    </section>
+
+    <!-- ===================== MURO EN VIVO ===================== -->
+    <section id="demo-panel" class="mt-6 hidden">
+        <div class="card risk-wash anim-up" data-risk="critical">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <span class="h-2.5 w-2.5 rounded-full bg-rose-500 breath"></span>
+                    <div>
+                        <p class="text-sm font-semibold text-white">Muro de moderacion en directo</p>
+                        <p id="demo-status" class="text-[11px] text-slate-500">Conectando con el stream...</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="demo-stop"
+                            class="rounded-lg border border-white/10 px-3.5 py-2 text-xs text-slate-300 transition hover:border-rose-500/40 hover:text-rose-300">
+                        Detener
+                    </button>
+                </div>
+            </div>
+
+            <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
+                    <p class="text-[10px] uppercase tracking-wider text-slate-500">Recibidos</p>
+                    <p id="demo-stat-total" class="mt-1 text-xl font-semibold tabular-nums text-white">0</p>
+                </div>
+                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
+                    <p class="text-[10px] uppercase tracking-wider text-slate-500">Sospechosos</p>
+                    <p id="demo-stat-bots" class="mt-1 text-xl font-semibold tabular-nums text-amber-300">0</p>
+                </div>
+                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
+                    <p class="text-[10px] uppercase tracking-wider text-slate-500">Score medio</p>
+                    <p id="demo-stat-avg" class="mt-1 text-xl font-semibold tabular-nums text-white">0</p>
+                </div>
+                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
+                    <p class="text-[10px] uppercase tracking-wider text-slate-500">Veredictos altos</p>
+                    <p id="demo-stat-high" class="mt-1 text-xl font-semibold tabular-nums text-rose-300">0</p>
+                </div>
+            </div>
+
+            <div class="mt-4 h-1 overflow-hidden rounded-full bg-white/5">
+                <div id="demo-progress" class="h-full w-0 rounded-full bg-gradient-to-r from-rose-500 via-fuchsia-500 to-indigo-500 transition-all duration-300 ease-out"></div>
+            </div>
+
+            <div id="demo-wall" class="mt-4 max-h-[26rem] space-y-2 overflow-y-auto pr-1"></div>
+        </div>
+    </section>
+
     <!-- ===================== RESULTADOS ===================== -->
-    <section id="results" class="hidden">
+    <section id="results" class="mt-6 hidden grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
 
         <!-- --- Veredicto principal --- -->
-        <div class="mt-10 grid gap-5 lg:grid-cols-[320px_1fr]">
+        <article id="verdict-card" class="card risk-wash anim-up" data-risk="low">
+            <p class="text-[10px] uppercase tracking-widest text-slate-500">Bots estimados</p>
 
-            <div class="rounded-2xl border border-white/10 bg-ink-900 p-6">
-                <p class="text-[11px] uppercase tracking-widest text-slate-500">Bot estimado</p>
-
-                <!-- Gauge SVG -->
-                <div class="relative mx-auto mt-4 h-36 w-36">
-                    <svg viewBox="0 0 120 120" class="h-full w-full -rotate-90">
-                        <circle cx="60" cy="60" r="52" fill="none" stroke="#1c2130" stroke-width="10"/>
-                        <circle id="gauge-arc" cx="60" cy="60" r="52" fill="none" stroke="#6366f1" stroke-width="10"
-                                stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"
-                                style="transition: stroke-dashoffset 1s cubic-bezier(.16,1,.3,1), stroke .5s"/>
-                    </svg>
-                    <div class="absolute inset-0 grid place-items-center">
-                        <div class="text-center">
-                            <span id="bot-percent" class="block text-3xl font-bold tabular-nums text-white">0%</span>
-                            <span class="text-[10px] uppercase tracking-wider text-slate-500">confianza</span>
-                            <span id="confidence" class="block text-[11px] font-medium text-slate-400">0%</span>
-                        </div>
+            <div class="relative mx-auto mt-4 h-40 w-40">
+                <svg viewBox="0 0 120 120" class="h-full w-full -rotate-90">
+                    <defs>
+                        <linearGradient id="gauge-grad" x1="0" y1="0" x2="1" y2="1">
+                            <stop id="gauge-stop-a" offset="0%" stop-color="#34d399"/>
+                            <stop id="gauge-stop-b" offset="100%" stop-color="#10b981"/>
+                        </linearGradient>
+                    </defs>
+                    <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="10"/>
+                    <circle id="gauge-arc" cx="60" cy="60" r="52" fill="none" stroke="url(#gauge-grad)" stroke-width="10"
+                            stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"
+                            style="transition: stroke-dashoffset 1.15s cubic-bezier(.16,1,.3,1)"/>
+                </svg>
+                <div class="absolute inset-0 grid place-items-center">
+                    <div class="text-center">
+                        <span id="bot-percent" class="block text-4xl font-bold tabular-nums text-white">0%</span>
+                        <span class="text-[10px] uppercase tracking-wider text-slate-500">confianza</span>
+                        <span id="confidence" class="mt-1 block text-[11px] font-medium text-slate-400">0%</span>
                     </div>
                 </div>
-
-                <div id="risk-badge" class="mt-5 rounded-xl border px-3 py-2.5 text-center">
-                    <span class="text-xs font-semibold uppercase tracking-wider">—</span>
-                </div>
-                <p id="risk-action" class="mt-3 text-center text-[11px] leading-relaxed text-slate-500"></p>
             </div>
 
-            <!-- --- Distribucion + KPIs --- -->
-            <div class="space-y-5">
-                <div class="rounded-2xl border border-white/10 bg-ink-900 p-6">
-                    <p class="text-[11px] uppercase tracking-widest text-slate-500">Distribucion de riesgo por comentario</p>
-                    <div class="mt-5 space-y-3">
-                        <div>
-                            <div class="mb-1 flex justify-between text-xs"><span class="text-rose-300">Alto (&ge;60)</span><span id="bar-high-label" class="tabular-nums text-slate-500">0</span></div>
-                            <div class="h-2 overflow-hidden rounded-full bg-ink-700"><div id="bar-high" class="h-full w-0 rounded-full bg-gradient-to-r from-rose-500 to-rose-400 transition-all duration-700"></div></div>
-                        </div>
-                        <div>
-                            <div class="mb-1 flex justify-between text-xs"><span class="text-amber-300">Medio (30-59)</span><span id="bar-medium-label" class="tabular-nums text-slate-500">0</span></div>
-                            <div class="h-2 overflow-hidden rounded-full bg-ink-700"><div id="bar-medium" class="h-full w-0 rounded-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-700"></div></div>
-                        </div>
-                        <div>
-                            <div class="mb-1 flex justify-between text-xs"><span class="text-emerald-300">Bajo (&lt;30)</span><span id="bar-low-label" class="tabular-nums text-slate-500">0</span></div>
-                            <div class="h-2 overflow-hidden rounded-full bg-ink-700"><div id="bar-low" class="h-full w-0 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300 transition-all duration-700"></div></div>
-                        </div>
+            <div id="risk-badge" class="risk-chip mt-5 rounded-xl border px-3 py-2.5 text-center" data-risk="low">
+                <span id="risk-label" class="text-xs font-semibold uppercase tracking-wider">—</span>
+            </div>
+            <p id="risk-action" class="mt-3 text-center text-[11px] leading-relaxed text-slate-500"></p>
+        </article>
+
+        <!-- --- Contadores --- -->
+        <article class="card card-hover anim-up" style="animation-delay:.06s">
+            <p class="text-[10px] uppercase tracking-widest text-slate-500">Metricas clave</p>
+            <div id="kpi-grid" class="mt-4 grid grid-cols-2 gap-3"></div>
+        </article>
+
+        <!-- --- Distribucion --- -->
+        <article class="card card-hover anim-up" style="animation-delay:.12s">
+            <p class="text-[10px] uppercase tracking-widest text-slate-500">Distribucion por veredicto</p>
+            <div class="mt-5 space-y-4">
+                <div>
+                    <div class="mb-1.5 flex justify-between text-xs">
+                        <span class="text-rose-300">Alto (score &ge;60)</span>
+                        <span id="bar-high-label" class="tabular-nums text-slate-400">0</span>
                     </div>
+                    <div class="track"><div id="bar-high" class="fill" style="background-image:linear-gradient(90deg,#f87171,#ef4444)"></div></div>
                 </div>
-
-                <div id="kpi-grid" class="grid grid-cols-2 gap-3 sm:grid-cols-4"></div>
+                <div>
+                    <div class="mb-1.5 flex justify-between text-xs">
+                        <span class="text-amber-300">Medio (30-59)</span>
+                        <span id="bar-medium-label" class="tabular-nums text-slate-400">0</span>
+                    </div>
+                    <div class="track"><div id="bar-medium" class="fill" style="background-image:linear-gradient(90deg,#fbbf24,#f59e0b)"></div></div>
+                </div>
+                <div>
+                    <div class="mb-1.5 flex justify-between text-xs">
+                        <span class="text-emerald-300">Bajo (score &lt;30)</span>
+                        <span id="bar-low-label" class="tabular-nums text-slate-400">0</span>
+                    </div>
+                    <div class="track"><div id="bar-low" class="fill" style="background-image:linear-gradient(90deg,#34d399,#10b981)"></div></div>
+                </div>
             </div>
-        </div>
+        </article>
 
-        <!-- --- Video analizado --- -->
-        <div class="mt-5 rounded-2xl border border-white/10 bg-ink-900 p-6">
-            <p class="text-[11px] uppercase tracking-widest text-slate-500">Fuente de datos</p>
+        <!-- --- Histograma de scores --- -->
+        <article class="card card-hover anim-up md:col-span-2" style="animation-delay:.18s">
+            <div class="flex items-baseline justify-between">
+                <p class="text-[10px] uppercase tracking-widest text-slate-500">Histograma de scores</p>
+                <p class="text-[10px] text-slate-600">10 bins de 10 puntos · la barra se pinta del color de su franja de riesgo</p>
+            </div>
+            <div id="histogram" class="mt-5 flex h-40 items-end gap-1.5"></div>
+            <div class="mt-2 flex justify-between text-[10px] text-slate-600">
+                <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
+            </div>
+        </article>
+
+        <!-- --- Heuristicas --- -->
+        <article class="card card-hover anim-up md:col-span-2 lg:col-span-3" style="animation-delay:.22s">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <p class="text-[10px] uppercase tracking-widest text-slate-500">Desglose de las 9 heuristicas</p>
+                <p class="text-[10px] text-slate-600">Puntos = peso &times; valor de la regla · pesos suman 1.00</p>
+            </div>
+            <div id="signals-list" class="mt-5 grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-2 lg:grid-cols-3"></div>
+        </article>
+
+        <!-- --- Hallazgos --- -->
+        <article class="card card-hover anim-up" style="animation-delay:.26s">
+            <p class="text-[10px] uppercase tracking-widest text-slate-500">Hallazgos</p>
+            <ul id="findings-list" class="mt-4 space-y-2.5 text-sm leading-relaxed text-slate-300"></ul>
+        </article>
+
+        <!-- --- Fuente --- -->
+        <article class="card card-hover anim-up md:col-span-2" style="animation-delay:.3s">
+            <p class="text-[10px] uppercase tracking-widest text-slate-500">Fuente de datos</p>
             <p id="video-title" class="mt-2 text-sm font-medium text-white">—</p>
             <p class="mt-1 text-xs text-slate-500">
                 <span id="video-id" class="font-mono"></span>
                 <span class="mx-2 text-slate-700">·</span>
                 <span id="video-meta"></span>
             </p>
-        </div>
-
-        <!-- --- Senales dominantes --- -->
-        <div class="mt-5 rounded-2xl border border-white/10 bg-ink-900 p-6">
-            <p class="text-[11px] uppercase tracking-widest text-slate-500">Senales que mas pesan</p>
-            <div id="signals-list" class="mt-4 space-y-3"></div>
-        </div>
-
-        <!-- --- Hallazgos --- -->
-        <div class="mt-5 rounded-2xl border border-white/10 bg-ink-900 p-6">
-            <p class="text-[11px] uppercase tracking-widest text-slate-500">Hallazgos</p>
-            <ul id="findings-list" class="mt-4 space-y-2.5 text-sm leading-relaxed text-slate-300"></ul>
-        </div>
+            <p id="api-meta" class="mt-2 hidden text-[11px] text-slate-600"></p>
+        </article>
 
         <!-- --- Comentarios sospechosos --- -->
-        <div class="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-ink-900">
+        <article class="card anim-up p-0 md:col-span-2 lg:col-span-3" style="animation-delay:.34s">
             <div class="flex items-center justify-between border-b border-white/5 px-6 py-4">
-                <p class="text-[11px] uppercase tracking-widest text-slate-500">Comentarios mas sospechosos</p>
+                <p class="text-[10px] uppercase tracking-widest text-slate-500">Comentarios mas sospechosos</p>
                 <button id="toggle-all" type="button" class="text-[11px] text-indigo-400 transition hover:text-indigo-300">Ver todos</button>
             </div>
             <div id="comments-list" class="divide-y divide-white/5"></div>
-        </div>
-
-        <p id="analysis-id" class="mt-4 text-center text-[11px] text-slate-600"></p>
+        </article>
     </section>
 
+    <p id="analysis-id" class="mt-5 text-center text-[11px] text-slate-600"></p>
+
     <!-- ===================== ESTADO INICIAL ===================== -->
-    <section id="placeholder" class="mt-16 grid gap-4 sm:grid-cols-3">
-        <div class="rounded-2xl border border-white/5 bg-ink-900/40 p-5">
+    <section id="placeholder" class="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <article class="card card-hover">
             <p class="text-sm font-semibold text-white">1 · Extraccion</p>
             <p class="mt-2 text-xs leading-relaxed text-slate-500">CommentThreads.list de la YouTube Data API v3. Sin clave, un simulador determinista genera datos de demo reproducibles.</p>
-        </div>
-        <div class="rounded-2xl border border-white/5 bg-ink-900/40 p-5">
+        </article>
+        <article class="card card-hover">
             <p class="text-sm font-semibold text-white">2 · Heuristicas</p>
-            <p class="mt-2 text-xs leading-relaxed text-slate-500">9 reglas ponderadas que suman 1.0: lexicon de spam, enlaces, identidad, emojis, formato, ruido, temporal, duplicados e interaccion.</p>
-        </div>
-        <div class="rounded-2xl border border-white/5 bg-ink-900/40 p-5">
+            <p class="mt-2 text-xs leading-relaxed text-slate-500">9 reglas ponderadas que suman 1.0: lexico de spam, identidad, contenido generico, ruido, temporal, formato, duplicados, emojis e interaccion.</p>
+        </article>
+        <article class="card card-hover">
             <p class="text-sm font-semibold text-white">3 · Agregacion</p>
             <p class="mt-2 text-xs leading-relaxed text-slate-500">Media ponderada + efecto cluster (rafagas y duplicados) + intervalo de confianza. pandas hace el agregado.</p>
-        </div>
+        </article>
     </section>
 </main>
 
@@ -229,26 +463,106 @@
 </footer>
 
 <script>
-    // ------------------------------------------------------------------
-    // Logica del frontend (vanilla JS: cero build step para el MVP).
-    // ------------------------------------------------------------------
+    // ==================================================================
+    // Logica del frontend (JS vanilla: cero build step).
+    //
+    // REGLA DE ORO: `$` es `document.getElementById`, NO un selector CSS.
+    // Los identificadores van SIN '#'. Pasar '#algo' devuelve null y revienta
+    // el render. Hay 11 comprobaciones automaticas que vigilan esto.
+    // ==================================================================
     const $ = (id) => document.getElementById(id);
 
-    const RISK_STYLES = {
-        critical: 'border-rose-500/40 bg-rose-500/10 text-rose-300',
-        high:     'border-orange-500/40 bg-orange-500/10 text-orange-300',
-        medium:   'border-amber-500/40 bg-amber-500/10 text-amber-300',
-        low:      'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-    };
-    const GAUGE_COLORS = {
-        critical: '#f43f5e', high: '#fb923c', medium: '#fbbf24', low: '#34d399'
-    };
-    let showingAll = false;
-    let currentComments = [];
+    const GAUGE_CIRCUMFERENCE = 326.7;   // 2 * PI * 52
+    const DEMO_WALL_MAX = 40;            // nodos retenidos en el muro en vivo
 
-    /** POST /api/analyze y render de resultados. */
+    const RISK_HEX = {
+        critical: '#c084fc',
+        high: '#f87171',
+        medium: '#fbbf24',
+        low: '#34d399'
+    };
+
+    const SIGNAL_GRADIENT = {
+        spam_lexicon: 'linear-gradient(90deg,#f43f5e,#fb7185)',
+        identity_pattern: 'linear-gradient(90deg,#8b5cf6,#c084fc)',
+        generic_content: 'linear-gradient(90deg,#0ea5e9,#38bdf8)',
+        text_noise: 'linear-gradient(90deg,#64748b,#94a3b8)',
+        temporal: 'linear-gradient(90deg,#f59e0b,#fbbf24)',
+        duplication: 'linear-gradient(90deg,#d946ef,#e879f9)',
+        emojis: 'linear-gradient(90deg,#10b981,#34d399)',
+        formatting: 'linear-gradient(90deg,#14b8a6,#2dd4bf)',
+        engagement: 'linear-gradient(90deg,#6366f1,#818cf8)'
+    };
+
+    const PHASES = [
+        'Conectando con YouTube API...',
+        'Extrayendo features...',
+        'Aplicando 9 heurísticas...',
+        'Calculando riesgo...'
+    ];
+
+    let phaseTimer = null;
+    let phaseIndex = 0;
+    let loaderTarget = 0;
+    let demoSource = null;
+
+    // ==================================================================
+    // Utilidades
+    // ==================================================================
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g,
+            c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function formatNumber(value) {
+        return new Intl.NumberFormat('es-ES').format(value);
+    }
+
+    function formatDate(iso) {
+        try {
+            return new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
+        } catch (e) {
+            return iso;
+        }
+    }
+
+    /** Cuenta animada de 0 al valor pedido (easeOutCubic). */
+    function animateNumber(el, to, decimals, suffix) {
+        if (!el) return;
+        const target = Number(to);
+        if (!isFinite(target)) { el.textContent = String(to); return; }
+        const duration = 950;
+        const started = performance.now();
+        const step = (now) => {
+            const p = Math.min(1, (now - started) / duration);
+            const eased = 1 - Math.pow(1 - p, 3);
+            el.textContent = (target * eased).toFixed(decimals || 0) + (suffix || '');
+            if (p < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    }
+
+    /** Escribe el ancho de una barra. Sin esto, un id mal escrito rompe el render. */
+    function setBar(id, pct) {
+        const bar = $(id);
+        if (bar) bar.style.width = Math.max(0, Math.min(100, pct || 0)) + '%';
+    }
+
+    function setText(id, value) {
+        const el = $(id);
+        if (el) el.textContent = value;
+    }
+
+    function plural(n, singular, pluralForm) {
+        return formatNumber(n) + ' ' + (n === 1 ? singular : pluralForm);
+    }
+
+    // ==================================================================
+    // Analisis normal
+    // ==================================================================
     $('analyze-form').addEventListener('submit', async (event) => {
         event.preventDefault();
+        stopDemo();
         setLoading(true);
         $('error-box').classList.add('hidden');
         $('warning-box').classList.add('hidden');
@@ -264,9 +578,35 @@
                 })
             });
 
-            const payload = await response.json();
+            // El cuerpo se lee como texto y se convierte a mano: si el servidor
+            // devuelve HTML (error 500 de un proxy, pagina en blanco) o una
+            // respuesta vacia, `res.json()` lanza "Unexpected end of JSON
+            // input" y se pierde el motivo real del fallo.
+            const raw = await response.text();
+            let payload = null;
+            let parseError = null;
+            try {
+                payload = raw ? JSON.parse(raw) : null;
+            } catch (e) {
+                parseError = e;
+            }
+
             if (!response.ok) {
-                throw new Error(payload.detail || 'Error inesperado del servidor.');
+                let msg = 'El servidor respondio ' + response.status;
+                if (payload && payload.detail) {
+                    msg = typeof payload.detail === 'string'
+                        ? payload.detail
+                        : JSON.stringify(payload.detail);
+                } else if (parseError || !raw) {
+                    msg += ' con la respuesta vacia. ¿El servidor se reinicio? '
+                        + 'Recarga la pagina y prueba de nuevo.';
+                }
+                throw new Error(msg);
+            }
+            if (parseError) {
+                throw new Error('La respuesta del servidor no es JSON valido. '
+                    + 'Comprueba que http://' + window.location.host
+                    + ' sea la app y no un proxy. Detalle: ' + parseError.message);
             }
             render(payload);
         } catch (error) {
@@ -276,151 +616,289 @@
         }
     });
 
+    /** Loader con fases rotativas y barra que se acerca al 100% sin saltos falsos. */
     function setLoading(active) {
-        $('submit-btn').disabled = active;
-        $('btn-label').textContent = active ? 'Analizando...' : 'Analizar';
+        const loader = $('loader');
+        const btn = $('submit-btn');
+        if (!loader || !btn) return;
+        btn.disabled = active;
         $('btn-spinner').classList.toggle('hidden', !active);
+        setText('btn-label', active ? 'Analizando...' : 'Analizar');
+        loader.classList.toggle('hidden', !active);
+        if (!active) { stopPhases(); return; }
+
+        const realMode = document.body.dataset.mode === 'real';
+        phaseIndex = 0;
+        setText('loader-phase', realMode ? PHASES[0] : 'Preparando dataset de demostracion...');
+        animateNumber($('loader-pct'), 0, 0, '%');
+
+        // Cada fase sube el techo de la barra: nunca llega al 100% hasta que
+        // el servidor responde de verdad.
+        const ceilings = realMode ? [22, 48, 74, 92] : [30, 58, 80, 94];
+        loaderTarget = ceilings[0];
+        advancePhase();
+
+        phaseTimer = setInterval(() => {
+            phaseIndex = (phaseIndex + 1) % PHASES.length;
+            setText('loader-phase', realMode ? PHASES[phaseIndex] : demoPhase(phaseIndex));
+            loaderTarget = ceilings[Math.min(phaseIndex + 1, ceilings.length - 1)];
+            animateNumber($('loader-pct'), loaderTarget, 0, '%');
+            setBar('loader-bar', loaderTarget);
+        }, 1100);
+    }
+
+    function demoPhase(index) {
+        return ['Generando comentarios sinteticos...',
+                'Extrayendo 40 features por comentario...',
+                'Aplicando 9 heurísticas ponderadas...',
+                'Calculando riesgo y distribucion...'][index];
+    }
+
+    function stopPhases() {
+        if (phaseTimer) { clearInterval(phaseTimer); phaseTimer = null; }
+    }
+
+    function advancePhase() {
+        animateNumber($('loader-pct'), loaderTarget, 0, '%');
+        setBar('loader-bar', loaderTarget);
     }
 
     function showError(message) {
         const box = $('error-box');
+        if (!box) return;
         box.innerHTML = '<strong>No se pudo completar el analisis.</strong><br>' + escapeHtml(message);
         box.classList.remove('hidden');
         $('results').classList.add('hidden');
         $('placeholder').classList.remove('hidden');
     }
 
-    function render(data) {
+    // ==================================================================
+    // Render (compartido por /api/analyze y por el evento `done` de la demo)
+    // ==================================================================
+    function render(data, options) {
+        const opts = options || {};
         $('placeholder').classList.add('hidden');
 
-        if (data.warnings && data.warnings.length) {
-            const box = $('warning-box');
-            box.innerHTML = data.warnings.map(w => '<div class="mb-1 last:mb-0">' + escapeHtml(w) + '</div>').join('');
-            box.classList.remove('hidden');
+        const warningBox = $('warning-box');
+        if (warningBox) {
+            if (data.warnings && data.warnings.length) {
+                warningBox.innerHTML = data.warnings
+                    .map(w => '<div class="mb-1 last:mb-0">' + escapeHtml(w) + '</div>').join('');
+                warningBox.classList.remove('hidden');
+            } else {
+                warningBox.classList.add('hidden');
+            }
         }
 
         renderVerdict(data);
         renderDistribution(data.distribution, data.metrics.total_comments_analyzed);
         renderKpis(data.metrics, data.feature_averages);
+        renderHistogram(data.comments);
         renderSource(data);
         renderSignals(data.signals);
         renderFindings(data.findings);
         renderComments(data.comments);
 
-        $('analysis-id').textContent = 'Analisis ' + data.analysis_id + ' · generado ' + formatDate(data.generated_at);
-        $('results').classList.remove('hidden');
-        $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setText('analysis-id', 'Analisis ' + data.analysis_id
+            + ' · generado ' + formatDate(data.generated_at));
+
+        const results = $('results');
+        results.classList.remove('hidden');
+        results.classList.remove('anim-up');
+        // Reinicia la animacion de entrada aunque venga de una segunda ronda.
+        void results.offsetWidth;
+        results.classList.add('anim-up');
+
+        if (!opts.silent) {
+            results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     }
 
     function renderVerdict(data) {
         const pct = data.metrics.bot_percentage;
-        $('bot-percent').textContent = pct.toFixed(1) + '%';
-        $('confidence').textContent = data.metrics.confidence + '% conf.';
+        const level = data.risk.level;
+        const hex = RISK_HEX[level] || '#6366f1';
 
-        // Arco del gauge: circunferencia = 2 * PI * 52 = 326.7
-        const circumference = 326.7;
-        const arc = $('gauge-arc');
-        arc.style.strokeDashoffset = String(circumference * (1 - pct / 100));
-        arc.style.stroke = GAUGE_COLORS[data.risk.level] || '#6366f1';
-
+        // Tema de riesgo propagado por atributo: el CSS hace el resto.
+        const card = $('verdict-card');
         const badge = $('risk-badge');
-        badge.className = 'mt-5 rounded-xl border px-3 py-2.5 text-center ' + (RISK_STYLES[data.risk.level] || '');
-        badge.querySelector('span').textContent = 'Riesgo ' + data.risk.label;
-        $('risk-action').textContent = data.risk.action;
+        if (card) card.dataset.risk = level;
+        if (badge) badge.dataset.risk = level;
+
+        const stopA = $('gauge-stop-a');
+        const stopB = $('gauge-stop-b');
+        if (stopA) stopA.setAttribute('stop-color', hex);
+        if (stopB) stopB.setAttribute('stop-color', hex);
+
+        const arc = $('gauge-arc');
+        if (arc) arc.style.strokeDashoffset = String(GAUGE_CIRCUMFERENCE * (1 - pct / 100));
+
+        animateNumber($('bot-percent'), pct, 1, '%');
+        animateNumber($('confidence'), data.metrics.confidence, 0, ' conf.');
+        setText('risk-label', 'Riesgo ' + data.risk.label);
+        setText('risk-action', data.risk.action);
     }
 
     function renderDistribution(distribution, total) {
-        [['high', '#bar-high'], ['medium', '#bar-medium'], ['low', '#bar-low']].forEach(([key, id]) => {
+        [['high', 'bar-high'], ['medium', 'bar-medium'], ['low', 'bar-low']].forEach(([key, id]) => {
             const value = distribution[key] || 0;
             const pct = total ? (value / total) * 100 : 0;
-            $(id).style.width = pct + '%';
-            $(id + '-label').textContent = value + ' (' + pct.toFixed(0) + '%)';
+            setBar(id, pct);
+            setText(id + '-label', value + ' (' + pct.toFixed(0) + '%)');
         });
     }
 
     function renderKpis(metrics, averages) {
+        const avg = averages || {};
         const cards = [
-            { label: 'Comentarios', value: metrics.total_comments_analyzed, hint: metrics.unique_authors + ' autores unicos' },
-            { label: 'con enlaces', value: metrics.link_ratio + '%', hint: metrics.comments_with_links + ' comentarios' },
-            { label: 'emojis / com.', value: metrics.emoji_per_comment, hint: 'densidad media' },
-            { label: 'duplicados', value: metrics.duplicate_ratio + '%', hint: metrics.burst_detected ? 'rafaga detectada' : 'sin rafagas' },
-            { label: 'score medio', value: metrics.mean_bot_score, hint: 'mediana ' + metrics.median_bot_score },
-            { label: 'desviacion', value: metrics.score_std_dev, hint: 'dispersion de scores' },
-            { label: 'longitud media', value: averages.longitud_media_caracteres, hint: 'caracteres' },
-            { label: 'score maximo', value: metrics.max_bot_score, hint: 'peor comentario' }
+            { label: 'Comentarios', value: metrics.total_comments_analyzed, dec: 0,
+              hint: plural(metrics.unique_authors, 'autor unico', 'autores unicos'), tone: 'text-white' },
+            { label: 'con enlaces', value: metrics.link_ratio, dec: 1, suffix: '%',
+              hint: plural(metrics.comments_with_links, 'comentario', 'comentarios'), tone: 'text-white' },
+            { label: 'emojis / com.', value: metrics.emoji_per_comment, dec: 2,
+              hint: 'densidad media', tone: 'text-white' },
+            { label: 'duplicados', value: metrics.duplicate_ratio, dec: 1, suffix: '%',
+              hint: metrics.burst_detected ? 'rafaga detectada' : 'sin rafagas',
+              tone: metrics.burst_detected ? 'text-amber-300' : 'text-white' },
+            { label: 'score medio', value: metrics.mean_bot_score, dec: 1,
+              hint: 'mediana ' + metrics.median_bot_score, tone: 'text-white' },
+            { label: 'desviacion', value: metrics.score_std_dev, dec: 1,
+              hint: 'dispersion de scores', tone: 'text-white' },
+            { label: 'longitud media', value: avg.longitud_media_caracteres, dec: 0,
+              hint: 'caracteres', tone: 'text-white' },
+            { label: 'score maximo', value: metrics.max_bot_score, dec: 1,
+              hint: 'peor comentario', tone: 'text-rose-300' }
         ];
-        $('kpi-grid').innerHTML = cards.map(card => `
-            <div class="rounded-xl border border-white/10 bg-ink-900 p-4">
-                <p class="text-[10px] uppercase tracking-wider text-slate-500">${escapeHtml(card.label)}</p>
-                <p class="mt-1.5 text-xl font-semibold tabular-nums text-white">${escapeHtml(String(card.value))}</p>
-                <p class="mt-0.5 text-[10px] text-slate-600">${escapeHtml(String(card.hint))}</p>
+        $('kpi-grid').innerHTML = cards.map((card, i) => `
+            <div class="rounded-xl border border-white/5 bg-black/20 p-3 transition hover:border-white/15">
+                <p class="text-[9px] uppercase tracking-wider text-slate-500">${escapeHtml(card.label)}</p>
+                <p class="stat-value mt-1 text-xl font-semibold tabular-nums ${card.tone}"
+                   data-to="${card.value}" data-dec="${card.dec}" data-suffix="${escapeHtml(card.suffix || '')}">0</p>
+                <p class="mt-0.5 truncate text-[9px] text-slate-600">${escapeHtml(String(card.hint))}</p>
             </div>`).join('');
+
+        // Los contadores arrancan en 0 y suben: el dato "aparece" en pantalla.
+        requestAnimationFrame(() => {
+            document.querySelectorAll('#kpi-grid .stat-value').forEach(el => {
+                animateNumber(el, el.dataset.to, Number(el.dataset.dec), el.dataset.suffix);
+            });
+        });
+    }
+
+    function renderHistogram(comments) {
+        const bins = new Array(10).fill(0);
+        (comments || []).forEach(c => {
+            const idx = Math.min(9, Math.max(0, Math.floor((c.bot_score || 0) / 10)));
+            bins[idx] += 1;
+        });
+        const max = Math.max.apply(null, bins.concat([1]));
+
+        $('histogram').innerHTML = bins.map((n, i) => {
+            const height = (n / max) * 100;
+            const color = i <= 2 ? RISK_HEX.low : i <= 4 ? RISK_HEX.medium : i <= 6 ? RISK_HEX.high : RISK_HEX.critical;
+            return `
+                <div class="group relative flex h-full flex-1 flex-col justify-end" title="Scores ${i * 10}-${i * 10 + 9}: ${n} comentarios">
+                    <div class="hist-bar w-full rounded-t-md"
+                         style="height:${height}%;background-image:linear-gradient(180deg,${color},${color}55)"></div>
+                    <span class="absolute -top-5 left-1/2 hidden -translate-x-1/2 text-[10px] text-slate-300 group-hover:block">${n}</span>
+                </div>`;
+        }).join('');
+
+        requestAnimationFrame(() => {
+            document.querySelectorAll('#histogram .hist-bar').forEach((el, i) => {
+                el.style.transition = 'height .9s cubic-bezier(.16,1,.3,1) ' + (i * 55) + 'ms';
+            });
+        });
     }
 
     function renderSource(data) {
-        const s = data.source;
-        $('video-title').textContent = s.title || '(sin titulo - dataset simulado)';
-        $('video-id').textContent = 'ID ' + s.video_id;
+        const s = data.source || {};
+        setText('video-title', s.title || '(sin titulo - dataset simulado)');
+        setText('video-id', s.is_demo ? 'DEMO' : 'ID ' + s.video_id);
         const parts = [];
         if (s.channel) parts.push(s.channel);
-        if (s.view_count) parts.push(formatNumber(s.view_count) + ' visitas');
-        if (s.comment_count) parts.push(formatNumber(s.comment_count) + ' comentarios totales');
-        $('video-meta').textContent = parts.join(' · ');
+        if (s.view_count) parts.push(plural(s.view_count, 'visita', 'visitas'));
+        if (s.comment_count) parts.push(plural(s.comment_count, 'comentario', 'comentarios') + ' totales');
+        setText('video-meta', parts.join(' · '));
+        renderApiMeta(data);
+    }
+
+    /** Traza de la llamada real a la YouTube Data API (vacio en modo simulacion). */
+    function renderApiMeta(data) {
+        const api = data.api || {};
+        const box = $('api-meta');
+        if (!box) return;
+        if (!api.pages_fetched) { box.classList.add('hidden'); return; }
+
+        const bits = [];
+        bits.push(plural(api.pages_fetched, 'pagina', 'paginas') + ' de commentThreads.list');
+        bits.push(plural(api.top_level_comments, 'comentario', 'comentarios')
+            + ' + ' + plural(api.replies_included, 'respuesta', 'respuestas'));
+        if (api.total_comments_available) {
+            bits.push('de ' + formatNumber(api.total_comments_available) + ' disponibles'
+                + (api.coverage_ratio !== null && api.coverage_ratio !== undefined
+                    ? ' (' + api.coverage_ratio + '% de cobertura)' : ''));
+        }
+        bits.push('~' + plural(api.quota_units, 'unidad', 'unidades') + ' de cuota');
+        if (!api.replies_part_available) bits.push('sin respuestas');
+        box.textContent = 'YouTube Data API v3 · ' + bits.join(' · ');
+        box.classList.remove('hidden');
     }
 
     function renderSignals(signals) {
-        if (!signals.length) {
-            $('signals-list').innerHTML = '<p class="text-xs text-slate-500">Ninguna senal supero el umbral minimo.</p>';
+        const list = $('signals-list');
+        if (!signals || !signals.length) {
+            list.innerHTML = '<p class="text-xs text-slate-500">Ninguna senal supero el umbral minimo.</p>';
             return;
         }
         const max = signals[0].average_contribution || 1;
-        const color = (key) => ({
-            spam_lexicon: 'from-rose-500 to-rose-400',
-            identity_pattern: 'from-violet-500 to-violet-400',
-            generic_content: 'from-sky-500 to-sky-400',
-            text_noise: 'from-slate-500 to-slate-400',
-            temporal: 'from-amber-500 to-amber-300',
-            duplication: 'from-fuchsia-500 to-fuchsia-400',
-            emojis: 'from-emerald-500 to-emerald-400',
-            formatting: 'from-teal-500 to-teal-400',
-            engagement: 'from-indigo-500 to-indigo-400'
-        }[key] || 'from-indigo-500 to-indigo-400');
+        list.innerHTML = signals.map((signal, i) => {
+            const width = (signal.average_contribution / max) * 100;
+            const gradient = SIGNAL_GRADIENT[signal.key] || 'linear-gradient(90deg,#6366f1,#818cf8)';
+            return `
+                <div class="anim-up" style="animation-delay:${i * 70}ms">
+                    <div class="mb-1.5 flex flex-wrap items-baseline justify-between gap-2">
+                        <span class="text-sm text-slate-200">${escapeHtml(signal.label)}</span>
+                        <span class="font-mono text-[10px] text-slate-500">${signal.average_contribution} pts · peso ${signal.weight} · ${signal.flagged} afectados</span>
+                    </div>
+                    <div class="track">
+                        <div class="fill fill-stripe" style="background-image:${gradient}" data-width="${width}"></div>
+                    </div>
+                    <p class="mt-1.5 text-[11px] leading-relaxed text-slate-600">${escapeHtml(signal.description)}</p>
+                </div>`;
+        }).join('');
 
-        $('signals-list').innerHTML = signals.map(signal => `
-            <div>
-                <div class="mb-1 flex flex-wrap items-baseline justify-between gap-2">
-                    <span class="text-sm text-slate-200">${escapeHtml(signal.label)}</span>
-                    <span class="font-mono text-[11px] text-slate-500">${signal.average_contribution} pts · peso ${signal.weight} · ${signal.flagged} afectados</span>
-                </div>
-                <div class="h-1.5 overflow-hidden rounded-full bg-ink-700">
-                    <div class="h-full rounded-full bg-gradient-to-r ${color(signal.key)}"
-                         style="width: ${(signal.average_contribution / max) * 100}%"></div>
-                </div>
-                <p class="mt-1 text-[11px] text-slate-600">${escapeHtml(signal.description)}</p>
-            </div>`).join('');
+        requestAnimationFrame(() => {
+            list.querySelectorAll('.fill-stripe').forEach(el => {
+                el.style.width = el.dataset.width + '%';
+            });
+        });
     }
 
     function renderFindings(findings) {
-        $('findings-list').innerHTML = findings.map(f =>
-            `<li class="flex gap-2.5"><span class="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-indigo-400"></span><span>${escapeHtml(f)}</span></li>`
+        $('findings-list').innerHTML = (findings || []).map(f =>
+            `<li class="flex gap-2.5"><span class="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-indigo-400"></span><span>${escapeHtml(f)}</span></li>`
         ).join('');
     }
+
+    let currentComments = [];
+    let showingAll = false;
 
     function renderComments(comments) {
         currentComments = comments || [];
         showingAll = false;
-        $('toggle-all').textContent = 'Ver todos';
+        setText('toggle-all', 'Ver todos');
         paintComments();
     }
 
     function paintComments() {
         const subset = showingAll ? currentComments : currentComments.slice(0, 8);
-        const scoreColor = (score) => score >= 60 ? 'text-rose-400' : score >= 30 ? 'text-amber-400' : 'text-emerald-400';
+        const scoreColor = (score) => score >= 60 ? 'text-rose-300' : score >= 30 ? 'text-amber-300' : 'text-emerald-300';
 
-        $('comments-list').innerHTML = subset.map(comment => `
-            <details class="group p-5 transition hover:bg-white/[.02]">
+        $('comments-list').innerHTML = subset.map((comment, i) => `
+            <details class="group px-6 py-5 transition hover:bg-white/[.02] anim-up" style="animation-delay:${Math.min(i, 8) * 50}ms">
                 <summary class="flex cursor-pointer list-none items-start gap-4">
-                    <span class="mt-0.5 rounded-lg bg-ink-700 px-2.5 py-1 font-mono text-sm font-semibold tabular-nums ${scoreColor(comment.bot_score)}">
+                    <span class="mt-0.5 min-w-[3.1rem] rounded-lg bg-ink-700 px-2.5 py-1 text-center font-mono text-sm font-semibold tabular-nums ${scoreColor(comment.bot_score)}">
                         ${comment.bot_score}
                     </span>
                     <div class="min-w-0 flex-1">
@@ -448,25 +926,128 @@
     $('toggle-all').addEventListener('click', () => {
         if (!currentComments.length) return;
         showingAll = !showingAll;
-        $('toggle-all').textContent = showingAll ? 'Ver solo los 8 primeros' : 'Ver todos';
+        setText('toggle-all', showingAll ? 'Ver solo los 8 primeros' : 'Ver todos');
         paintComments();
     });
 
-    // --- Utilidades -----------------------------------------------------
-    function escapeHtml(value) {
-        return String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    // ==================================================================
+    // Demo en vivo: Server-Sent Events (muro que se actualiza solo)
+    // ==================================================================
+    $('demo-btn').addEventListener('click', () => {
+        if (demoSource) { stopDemo(); return; }
+        startDemo();
+    });
+
+    $('demo-stop').addEventListener('click', () => stopDemo());
+
+    function startDemo() {
+        const panel = $('demo-panel');
+        const wall = $('demo-wall');
+        if (!panel || !wall) return;
+
+        $('error-box').classList.add('hidden');
+        wall.innerHTML = '';
+        panel.classList.remove('hidden');
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        $('demo-btn').disabled = true;
+        $('demo-btn-label').textContent = 'Demo en curso...';
+        const dot = $('demo-btn-dot');
+        if (dot) dot.classList.add('breath');
+        setText('demo-status', 'Conectando con el stream...');
+        setBar('demo-progress', 0);
+        setText('demo-stat-total', '0');
+        setText('demo-stat-bots', '0');
+        setText('demo-stat-avg', '0');
+        setText('demo-stat-high', '0');
+
+        demoSource = new EventSource('/api/demo/stream?comment_limit=30&delay=0.28');
+
+        demoSource.addEventListener('start', (event) => {
+            const data = JSON.parse(event.data);
+            setText('demo-status', 'Ataque en curso · ' + data.total + ' comentarios · ' + data.source.title);
+            if (data.warnings && data.warnings.length) {
+                const box = $('warning-box');
+                if (box) {
+                    box.innerHTML = data.warnings.map(w => '<div>' + escapeHtml(w) + '</div>').join('');
+                    box.classList.remove('hidden');
+                }
+            }
+        });
+
+        demoSource.addEventListener('comment', (event) => {
+            const data = JSON.parse(event.data);
+            pushWallCard(data.comment, data.running);
+            const pct = data.total ? (data.index / data.total) * 100 : 0;
+            setBar('demo-progress', pct);
+            setText('demo-stat-total', formatNumber(data.running.analyzed));
+            setText('demo-stat-bots', formatNumber(data.running.suspected));
+            setText('demo-stat-high', formatNumber(data.running.high));
+            animateNumber($('demo-stat-avg'), data.running.average_score, 1, '');
+            setText('demo-status', 'Procesando ' + data.index + ' de ' + data.total
+                + ' · ' + data.comment.verdict);
+        });
+
+        demoSource.addEventListener('done', (event) => {
+            const data = JSON.parse(event.data);
+            // El `done` lleva el AnalyzeResponse completo: reutiliza el render
+            // normal, con sus animaciones, sin una segunda ruta de codigo.
+            render(data);
+            setText('demo-status', 'Ataque completado · riesgo ' + data.risk.label
+                + ' · ' + data.metrics.bot_percentage + '% de bots');
+            stopDemo(true);
+        });
+
+        demoSource.onerror = () => {
+            setText('demo-status', 'Stream interrumpido (reinicio del servidor o timeout del proxy).');
+            stopDemo();
+        };
     }
 
-    function formatNumber(value) {
-        return new Intl.NumberFormat('es-ES').format(value);
-    }
+    function pushWallCard(comment, running) {
+        const wall = $('demo-wall');
+        if (!wall) return;
+        const isBot = comment.bot_score >= 30;
+        const tone = isBot
+            ? 'border-rose-500/25 bg-rose-500/[.06]'
+            : 'border-emerald-500/20 bg-emerald-500/[.04]';
+        const chip = isBot ? 'text-rose-300' : 'text-emerald-300';
 
-    function formatDate(iso) {
-        try {
-            return new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
-        } catch (e) {
-            return iso;
+        const card = document.createElement('div');
+        card.className = 'anim-pop rounded-xl border px-4 py-3 transition ' + tone;
+        card.innerHTML = `
+            <div class="flex items-start gap-3">
+                <span class="mt-0.5 min-w-[2.9rem] rounded-md bg-black/40 px-2 py-0.5 text-center font-mono text-xs font-semibold tabular-nums ${chip}">
+                    ${comment.bot_score}
+                </span>
+                <div class="min-w-0 flex-1">
+                    <p class="truncate text-[11px] text-slate-500">
+                        <span class="text-slate-300">@${escapeHtml(comment.author)}</span>
+                        ${comment.is_reply ? ' · respuesta' : ''}
+                    </p>
+                    <p class="mt-0.5 truncate text-sm text-slate-200">${escapeHtml(comment.text_preview)}</p>
+                    <p class="mt-1 text-[10px] ${chip}">${escapeHtml((comment.reasons || [])[0] || '')}</p>
+                </div>
+                <span class="shrink-0 text-[10px] tabular-nums text-slate-600">${running.analyzed}</span>
+            </div>`;
+
+        wall.insertBefore(card, wall.firstChild);
+        while (wall.childElementCount > DEMO_WALL_MAX) {
+            wall.removeChild(wall.lastElementChild);
         }
+    }
+
+    function stopDemo(completed) {
+        if (demoSource) {
+            demoSource.close();
+            demoSource = null;
+        }
+        const btn = $('demo-btn');
+        if (btn) btn.disabled = false;
+        setText('demo-btn-label', completed ? 'Lanzar otra demo' : 'Lanzar demo en directo');
+        const dot = $('demo-btn-dot');
+        if (dot) dot.classList.remove('breath');
+        setBar('demo-progress', completed ? 100 : 0);
     }
 </script>
 </body>
