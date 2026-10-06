@@ -1,0 +1,81 @@
+# ---------------------------------------------------------------------------
+# Contexto de build de la imagen: lo que hay aqui NO debe entrar en la imagen.
+# Reduce el tamano del contexto y evita filtrar secretos (.env, claves).
+# ---------------------------------------------------------------------------
+
+# --- Secretos y configuracion local ----------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# --- Git / VCS -------------------------------------------------------------
+.git
+.gitignore
+.github/
+.gitattributes
+
+# --- Python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.installed.cfg
+*.egg
+
+# --- Entornos virtuales ----------------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# --- Testing / calidad -----------------------------------------------------
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+
+# --- Datos locales / artefactos -------------------------------------------
+*.db
+*.sqlite
+*.sqlite3
+*.log
+crash_log.txt
+data/
+output/
+
+# --- IDEs ------------------------------------------------------------------
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# --- Sistema operativo -----------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Docker ----------------------------------------------------------------
+Dockerfile
+Dockerfile.*
+docker-compose*.yml
+.dockerignore
+
+# --- Documentacion ---------------------------------------------------------
+# (Los *.md si se necesitan en el repo, pero no en el contexto de build.)

@@ -1,0 +1,65 @@
+# ---------------------------------------------------------------------------
+# Project Assembly - orquestacion local de desarrollo
+# ---------------------------------------------------------------------------
+# Uso rapido:  docker compose up --build      -> http://localhost:8000
+#
+# Notas para Windows (Docker Desktop):
+#   - El bind-mount de ./ es correcto pero mas lento que un volume nombrado
+#     (limites de ficheros del host). Si notas latencia, comenta el bloque
+#     `volumes` y reinicia el contenedor para trabajar con la copia de la imagen.
+#   - `develop.watch` requiere Compose v2.22+. Si tu version es anterior,
+#     dejalo desactivado: el `--reload` del comando ya cubre el hot-reload.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: project-assembly:1.0.0
+    container_name: assembly-api
+    restart: unless-stopped
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      APP_ENV: development
+      PORT: "8000"
+      # Vacia = modo simulacion determinista (demo funcional sin cuota).
+      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
+      MAX_COMMENTS: ${MAX_COMMENTS:-120}
+      REQUEST_TIMEOUT: ${REQUEST_TIMEOUT:-10}
+      SIMULATION_SALT: ${SIMULATION_SALT:-assembly-v1}
+
+    volumes:
+      # Hot-reload del codigo + templates en desarrollo.
+      - ./:/app
+
+    command: >
+      uvicorn app:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --reload-dir /app
+      --reload-include *.py
+      --reload-include *.html
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Limite de recursos: evita que un analisis descontrolado tumbe el host.
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M

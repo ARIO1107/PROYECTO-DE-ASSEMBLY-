@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }} · Detector de bots en comentarios</title>
+    <meta name="description" content="Analisis heuristico de comentarios de YouTube para estimar la presencia de bots.">
+
+    <!-- Tailwind CSS via CDN (Play CDN). Suficiente para un MVP; para produccion
+         compilarlo con el CLI de Tailwind y servir el CSS estatico. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace']
+                    },
+                    colors: {
+                        ink: { 950: '#08090c', 900: '#0d0f14', 800: '#141822', 700: '#1c2130' }
+                    },
+                    keyframes: {
+                        fadeUp: { '0%': { opacity: 0, transform: 'translateY(8px)' }, '100%': { opacity: 1, transform: 'translateY(0)' } }
+                    },
+                    animation: { fadeUp: 'fadeUp .4s ease-out both' }
+                }
+            }
+        };
+    </script>
+</head>
+
+<body class="bg-ink-950 text-slate-200 antialiased selection:bg-indigo-500/30">
+
+<!-- ===================== NAVBAR ===================== -->
+<header class="sticky top-0 z-20 border-b border-white/5 bg-ink-950/80 backdrop-blur">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
+        <div class="flex items-center gap-3">
+            <div class="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-600 text-sm font-bold">A</div>
+            <div>
+                <h1 class="text-sm font-semibold tracking-tight text-white">{{ app_name }}</h1>
+                <p class="text-[11px] leading-tight text-slate-500">Bot detection · MVP</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 text-[11px]">
+            {% if data_mode == 'real' %}
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-emerald-300">
+                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span> YouTube API real
+                </span>
+            {% else %}
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-300">
+                    <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span> Modo simulacion
+                </span>
+            {% endif %}
+            <span class="hidden rounded-full border border-white/10 px-2.5 py-1 text-slate-400 sm:inline">v{{ app_version }}</span>
+        </div>
+    </div>
+</header>
+
+<main class="mx-auto max-w-6xl px-5 py-10">
+
+    <!-- ===================== FORMULARIO ===================== -->
+    <section class="animate-fadeUp">
+        <h2 class="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            Analiza los comentarios de un video
+        </h2>
+        <p class="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
+            Pega la URL de YouTube y el servicio descargara los comentarios mas relevantes,
+            extraera <span class="text-slate-300">9 senales</span> de cada uno (spam, enlaces, emojis,
+            patron temporal, duplicados...) y devolvera un porcentaje estimado de bots.
+        </p>
+
+        <form id="analyze-form" class="mt-6 flex flex-col gap-3 sm:flex-row">
+            <div class="relative flex-1">
+                <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-600">
+                    <!-- YouTube-ish play glyph -->
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8zM9.5 15.5v-7l6.5 3.5-6.5 3.5z"/></svg>
+                </span>
+                <input id="url" name="url" type="text" required spellcheck="false"
+                       value="{{ default_url }}"
+                       placeholder="https://www.youtube.com/watch?v=..."
+                       class="w-full rounded-xl border border-white/10 bg-ink-900 py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-600 outline-none transition focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/20">
+            </div>
+
+            <div class="flex gap-3">
+                <select id="limit" name="comment_limit"
+                        class="rounded-xl border border-white/10 bg-ink-900 px-3 py-3.5 text-sm text-slate-300 outline-none focus:border-indigo-500/60">
+                    <option value="40">40 comentarios</option>
+                    <option value="80" selected>80 comentarios</option>
+                    <option value="150">150 comentarios</option>
+                </select>
+                <button type="submit" id="submit-btn"
+                        class="flex items-center gap-2 rounded-xl bg-indigo-500 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-50">
+                    <span id="btn-label">Analizar</span>
+                    <svg id="btn-spinner" class="hidden h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                    </svg>
+                </button>
+            </div>
+        </form>
+
+        <p class="mt-3 text-[11px] text-slate-600">
+            Formatos aceptados: <span class="font-mono text-slate-500">/watch?v=ID</span> ·
+            <span class="font-mono text-slate-500">youtu.be/ID</span> ·
+            <span class="font-mono text-slate-500">/shorts/ID</span> ·
+            <span class="font-mono text-slate-500">/embed/ID</span> · o el ID pelado.
+        </p>
+    </section>
+
+    <!-- ===================== ERROR ===================== -->
+    <div id="error-box" class="mt-6 hidden rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200"></div>
+
+    <!-- ===================== AVISO MODO SIMULACION ===================== -->
+    <div id="warning-box" class="mt-6 hidden rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200"></div>
+
+    <!-- ===================== RESULTADOS ===================== -->
+    <section id="results" class="hidden">
+
+        <!-- --- Veredicto principal --- -->
+        <div class="mt-10 grid gap-5 lg:grid-cols-[320px_1fr]">
+
+            <div class="rounded-2xl border border-white/10 bg-ink-900 p-6">
+                <p class="text-[11px] uppercase tracking-widest text-slate-500">Bot estimado</p>
+
+                <!-- Gauge SVG -->
+                <div class="relative mx-auto mt-4 h-36 w-36">
+                    <svg viewBox="0 0 120 120" class="h-full w-full -rotate-90">
+                        <circle cx="60" cy="60" r="52" fill="none" stroke="#1c2130" stroke-width="10"/>
+                        <circle id="gauge-arc" cx="60" cy="60" r="52" fill="none" stroke="#6366f1" stroke-width="10"
+                                stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"
+                                style="transition: stroke-dashoffset 1s cubic-bezier(.16,1,.3,1), stroke .5s"/>
+                    </svg>
+                    <div class="absolute inset-0 grid place-items-center">
+                        <div class="text-center">
+                            <span id="bot-percent" class="block text-3xl font-bold tabular-nums text-white">0%</span>
+                            <span class="text-[10px] uppercase tracking-wider text-slate-500">confianza</span>
+                            <span id="confidence" class="block text-[11px] font-medium text-slate-400">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="risk-badge" class="mt-5 rounded-xl border px-3 py-2.5 text-center">
+                    <span class="text-xs font-semibold uppercase tracking-wider">—</span>
+                </div>
+                <p id="risk-action" class="mt-3 text-center text-[11px] leading-relaxed text-slate-500"></p>
+            </div>
+
+            <!-- --- Distribucion + KPIs --- -->
+            <div class="space-y-5">
+                <div class="rounded-2xl border border-white/10 bg-ink-900 p-6">
+                    <p class="text-[11px] uppercase tracking-widest text-slate-500">Distribucion de riesgo por comentario</p>
+                    <div class="mt-5 space-y-3">
+                        <div>
+                            <div class="mb-1 flex justify-between text-xs"><span class="text-rose-300">Alto (&ge;60)</span><span id="bar-high-label" class="tabular-nums text-slate-500">0</span></div>
+                            <div class="h-2 overflow-hidden rounded-full bg-ink-700"><div id="bar-high" class="h-full w-0 rounded-full bg-gradient-to-r from-rose-500 to-rose-400 transition-all duration-700"></div></div>
+                        </div>
+                        <div>
+                            <div class="mb-1 flex justify-between text-xs"><span class="text-amber-300">Medio (30-59)</span><span id="bar-medium-label" class="tabular-nums text-slate-500">0</span></div>
+                            <div class="h-2 overflow-hidden rounded-full bg-ink-700"><div id="bar-medium" class="h-full w-0 rounded-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-700"></div></div>
+                        </div>
+                        <div>
+                            <div class="mb-1 flex justify-between text-xs"><span class="text-emerald-300">Bajo (&lt;30)</span><span id="bar-low-label" class="tabular-nums text-slate-500">0</span></div>
+                            <div class="h-2 overflow-hidden rounded-full bg-ink-700"><div id="bar-low" class="h-full w-0 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300 transition-all duration-700"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="kpi-grid" class="grid grid-cols-2 gap-3 sm:grid-cols-4"></div>
+            </div>
+        </div>
+
+        <!-- --- Video analizado --- -->
+        <div class="mt-5 rounded-2xl border border-white/10 bg-ink-900 p-6">
+            <p class="text-[11px] uppercase tracking-widest text-slate-500">Fuente de datos</p>
+            <p id="video-title" class="mt-2 text-sm font-medium text-white">—</p>
+            <p class="mt-1 text-xs text-slate-500">
+                <span id="video-id" class="font-mono"></span>
+                <span class="mx-2 text-slate-700">·</span>
+                <span id="video-meta"></span>
+            </p>
+        </div>
+
+        <!-- --- Senales dominantes --- -->
+        <div class="mt-5 rounded-2xl border border-white/10 bg-ink-900 p-6">
+            <p class="text-[11px] uppercase tracking-widest text-slate-500">Senales que mas pesan</p>
+            <div id="signals-list" class="mt-4 space-y-3"></div>
+        </div>
+
+        <!-- --- Hallazgos --- -->
+        <div class="mt-5 rounded-2xl border border-white/10 bg-ink-900 p-6">
+            <p class="text-[11px] uppercase tracking-widest text-slate-500">Hallazgos</p>
+            <ul id="findings-list" class="mt-4 space-y-2.5 text-sm leading-relaxed text-slate-300"></ul>
+        </div>
+
+        <!-- --- Comentarios sospechosos --- -->
+        <div class="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-ink-900">
+            <div class="flex items-center justify-between border-b border-white/5 px-6 py-4">
+                <p class="text-[11px] uppercase tracking-widest text-slate-500">Comentarios mas sospechosos</p>
+                <button id="toggle-all" type="button" class="text-[11px] text-indigo-400 transition hover:text-indigo-300">Ver todos</button>
+            </div>
+            <div id="comments-list" class="divide-y divide-white/5"></div>
+        </div>
+
+        <p id="analysis-id" class="mt-4 text-center text-[11px] text-slate-600"></p>
+    </section>
+
+    <!-- ===================== ESTADO INICIAL ===================== -->
+    <section id="placeholder" class="mt-16 grid gap-4 sm:grid-cols-3">
+        <div class="rounded-2xl border border-white/5 bg-ink-900/40 p-5">
+            <p class="text-sm font-semibold text-white">1 · Extraccion</p>
+            <p class="mt-2 text-xs leading-relaxed text-slate-500">CommentThreads.list de la YouTube Data API v3. Sin clave, un simulador determinista genera datos de demo reproducibles.</p>
+        </div>
+        <div class="rounded-2xl border border-white/5 bg-ink-900/40 p-5">
+            <p class="text-sm font-semibold text-white">2 · Heuristicas</p>
+            <p class="mt-2 text-xs leading-relaxed text-slate-500">9 reglas ponderadas que suman 1.0: lexicon de spam, enlaces, identidad, emojis, formato, ruido, temporal, duplicados e interaccion.</p>
+        </div>
+        <div class="rounded-2xl border border-white/5 bg-ink-900/40 p-5">
+            <p class="text-sm font-semibold text-white">3 · Agregacion</p>
+            <p class="mt-2 text-xs leading-relaxed text-slate-500">Media ponderada + efecto cluster (rafagas y duplicados) + intervalo de confianza. pandas hace el agregado.</p>
+        </div>
+    </section>
+</main>
+
+<footer class="border-t border-white/5 py-8 text-center text-[11px] text-slate-600">
+    Estimacion heuristica orientativa. No es una verificacion de identidad.
+</footer>
+
+<script>
+    // ------------------------------------------------------------------
+    // Logica del frontend (vanilla JS: cero build step para el MVP).
+    // ------------------------------------------------------------------
+    const $ = (id) => document.getElementById(id);
+
+    const RISK_STYLES = {
+        critical: 'border-rose-500/40 bg-rose-500/10 text-rose-300',
+        high:     'border-orange-500/40 bg-orange-500/10 text-orange-300',
+        medium:   'border-amber-500/40 bg-amber-500/10 text-amber-300',
+        low:      'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+    };
+    const GAUGE_COLORS = {
+        critical: '#f43f5e', high: '#fb923c', medium: '#fbbf24', low: '#34d399'
+    };
+    let showingAll = false;
+    let currentComments = [];
+
+    /** POST /api/analyze y render de resultados. */
+    $('analyze-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        setLoading(true);
+        $('error-box').classList.add('hidden');
+        $('warning-box').classList.add('hidden');
+
+        try {
+            const response = await fetch('/api/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    url: $('url').value.trim(),
+                    comment_limit: parseInt($('limit').value, 10),
+                    include_comments: true
+                })
+            });
+
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.detail || 'Error inesperado del servidor.');
+            }
+            render(payload);
+        } catch (error) {
+            showError(error.message);
+        } finally {
+            setLoading(false);
+        }
+    });
+
+    function setLoading(active) {
+        $('submit-btn').disabled = active;
+        $('btn-label').textContent = active ? 'Analizando...' : 'Analizar';
+        $('btn-spinner').classList.toggle('hidden', !active);
+    }
+
+    function showError(message) {
+        const box = $('error-box');
+        box.innerHTML = '<strong>No se pudo completar el analisis.</strong><br>' + escapeHtml(message);
+        box.classList.remove('hidden');
+        $('results').classList.add('hidden');
+        $('placeholder').classList.remove('hidden');
+    }
+
+    function render(data) {
+        $('placeholder').classList.add('hidden');
+
+        if (data.warnings && data.warnings.length) {
+            const box = $('warning-box');
+            box.innerHTML = data.warnings.map(w => '<div class="mb-1 last:mb-0">' + escapeHtml(w) + '</div>').join('');
+            box.classList.remove('hidden');
+        }
+
+        renderVerdict(data);
+        renderDistribution(data.distribution, data.metrics.total_comments_analyzed);
+        renderKpis(data.metrics, data.feature_averages);
+        renderSource(data);
+        renderSignals(data.signals);
+        renderFindings(data.findings);
+        renderComments(data.comments);
+
+        $('analysis-id').textContent = 'Analisis ' + data.analysis_id + ' · generado ' + formatDate(data.generated_at);
+        $('results').classList.remove('hidden');
+        $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function renderVerdict(data) {
+        const pct = data.metrics.bot_percentage;
+        $('bot-percent').textContent = pct.toFixed(1) + '%';
+        $('confidence').textContent = data.metrics.confidence + '% conf.';
+
+        // Arco del gauge: circunferencia = 2 * PI * 52 = 326.7
+        const circumference = 326.7;
+        const arc = $('gauge-arc');
+        arc.style.strokeDashoffset = String(circumference * (1 - pct / 100));
+        arc.style.stroke = GAUGE_COLORS[data.risk.level] || '#6366f1';
+
+        const badge = $('risk-badge');
+        badge.className = 'mt-5 rounded-xl border px-3 py-2.5 text-center ' + (RISK_STYLES[data.risk.level] || '');
+        badge.querySelector('span').textContent = 'Riesgo ' + data.risk.label;
+        $('risk-action').textContent = data.risk.action;
+    }
+
+    function renderDistribution(distribution, total) {
+        [['high', '#bar-high'], ['medium', '#bar-medium'], ['low', '#bar-low']].forEach(([key, id]) => {
+            const value = distribution[key] || 0;
+            const pct = total ? (value / total) * 100 : 0;
+            $(id).style.width = pct + '%';
+            $(id + '-label').textContent = value + ' (' + pct.toFixed(0) + '%)';
+        });
+    }
+
+    function renderKpis(metrics, averages) {
+        const cards = [
+            { label: 'Comentarios', value: metrics.total_comments_analyzed, hint: metrics.unique_authors + ' autores unicos' },
+            { label: 'con enlaces', value: metrics.link_ratio + '%', hint: metrics.comments_with_links + ' comentarios' },
+            { label: 'emojis / com.', value: metrics.emoji_per_comment, hint: 'densidad media' },
+            { label: 'duplicados', value: metrics.duplicate_ratio + '%', hint: metrics.burst_detected ? 'rafaga detectada' : 'sin rafagas' },
+            { label: 'score medio', value: metrics.mean_bot_score, hint: 'mediana ' + metrics.median_bot_score },
+            { label: 'desviacion', value: metrics.score_std_dev, hint: 'dispersion de scores' },
+            { label: 'longitud media', value: averages.longitud_media_caracteres, hint: 'caracteres' },
+            { label: 'score maximo', value: metrics.max_bot_score, hint: 'peor comentario' }
+        ];
+        $('kpi-grid').innerHTML = cards.map(card => `
+            <div class="rounded-xl border border-white/10 bg-ink-900 p-4">
+                <p class="text-[10px] uppercase tracking-wider text-slate-500">${escapeHtml(card.label)}</p>
+                <p class="mt-1.5 text-xl font-semibold tabular-nums text-white">${escapeHtml(String(card.value))}</p>
+                <p class="mt-0.5 text-[10px] text-slate-600">${escapeHtml(String(card.hint))}</p>
+            </div>`).join('');
+    }
+
+    function renderSource(data) {
+        const s = data.source;
+        $('video-title').textContent = s.title || '(sin titulo - dataset simulado)';
+        $('video-id').textContent = 'ID ' + s.video_id;
+        const parts = [];
+        if (s.channel) parts.push(s.channel);
+        if (s.view_count) parts.push(formatNumber(s.view_count) + ' visitas');
+        if (s.comment_count) parts.push(formatNumber(s.comment_count) + ' comentarios totales');
+        $('video-meta').textContent = parts.join(' · ');
+    }
+
+    function renderSignals(signals) {
+        if (!signals.length) {
+            $('signals-list').innerHTML = '<p class="text-xs text-slate-500">Ninguna senal supero el umbral minimo.</p>';
+            return;
+        }
+        const max = signals[0].average_contribution || 1;
+        const color = (key) => ({
+            spam_lexicon: 'from-rose-500 to-rose-400',
+            identity_pattern: 'from-violet-500 to-violet-400',
+            generic_content: 'from-sky-500 to-sky-400',
+            text_noise: 'from-slate-500 to-slate-400',
+            temporal: 'from-amber-500 to-amber-300',
+            duplication: 'from-fuchsia-500 to-fuchsia-400',
+            emojis: 'from-emerald-500 to-emerald-400',
+            formatting: 'from-teal-500 to-teal-400',
+            engagement: 'from-indigo-500 to-indigo-400'
+        }[key] || 'from-indigo-500 to-indigo-400');
+
+        $('signals-list').innerHTML = signals.map(signal => `
+            <div>
+                <div class="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+                    <span class="text-sm text-slate-200">${escapeHtml(signal.label)}</span>
+                    <span class="font-mono text-[11px] text-slate-500">${signal.average_contribution} pts · peso ${signal.weight} · ${signal.flagged} afectados</span>
+                </div>
+                <div class="h-1.5 overflow-hidden rounded-full bg-ink-700">
+                    <div class="h-full rounded-full bg-gradient-to-r ${color(signal.key)}"
+                         style="width: ${(signal.average_contribution / max) * 100}%"></div>
+                </div>
+                <p class="mt-1 text-[11px] text-slate-600">${escapeHtml(signal.description)}</p>
+            </div>`).join('');
+    }
+
+    function renderFindings(findings) {
+        $('findings-list').innerHTML = findings.map(f =>
+            `<li class="flex gap-2.5"><span class="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-indigo-400"></span><span>${escapeHtml(f)}</span></li>`
+        ).join('');
+    }
+
+    function renderComments(comments) {
+        currentComments = comments || [];
+        showingAll = false;
+        $('toggle-all').textContent = 'Ver todos';
+        paintComments();
+    }
+
+    function paintComments() {
+        const subset = showingAll ? currentComments : currentComments.slice(0, 8);
+        const scoreColor = (score) => score >= 60 ? 'text-rose-400' : score >= 30 ? 'text-amber-400' : 'text-emerald-400';
+
+        $('comments-list').innerHTML = subset.map(comment => `
+            <details class="group p-5 transition hover:bg-white/[.02]">
+                <summary class="flex cursor-pointer list-none items-start gap-4">
+                    <span class="mt-0.5 rounded-lg bg-ink-700 px-2.5 py-1 font-mono text-sm font-semibold tabular-nums ${scoreColor(comment.bot_score)}">
+                        ${comment.bot_score}
+                    </span>
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-xs text-slate-500">
+                            <span class="text-slate-300">@${escapeHtml(comment.author)}</span>
+                            ${comment.is_reply ? ' · respuesta' : ''}
+                            ${comment.published_at ? ' · ' + formatDate(comment.published_at) : ''}
+                        </p>
+                        <p class="mt-1 text-sm leading-relaxed text-slate-200">${escapeHtml(comment.text_preview)}</p>
+                    </div>
+                </summary>
+                <div class="mt-4 space-y-2 border-l-2 border-indigo-500/30 pl-4">
+                    ${comment.reasons.map(r => `<p class="text-xs leading-relaxed text-slate-400">${escapeHtml(r)}</p>`).join('')}
+                    <div class="flex flex-wrap gap-1.5 pt-1">
+                        ${Object.entries(comment.features)
+                            .filter(([, v]) => typeof v === 'number' && v !== 0)
+                            .map(([k, v]) => `<span class="rounded bg-ink-700 px-2 py-0.5 font-mono text-[10px] text-slate-400">${escapeHtml(k)}: ${v}</span>`)
+                            .join('')}
+                        ${(comment.features.spam_terms || []).map(t => `<span class="rounded bg-rose-500/10 px-2 py-0.5 font-mono text-[10px] text-rose-300">${escapeHtml(t)}</span>`).join('')}
+                    </div>
+                </div>
+            </details>`).join('');
+    }
+
+    $('toggle-all').addEventListener('click', () => {
+        if (!currentComments.length) return;
+        showingAll = !showingAll;
+        $('toggle-all').textContent = showingAll ? 'Ver solo los 8 primeros' : 'Ver todos';
+        paintComments();
+    });
+
+    // --- Utilidades -----------------------------------------------------
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function formatNumber(value) {
+        return new Intl.NumberFormat('es-ES').format(value);
+    }
+
+    function formatDate(iso) {
+        try {
+            return new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
+        } catch (e) {
+            return iso;
+        }
+    }
+</script>
+</body>
+</html>

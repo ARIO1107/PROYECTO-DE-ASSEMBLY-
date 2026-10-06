@@ -1,0 +1,141 @@
+# ===========================================================================
+# Python
+# ===========================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib60/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ===========================================================================
+# Entornos virtuales
+# ===========================================================================
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+# ===========================================================================
+# Configuracion local y SECRETOS (no subir nunca)
+# ===========================================================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.der
+secrets/
+credentials.json
+google-services.json
+GoogleService-Info.plist
+service-account*.json
+*.priv
+id_rsa*
+id_ed25519*
+
+# ===========================================================================
+# Testing / cobertura / analisis estatico
+# ===========================================================================
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+coverage.json
+htmlcov/
+.cache
+nosetests.xml
+.tox/
+.nox/
+.mypy_cache/
+.dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# ===========================================================================
+# Datos locales, logs y salidas generadas
+# ===========================================================================
+*.db
+*.sqlite
+*.sqlite3
+*.log
+logs/
+crash_log.txt
+data/
+datasets/
+output/
+tmp/
+
+# ===========================================================================
+# Modelos / ficheros pesados de ML (por si se anaden en el futuro)
+# ===========================================================================
+*.pt
+*.pth
+*.onnx
+*.h5
+*.ckpt
+models/
+node_modules/
+
+# ===========================================================================
+# Editores e IDEs
+# ===========================================================================
+.idea/
+.vscode/
+!.vscode/extensions.json
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+*~
+.history/
+
+# ===========================================================================
+# Sistema operativo
+# ===========================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# ===========================================================================
+# Docker
+# ===========================================================================
+# Ficheros generados por builds locales (la imagen en si no va al repo).
+*.tar
+*.tar.gz
+docker-data/
+.docker-build-cache/
+
+# ===========================================================================
+# Documentacion generada
+# ===========================================================================
+docs/_build/
+site/

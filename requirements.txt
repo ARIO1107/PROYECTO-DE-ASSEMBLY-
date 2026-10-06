@@ -1,0 +1,22 @@
+# ---------------------------------------------------------------------------
+# Project Assembly - dependencias del backend
+# ---------------------------------------------------------------------------
+# Rangos con techo en la major/minor relevante: reproducibles sin bloquear
+# upgrades de Python (una pin exacta como pandas==2.2.3 no tiene ruedas para
+# Python 3.13+, y rompe la instalacion local).
+#
+# Para fijar el lockfile exacto que usa Docker:
+#   pip freeze > requirements.lock.txt
+
+# --- Framework web / servidor ---------------------------------------------
+fastapi>=0.115.6,<1.0
+uvicorn[standard]>=0.34.0,<1.0        # servidor ASGI + hot-reload en desarrollo
+jinja2>=3.1.5,<4.0                    # motor de plantillas para /templates
+
+# --- Validacion / configuracion --------------------------------------------
+pydantic>=2.10.4,<3.0                 # modelos de request/response y validacion
+pydantic-settings>=2.7.0,<3.0         # settings por variables de entorno / .env
+
+# --- Datos / red -----------------------------------------------------------
+requests>=2.32.3,<3.0                 # cliente HTTP para la YouTube Data API v3
+pandas>=2.2.3,<3.0                    # agregacion estadistica de metricas
