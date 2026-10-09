@@ -13,9 +13,15 @@ Arquitectura
 El pipeline de analisis tiene 4 fases desacopladas y testeables por separado:
 
     1. EXTRACCION   -> `resolve_video()` + `fetch_youtube_comments()`
+                       o `parse_uploaded_comments()` (CSV/JSON multiplataforma)
     2. INGENIERIA    -> `build_features()` (features crudas por comentario)
     3. PUNTUACION    -> `RULES` (9 heuristicas ponderadas, 0..1 por regla)
     4. AGREGACION   -> `aggregate()` (pandas) -> respuesta JSON
+
+Las tres fuentes de datos (YouTube, archivo subido y simulacion) terminan en el
+mismo `RawComment`, asi que comparten entero de la fase 2 a la 4: no existe una
+ruta alternativa de puntuacion para archivos, y cualquier cambio del motor vale
+para las tres.
 
 Ademas hay un modo de demostracion (`/api/demo/*`) que genera un ataque de bots
 en memoria y lo emite en vivo por Server-Sent Events, sin tocar la red ni la
@@ -34,6 +40,8 @@ ráfagas y de forma duplicada, no de manera independiente.
 from __future__ import annotations
 
 import asyncio
+import csv
+import io
 import json
 import math
 import os
@@ -41,6 +49,7 @@ import random
 import re
 import statistics
 import time
+import unicodedata
 import uuid
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
@@ -51,7 +60,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pandas as pd
 import requests
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import AliasChoices, BaseModel, Field, field_validator
@@ -153,7 +162,7 @@ class AnalyzeResponse(BaseModel):
     analysis_id: str
     generated_at: str
     app_version: str
-    dataset_source: str                      # "youtube_api" | "simulated"
+    dataset_source: str                      # "youtube_api" | "simulated" | "file_upload"
     source: dict[str, Any]                    # video_id, url canonica, titulo, canal
     api: dict[str, Any] = Field(default_factory=dict)  # traza de la llamada real
     metrics: dict[str, Any]                   # KPI agregados
@@ -266,7 +275,7 @@ class RawComment:
 @dataclass
 class Dataset:
     comments: list[RawComment]
-    source: str                        # "youtube_api" | "simulated"
+    source: str                        # "youtube_api" | "simulated" | "file_upload"
     warnings: list[str] = field(default_factory=list)
     video_meta: dict[str, Any] = field(default_factory=dict)
     api_info: dict[str, Any] = field(default_factory=dict)
@@ -960,6 +969,535 @@ def _render_bot_text(rng: random.Random) -> str:
 
 
 # ===========================================================================
+# 4b. EXTRACCION: archivos subidos (CSV / JSON) - multiplataforma
+# ===========================================================================
+# El motor no sabe de donde vienen los comentarios: solo necesita `RawComment`.
+# Esta seccion traduce el vertido de TikTok, Instagram, X, Facebook, YouTube
+# Studio o cualquier herramienta de exportacion al MISMO `RawComment`, para
+# que el analisis sea identico al de YouTube: 40 features -> 9 heuristicas ->
+# agregacion. No hay una "vía corta" para archivos: quien sube un CSV pasa
+# exactamente por el mismo pipeline.
+#
+# Limites a proposito: esto analiza MUESTRAS (hasta 200 filas), no vertidos de
+# un millon de comentarios. Un fichero de 100 MB se rechaza antes de leerlo.
+
+UPLOAD_MAX_BYTES = 5 * 1024 * 1024       # 5 MB: suficiente para 200 filas de sobra
+UPLOAD_MAX_ROWS = 200                    # el usuario pide 150-200; fijamos el techo
+UPLOAD_FORMATS = ("csv", "json")
+
+# Alias de columna -> campo canonico. Se normalizan sin acentos ni puntuacion,
+# asi "Nombre de Autor" y "autor" caen en lo mismo. El orden del diccionario es
+# el orden de preferencia: si hay "text" y "comment", gana "text".
+COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
+    "author": (
+        "author", "autor", "user", "usuario", "username", "user_name", "nick",
+        "name", "nombre", "fullname", "handle", "screen_name", "author_name",
+        "by", "channel", "creator", "cuenta", "perfil", "comentarista",
+    ),
+    "text": (
+        "text", "texto", "comment", "comentario", "message", "mensaje",
+        "content", "contenido", "body", "caption", "comment_text",
+        "comentario_texto", "message_text", "review", "publicacion", "post",
+        "tweet", "description", "desc", "comentario_text",
+    ),
+    "date": (
+        "date", "fecha", "published_at", "publish_date", "created_at",
+        "created", "timestamp", "time", "datetime", "sent", "posted_at",
+        "comment_date", "comentario_fecha", "full_date", "pub_date",
+        "creation_time", "date_time",
+    ),
+    "likes": (
+        "likes", "like", "like_count", "likes_count", "num_likes", "favorite_count",
+        "digg_count", "reactions", "reaction_count", "hearts", "faves",
+        "favorites", "fav", "upvotes", "retweets", "retweet_count",
+        "me_gusta", "me_gustas",
+    ),
+    "replies": (
+        "replies", "reply", "reply_count", "replies_count", "respuestas",
+        "respuesta", "comments_count", "comment_count", "responses",
+        "response_count", "resp",
+    ),
+    "id": (
+        "id", "comment_id", "comentario_id", "cid", "tweet_id", "post_id",
+        "pk", "uid", "uuid",
+    ),
+    "platform": (
+        "platform", "plataforma", "red", "social", "origin", "network",
+        "app", "app_name", "fuente",
+    ),
+    "is_reply": (
+        "is_reply", "reply_to", "in_reply_to", "reply_to_id", "parent_id",
+        "respuesta_a", "is_response",
+    ),
+}
+
+# Deteccion de plataforma: por nombre de fichero, luego por valor de columna.
+# "x" es ambiguo como fichero, por eso se busca por nombre de columna aparte.
+PLATFORM_HINTS: tuple[tuple[str, str], ...] = (
+    ("tiktok", "tiktok"),
+    ("instagram", "instagram"),
+    ("ig", "instagram"),
+    ("facebook", "facebook"),
+    ("fb", "facebook"),
+    ("youtube", "youtube"),
+    ("yt", "youtube"),
+    ("twitter", "x"),
+    ("threads", "threads"),
+    ("twitch", "twitch"),
+    ("reddit", "reddit"),
+    ("linkedin", "linkedin"),
+    ("telegram", "telegram"),
+)
+
+# Formatos de fecha que se aceptan ademas del ISO-8601. Cubren lo que exportan
+# Excel, Google Sheets y las plataformas espanolas (dia/mes/ano).
+DATE_FORMATS: tuple[str, ...] = (
+    "%Y-%m-%d %H:%M:%S",
+    "%Y-%m-%d %H:%M",
+    "%Y-%m-%d",
+    "%Y/%m/%d %H:%M:%S",
+    "%Y/%m/%d",
+    "%d/%m/%Y %H:%M:%S",
+    "%d/%m/%Y %H:%M",
+    "%d/%m/%Y",
+    "%d-%m-%Y %H:%M:%S",
+    "%d-%m-%Y %H:%M",
+    "%d-%m-%Y",
+    "%m/%d/%Y %H:%M:%S",
+    "%m/%d/%Y %H:%M",
+    "%m/%d/%Y",
+    "%d %b %Y %H:%M:%S",
+    "%d %b %Y",
+    "%d %B %Y",
+    "%b %d, %Y %H:%M:%S",
+    "%b %d, %Y",
+)
+
+
+def _norm_key(value: Any) -> str:
+    """`Nombre de Autor` -> `nombre_autor`.
+
+    Sin acentos ni signos: los exportadores inventan etiquetas constantemente
+    y `autor`, `Autor ` y `AUTOR!` deben caer en lo mismo.
+    """
+    text = unicodedata.normalize("NFKD", str(value or ""))
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
+
+
+def _map_columns(columns: Sequence[Any]) -> dict[str, str]:
+    """Asocia cada columna del fichero a su campo canonico."""
+    indexed: dict[str, Any] = {}
+    for original in columns:
+        key = _norm_key(original)
+        if key and key not in indexed:
+            indexed[key] = original
+    mapping: dict[str, str] = {}
+    for field_name, aliases in COLUMN_ALIASES.items():
+        for alias in aliases:
+            if alias in indexed:
+                mapping[field_name] = indexed[alias]
+                break
+    return mapping
+
+
+def _parse_int(value: Any) -> Optional[int]:
+    """Entero tolerante: `+45`, `1.234`, `1,234`, `1.2K`, `3M`, `None`...
+
+    Las exportaciones mezclan formato espanol e ingles en la misma columna; un
+    `likes` mal interpretado (1.234 como 1.234 flotante) alteraria la regla de
+    interaccion, asi que se normaliza aqui una sola vez.
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value) if value == value else None      # NaN != NaN
+    text = str(value).strip().replace("\u00a0", " ")
+    if not text or text.lower() in {"-", "n/a", "na", "null", "none", "nan", "sin datos"}:
+        return None
+
+    multiplier = 1
+    suffix = text.lower().replace(" ", "")[-1:]
+    if suffix in {"k", "m", "b"} and re.match(r"^\d", text.strip().lower()):
+        multiplier = {"k": 1_000, "m": 1_000_000, "b": 1_000_000_000}[suffix]
+        text = text.strip()[:-1].strip()
+
+    text = text.replace("+", "").replace(" ", "")
+    # Miles con separador: 1.234 / 1,234. Sin esto, "1.234" da 1.234 flotante.
+    if re.fullmatch(r"-?\d{1,3}(?:[.,]\d{3})+", text):
+        text = text.replace(".", "").replace(",", "")
+    elif "," in text and "." not in text and re.fullmatch(r"-?\d+,\d+", text):
+        text = text.replace(",", ".")                      # decimal espanol
+
+    if not re.fullmatch(r"-?\d+(?:\.\d+)?", text):
+        return None
+    return int(float(text) * multiplier)
+
+
+def _parse_date(value: Any) -> Optional[datetime]:
+    """Fecha -> datetime ingenuo (UTC ya normalizado si la trae).
+
+    Devuelve `None` si no se puede interpretar: mejor sin fecha que una fecha
+    inventada, porque la regla temporal calcula ráfagas a partir de ellas.
+    Todos los valores se normalizan al mismo tipo (ingenuos en UTC) para que la
+    resta de `enrich_collective_features` no mezcle conscientes e ingenuos.
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, datetime):
+        return value.astimezone(timezone.utc).replace(tzinfo=None) if value.tzinfo else value
+    if isinstance(value, (int, float)):
+        return _from_epoch(float(value))
+    text = str(value).strip().strip('"')
+    if not text or text.lower() in {"n/a", "na", "null", "none"}:
+        return None
+
+    if re.fullmatch(r"\d{10}(\.\d+)?", text):              # epoch en segundos
+        return _from_epoch(float(text))
+    if re.fullmatch(r"\d{13}", text):                      # epoch en milisegundos
+        return _from_epoch(float(text) / 1000.0)
+    if re.fullmatch(r"\d{5}(\.\d+)?", text):               # serie de Excel
+        return datetime(1899, 12, 30) + timedelta(days=float(text))
+
+    iso = text.replace("Z", "+00:00") if text.endswith("Z") else text
+    try:
+        parsed = datetime.fromisoformat(iso)
+        return parsed.astimezone(timezone.utc).replace(tzinfo=None) if parsed.tzinfo else parsed
+    except ValueError:
+        pass
+
+    for fmt in DATE_FORMATS:
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def _from_epoch(seconds: float) -> Optional[datetime]:
+    try:
+        return datetime.fromtimestamp(seconds, tz=timezone.utc).replace(tzinfo=None)
+    except (OverflowError, OSError, ValueError):
+        return None
+
+
+def _decode_upload(raw: bytes) -> tuple[str, str]:
+    """Bytes -> texto, con BOM y codificaciones de Excel en espanol."""
+    if raw[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        return raw.decode("utf-16"), "utf-16"
+    for encoding in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
+        try:
+            return raw.decode(encoding), encoding
+        except UnicodeDecodeError:
+            continue
+    # latin-1 no puede fallar, pero por si acaso: no se pierde el analisis por un byte raro.
+    return raw.decode("latin-1", errors="replace"), "latin-1"
+
+
+def _json_rows(text: str) -> list[dict[str, Any]]:
+    """Extrae la lista de registros de un JSON (o NDJSON).
+
+    Acepta la forma plana `[{...}]`, los envoltorios habituales de las APIs
+    (`{"comments": [...]}`) y JSON Lines, que es como exportan varias
+    herramientas de escaneo.
+    """
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        # JSON Lines: un objeto por linea. Comun en exportes automaticos.
+        rows: list[dict[str, Any]] = []
+        for line in text.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                item = json.loads(line)
+            except json.JSONDecodeError:
+                return []
+            if isinstance(item, dict):
+                rows.append(item)
+        if len(rows) >= 2:
+            return rows
+        raise ValueError(
+            "El archivo parece JSON pero no es valido: revisa que la sintaxis "
+            "sea correcta (falta una llave o una coma final)."
+        )
+
+    if isinstance(payload, list):
+        return [row for row in payload if isinstance(row, dict)]
+    if isinstance(payload, dict):
+        for key in (
+            "comments", "data", "items", "results", "entries", "rows",
+            "comentarios", "tweets", "posts", "nodes", "records", "values",
+        ):
+            candidate = payload.get(key)
+            if isinstance(candidate, list):
+                return [row for row in candidate if isinstance(row, dict)]
+        # Un unico objeto tambien es un registro valido.
+        if any(_norm_key(k) in {a for aliases in COLUMN_ALIASES.values() for a in aliases}
+               for k in payload):
+            return [payload]
+        raise ValueError(
+            "El JSON no contiene ninguna lista de comentarios. Se esperaba una "
+            "lista `[{...}]` o un objeto con una clave como `comments`, `data` "
+            f"o `items`. Claves encontradas: {', '.join(list(payload)[:8])}."
+        )
+    raise ValueError("El archivo JSON no contiene una lista de comentarios.")
+
+
+def _csv_rows(text: str) -> tuple[list[dict[str, Any]], str]:
+    """CSV -> registros, con separador detectado (`,`, `;`, tabulador)."""
+    sample = text[:8192]
+    try:
+        dialect = csv.Sniffer().sniff(sample, delimiters=",;\t|")
+        delimiter = dialect.delimiter
+    except csv.Error:
+        dialect, delimiter = csv.excel, ","
+
+    rows = list(csv.reader(io.StringIO(text), dialect))
+    rows = [row for row in rows if any(str(cell).strip() for cell in row)]
+    if not rows:
+        raise ValueError("El archivo CSV esta vacio.")
+
+    header = [str(cell).lstrip("\ufeff").strip() for cell in rows[0]]
+    normalized = {_norm_key(cell) for cell in header}
+    known = {alias for aliases in COLUMN_ALIASES.values() for alias in aliases}
+    if not (normalized & known):
+        raise ValueError(
+            "No se reconoce la cabecera del CSV: se encontraron las columnas "
+            f"[{', '.join(header[:12])}] y ninguna coincide con autor, texto, "
+            "fecha o likes."
+        )
+
+    records = []
+    for line in rows[1:]:
+        record = {header[i]: (line[i] if i < len(line) else None) for i in range(len(header))}
+        records.append(record)
+    return records, delimiter
+
+
+def _detect_platform(filename: str, mapping: dict[str, str],
+                     records: Sequence[dict[str, Any]]) -> str:
+    """Plataforma de origen: indicada en el formulario > columna > nombre.
+
+    Los indicios cortos («ig», «x») solo valen como PALABRA suelta: si se
+    buscaran como subcadena, «max.csv» se detectaria como X y «digit.csv» como
+    Instagram. Los largos si valen como subcadena para cubrir
+    «comentarios_tiktok_2026.csv», donde TikTok esta junto a un guion bajo.
+    """
+    def matches(hint: str, lowered: str, tokens: set[str]) -> bool:
+        if len(hint) <= 3:
+            return hint in tokens
+        return hint in lowered
+
+    def tokens_of(value: str) -> set[str]:
+        return set(re.split(r"[^a-z0-9]+", value))
+
+    lowered_file = (filename or "").lower()
+    file_tokens = tokens_of(lowered_file)
+    for hint, label in PLATFORM_HINTS:
+        if matches(hint, lowered_file, file_tokens):
+            return label
+
+    column = mapping.get("platform")
+    if column:
+        for record in records[:25]:
+            value = _norm_key(record.get(column))
+            for hint, label in PLATFORM_HINTS:
+                if matches(hint, value, tokens_of(value)):
+                    return label
+            if value in {"otra", "otro", "other", "custom"}:
+                return "otra"
+    return "otra"
+
+
+def parse_uploaded_comments(
+    filename: str,
+    raw: bytes,
+    platform: Optional[str] = None,
+    limit: int = UPLOAD_MAX_ROWS,
+) -> Dataset:
+    """CSV/JSON de comentarios -> `Dataset`, listo para `score_dataset()`.
+
+    Toda la validacion ocurre aqui y devuelve mensajes accionables: quien sube
+    un vertido de TikTok no puede leer el stack del servidor para saber que la
+    cabecera no tenia columna de texto.
+    """
+    if not raw:
+        raise HTTPException(status_code=422, detail="El archivo esta vacio.")
+    if len(raw) > UPLOAD_MAX_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"El archivo pesa {len(raw):,} bytes y el maximo aceptado es "
+                   f"{UPLOAD_MAX_BYTES:,} bytes ({UPLOAD_MAX_BYTES // (1024 * 1024)} MB). "
+                   "Analiza una muestra, no el vertido completo.",
+        )
+
+    suffix = Path(filename or "").suffix.lower().lstrip(".")
+    if suffix and suffix not in UPLOAD_FORMATS:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Formato «.{suffix}» no soportado. Sube un archivo "
+                   f"{' o '.join(fmt.upper() for fmt in UPLOAD_FORMATS)} exportado de la red social.",
+        )
+
+    text, encoding = _decode_upload(raw)
+    looks_json = text.lstrip("﻿ \t\r\n").startswith(("[", "{"))
+
+    delimiter = None
+    if not suffix and not looks_json:
+        raise HTTPException(
+            status_code=415,
+            detail="No se pudo determinar el formato del archivo. Sube un CSV o un JSON "
+                   "con la extension correspondiente.",
+        )
+
+    try:
+        if looks_json or suffix == "json":
+            records = _json_rows(text)
+            fmt = "json"
+        else:
+            records, delimiter = _csv_rows(text)
+            fmt = "csv"
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    # Ordenador a proposito: si el archivo no tiene filas, no hay columnas que
+    # mostrar, y el mensaje de error no debe romperse al intentar listarlas.
+    columns = list(records[0].keys()) if records else []
+    if not records:
+        raise HTTPException(
+            status_code=422,
+            detail="El archivo no contiene ninguna fila de datos. "
+                   "Se esperaba una cabecera y al menos un comentario.",
+        )
+    mapping = _map_columns(columns)
+    if "text" not in mapping:
+        raise HTTPException(
+            status_code=422,
+            detail="No se encontro ninguna columna de texto. Se encontraron: "
+                   f"[{', '.join(columns[:12])}]. Renombra la columna del "
+                   "comentario a «text», «texto» o «comment».",
+        )
+
+    warnings: list[str] = []
+    if "author" not in mapping:
+        warnings.append(
+            "El archivo no incluye columna de autor: se analiza como «anonimo». "
+            "La regla de patron de identidad no puede evaluarse."
+        )
+    if "date" not in mapping:
+        warnings.append(
+            "El archivo no incluye columna de fecha: la regla temporal y la "
+            "deteccion de ráfagas se evaluan sin datos temporales."
+        )
+    if "likes" not in mapping:
+        warnings.append(
+            "El archivo no incluye columna de likes: la regla de interaccion "
+            "solo usa enlaces y respuestas."
+        )
+
+    rows_in_file = len(records)
+    records = records[: max(limit, 1)]
+    if rows_in_file > len(records):
+        warnings.append(
+            f"Se analizaron {len(records)} de {rows_in_file} filas del archivo "
+            f"(limite de muestra: {UPLOAD_MAX_ROWS} comentarios)."
+        )
+
+    comments: list[RawComment] = []
+    skipped = 0
+    for index, record in enumerate(records):
+        body = record.get(mapping["text"])
+        body_text = str(body).strip() if body is not None else ""
+        if not body_text:
+            skipped += 1
+            continue
+        author_value = record.get(mapping.get("author")) if "author" in mapping else None
+        author = str(author_value).strip() if author_value not in (None, "") else "anonimo"
+        published = _parse_date(record.get(mapping["date"])) if "date" in mapping else None
+        likes = _parse_int(record.get(mapping["likes"])) if "likes" in mapping else None
+        replies = _parse_int(record.get(mapping.get("replies"))) if "replies" in mapping else None
+        comment_id_value = record.get(mapping.get("id")) if "id" in mapping else None
+        is_reply_value = record.get(mapping.get("is_reply")) if "is_reply" in mapping else None
+
+        comments.append(RawComment(
+            comment_id=str(comment_id_value) if comment_id_value not in (None, "") else f"file-{index:05d}",
+            author=author[:120],
+            text=body_text,
+            published_at=published,
+            like_count=likes,
+            reply_count=replies if replies is not None else 0,
+            # En otras redes toda cuenta tiene perfil: es el equivalente a
+            # `has_channel` de YouTube y sin esto la regla de identidad
+            # castigaria a todos los usuarios por no tener "canal".
+            has_channel=True,
+            depth=1 if _truthy(is_reply_value) else 0,
+        ))
+
+    if not comments:
+        raise HTTPException(
+            status_code=422,
+            detail="Ninguna fila del archivo tiene texto de comentario. "
+                   f"Se leyeron {rows_in_file} filas y ninguna aportaba contenido.",
+        )
+    if skipped:
+        warnings.append(f"{skipped} filas sin texto fueron ignoradas.")
+
+    detected = _detect_platform(filename, mapping, records)
+    label = (platform or "").strip()[:40] or detected
+    if _norm_key(label) in {"auto", "automatica", "unknown", "ninguna"}:
+        label = detected
+
+    file_size = len(raw)
+    return Dataset(
+        comments=comments,
+        source="file_upload",
+        warnings=warnings,
+        video_meta={
+            "title": filename or "archivo",
+            "platform": label,
+            "is_upload": True,
+            "is_demo": False,
+            "channel": label,
+            "comment_count": len(comments),
+        },
+        api_info={
+            "engine": "archivo",
+            "file_name": filename,
+            "file_size": file_size,
+            "format": fmt,
+            "encoding": encoding,
+            "delimiter": delimiter,
+            "rows_in_file": rows_in_file,
+            "rows_used": len(comments),
+            "platform": label,
+            "columns_found": columns,
+            "column_mapping": mapping,
+            "trace": (
+                f"{fmt.upper()} · {encoding}"
+                + (f" · separador «{delimiter}»" if delimiter else "")
+                + f" · {rows_in_file} filas leidas -> {len(comments)} analizadas "
+                + "-> 40 features -> 9 heuristicas"
+            ),
+        },
+    )
+
+
+def _truthy(value: Any) -> bool:
+    """Interpreta indicadores de «es respuesta» de exportaciones ajenas."""
+    if value is None or value == "":
+        return False
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    return _norm_key(value) in {"true", "1", "si", "s", "yes", "y", "reply", "respuesta"}
+
+
+# ===========================================================================
 # 5. INGENIERIA DE FEATURES
 # ===========================================================================
 
@@ -1627,6 +2165,12 @@ def build_findings(metrics: dict[str, Any], signals: list[dict[str, Any]], sourc
             "ATENCION: los datos son SIMULADOS (falta YOUTUBE_API_KEY). "
             "Las cifras sirven para validar la interfaz, no para tomar decisiones."
         )
+    elif source == "file_upload":
+        findings.append(
+            "Analisis sobre archivo subido: los comentarios se leyeron de un CSV/JSON "
+            "proporcionado por el usuario y pasaron por el mismo motor de 9 heuristicas "
+            "que el modo YouTube. Revisa que el mapeo de columnas refleje tu archivo."
+        )
 
     return findings
 
@@ -1648,6 +2192,8 @@ def risk_profile(bot_percentage: float, source: str) -> dict[str, Any]:
 
     if source == "simulated":
         action += " (Estimacion sobre datos simulados, no concluyente.)"
+    elif source == "file_upload":
+        action += " (Calculado sobre un archivo subido, no sobre la plataforma en vivo.)"
 
     return {"level": level, "label": label, "action": action}
 
@@ -1709,14 +2255,23 @@ def build_analysis(
     verdicts: list[Verdict],
     include_comments: bool = True,
     demo: bool = False,
+    source_url: Optional[str] = None,
 ) -> AnalyzeResponse:
-    """Fase 4: agrega los veredictos y arma el `AnalyzeResponse`."""
+    """Fase 4: agrega los veredictos y arma el `AnalyzeResponse`.
+
+    `source_url` permite sobrescribir el enlace canonico: los archivos subidos
+    y las demos no son un video de YouTube, y publicar un `youtu.be` inventado
+    en la respuesta seria una mentira.
+    """
     metrics, signals, feature_averages = aggregate(verdicts, dataset.source)
     profile = risk_profile(metrics["bot_percentage"], dataset.source)
     metrics["risk_level"] = profile["level"]
 
     findings = build_findings(metrics, signals, dataset.source)
     ordered = sorted(verdicts, key=lambda v: v.bot_score, reverse=True)
+
+    if source_url is None:
+        source_url = canonical_url(video_id) if not demo else ""
 
     return AnalyzeResponse(
         analysis_id=uuid.uuid4().hex[:12],
@@ -1725,7 +2280,7 @@ def build_analysis(
         dataset_source=dataset.source,
         source={
             "video_id": video_id,
-            "url": canonical_url(video_id) if not demo else "",
+            "url": source_url,
             **dataset.video_meta,
         },
         api=dataset.api_info,
@@ -1974,7 +2529,10 @@ async def api_config() -> dict[str, Any]:
         "environment": settings.environment,
         "data_mode": "youtube_api" if has_key else "simulated",
         "max_comments": settings.max_comments,
-        "supported_platforms": ["youtube"],
+        "supported_platforms": [
+            "youtube", "tiktok", "instagram", "x", "facebook", "threads",
+            "twitch", "reddit", "linkedin", "telegram", "otra",
+        ],
         "youtube_api": {
             "configured": has_key,
             "endpoint": YOUTUBE_API_URL,
@@ -1995,6 +2553,17 @@ async def api_config() -> dict[str, Any]:
             "phases": list(DEMO_PHASES),
             "requires_api_key": False,
         },
+        "file_upload": {
+            "enabled": True,
+            "endpoint": "/api/analyze/upload",
+            "formats": list(UPLOAD_FORMATS),
+            "max_bytes": UPLOAD_MAX_BYTES,
+            "max_rows": UPLOAD_MAX_ROWS,
+            "recognized_columns": {
+                field_name: list(aliases) for field_name, aliases in COLUMN_ALIASES.items()
+            },
+            "requires_api_key": False,
+        },
     }
 
 
@@ -2012,6 +2581,44 @@ async def analyze(payload: AnalyzeRequest) -> AnalyzeResponse:
     video_id = resolve_video(payload.url)
     limit = payload.comment_limit or settings.max_comments
     return run_analysis(video_id, limit, include_comments=payload.include_comments)
+
+
+@app.post("/api/analyze/upload", response_model=AnalyzeResponse, tags=["analisis"])
+async def analyze_upload(
+    file: UploadFile = File(..., description="CSV o JSON con comentarios exportados de cualquier red social."),
+    platform: Optional[str] = Form(None, description="Plataforma de origen (tiktok, instagram, x...). Autodetectada si se omite."),
+    include_comments: bool = Form(True, description="Incluir el detalle por comentario en la respuesta."),
+    comment_limit: Optional[int] = Form(None, ge=1, le=UPLOAD_MAX_ROWS, description="Maximo de filas a analizar."),
+) -> AnalyzeResponse:
+    """Analiza un archivo CSV/JSON de comentarios exportados (multiplataforma).
+
+    Es la via para analizar TikTok, Instagram, X, Facebook o cualquier otra
+    red social sin dependencia de su API: se sube la muestra y pasa por el
+    MISMO pipeline que YouTube (40 features -> 9 heuristicas -> agregacion).
+
+    Ejemplo con curl:
+
+        curl -X POST http://localhost:8000/api/analyze/upload \\
+             -F "file=@comentarios.csv" -F "platform=tiktok"
+
+    Errores accionables: 413 (peso), 415 (formato), 422 (cabecera o contenido).
+    """
+    raw = await file.read(UPLOAD_MAX_BYTES + 1)
+    dataset = await asyncio.to_thread(
+        parse_uploaded_comments,
+        file.filename or "",
+        raw,
+        platform,
+        comment_limit or UPLOAD_MAX_ROWS,
+    )
+    verdicts = await asyncio.to_thread(score_dataset, dataset)
+    return build_analysis(
+        dataset.video_meta.get("title", "archivo"),
+        dataset,
+        verdicts,
+        include_comments=include_comments,
+        source_url="",
+    )
 
 
 @app.post("/api/demo/live", response_model=AnalyzeResponse, tags=["demo"])

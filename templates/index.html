@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }} · Detector de bots en comentarios</title>
-    <meta name="description" content="Analisis heuristico de comentarios de YouTube para estimar la presencia de bots.">
+    <meta name="description" content="Analisis heuristico de comentarios de YouTube, TikTok, Instagram, X, Facebook y mas redes para estimar la presencia de bots.">
     <meta name="color-scheme" content="dark">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
 
@@ -124,6 +124,49 @@
             animation: spin .7s linear infinite;
         }
 
+        /* --- Selector de origen: la URL de YouTube vive en view-youtube y el
+           archivo subido en view-others; ya no hay pestañas que estilizar. --- */
+
+        /* --- Zona de arrastre de archivos --- */
+        .dropzone {
+            display: flex; flex-direction: column; align-items: center;
+            gap: .5rem; cursor: pointer;
+            border: 1.5px dashed rgba(255, 255, 255, .16);
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, .025);
+            padding: 1.4rem 1rem;
+            text-align: center;
+            transition: border-color .3s var(--ease), background-color .3s var(--ease),
+                        transform .3s var(--ease);
+        }
+        .dropzone:hover { border-color: rgba(129, 140, 248, .55); background: rgba(99, 102, 241, .07); }
+        .dropzone:focus-visible { outline: 2px solid rgba(129, 140, 248, .8); outline-offset: 2px; }
+        .dropzone.is-over {
+            border-color: #818cf8;
+            background: rgba(99, 102, 241, .14);
+            transform: translateY(-2px);
+        }
+        .dropzone.has-file {
+            border-style: solid;
+            border-color: rgba(52, 211, 153, .5);
+            background: rgba(16, 185, 129, .07);
+        }
+
+        .field {
+            border-radius: .9rem;
+            border: 1px solid rgba(255, 255, 255, .10);
+            background: #0d0f14;
+            color: #cbd5e1;
+            font-size: .82rem;
+            padding: .8rem .9rem;
+            outline: none;
+            transition: border-color .3s var(--ease), box-shadow .3s var(--ease);
+        }
+        .field:focus { border-color: rgba(99, 102, 241, .6); box-shadow: 0 0 0 3px rgba(99, 102, 241, .18); }
+
+        /* --- Fila de la traza de la fuente (archivo subido vs API) --- */
+        .source-trace { font-variant-numeric: tabular-nums; }
+
         /* --- Respeto a la preferencia del sistema: sin movimiento, sin drift --- */
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
@@ -156,11 +199,16 @@
             <div class="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-600 text-sm font-bold shadow-lg shadow-indigo-900/40">A</div>
             <div>
                 <h1 class="text-sm font-semibold tracking-tight text-white">{{ app_name }}</h1>
-                <p class="text-[11px] leading-tight text-slate-500">Deteccion de bots · YouTube</p>
+                <p class="text-[11px] leading-tight text-slate-500">Deteccion de bots en comentarios</p>
             </div>
         </div>
 
         <div class="flex items-center gap-2 text-[11px]">
+            <span class="hidden rounded-full border border-white/10 px-2.5 py-1 text-slate-400 sm:inline">v{{ app_version }}</span>
+            <button type="button" id="nav-home"
+                    class="rounded-full border border-white/10 px-2.5 py-1 text-slate-400 transition hover:border-indigo-500/40 hover:text-indigo-300">
+                Inicio
+            </button>
             {% if data_mode == 'real' %}
                 <span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-emerald-300">
                     <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 breath"></span> YouTube API real
@@ -177,20 +225,161 @@
 
 <main class="mx-auto max-w-7xl px-5 pb-20 pt-8">
 
-    <!-- ===================== HERO + FORMULARIO ===================== -->
-    <section class="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <article class="card card-hover anim-up lg:col-span-2">
-            <span class="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-indigo-300">
-                Analisis heuristico
-            </span>
-            <h2 class="mt-4 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-                Analiza los comentarios de un video
+    <!-- ==================================================================
+         VISTAS DE LA SPA.
+         view-welcome : selector de plataforma + demo en vivo.
+         view-youtube : guia paso a paso + formulario de URL.
+         view-others  : redes soportadas, como conseguir el archivo (CSV/JSON)
+                        y como subirlo. Loader, error y resultados son
+                        compartidos (elementos mas abajo).
+         ================================================================== -->
+
+    <!-- ---------------- VISTA 1 · BIENVENIDA ---------------- -->
+    <div id="view-welcome" class="anim-up">
+        <section class="card anim-up p-8 sm:p-10">
+            <span class="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-indigo-300">Empecemos</span>
+            <h2 class="mt-4 max-w-2xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                Que quieres analizar?
             </h2>
-            <p class="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
-                Pega la URL de YouTube y el servicio descargara los comentarios mas relevantes,
-                extraera <span class="text-slate-300">40 features</span> de cada uno y devolvera un
-                porcentaje estimado de bots tras aplicar <span class="text-slate-300">9 heuristicas ponderadas</span>.
+            <p class="mt-3 max-w-2xl text-sm leading-relaxed text-slate-400">
+                Elige la red social en la que estan los comentarios que te preocupan. El servicio
+                extrae <span class="text-slate-300">40 features</span> de cada comentario y aplica
+                <span class="text-slate-300">9 heuristicas ponderadas</span> para estimar el porcentaje
+                de bots, con su distribucion por veredicto.
             </p>
+
+            <div id="platform-grid" class="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                <button type="button" id="pick-youtube" data-platform="" data-target="youtube"
+                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-4 text-left transition hover:-translate-y-0.5 hover:border-red-500/45 hover:bg-red-500/[.07]">
+                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-red-500/15 text-lg font-bold text-red-400">Y</span>
+                    <span class="text-sm font-semibold text-white">YouTube</span>
+                    <span class="text-[11px] text-slate-500">Pega la URL del video</span>
+                </button>
+                <button type="button" id="pick-tiktok" data-platform="tiktok" data-target="others"
+                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-4 text-left transition hover:-translate-y-0.5 hover:border-cyan-500/45 hover:bg-cyan-500/[.07]">
+                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-cyan-500/15 text-lg font-bold text-cyan-300">T</span>
+                    <span class="text-sm font-semibold text-white">TikTok</span>
+                    <span class="text-[11px] text-slate-500">CSV desde el enlace</span>
+                </button>
+                <button type="button" id="pick-instagram" data-platform="instagram" data-target="others"
+                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-4 text-left transition hover:-translate-y-0.5 hover:border-pink-500/45 hover:bg-pink-500/[.07]">
+                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-pink-500/15 text-lg font-bold text-pink-400">I</span>
+                    <span class="text-sm font-semibold text-white">Instagram</span>
+                    <span class="text-[11px] text-slate-500">CSV desde el enlace</span>
+                </button>
+                <button type="button" id="pick-x" data-platform="x" data-target="others"
+                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-4 text-left transition hover:-translate-y-0.5 hover:border-slate-300/45 hover:bg-slate-400/[.07]">
+                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-slate-500/15 text-lg font-bold text-slate-200">X</span>
+                    <span class="text-sm font-semibold text-white">X (Twitter)</span>
+                    <span class="text-[11px] text-slate-500">CSV/JSON del tuit</span>
+                </button>
+                <button type="button" id="pick-facebook" data-platform="facebook" data-target="others"
+                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-4 text-left transition hover:-translate-y-0.5 hover:border-blue-500/45 hover:bg-blue-500/[.07]">
+                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-blue-500/15 text-lg font-bold text-blue-400">F</span>
+                    <span class="text-sm font-semibold text-white">Facebook</span>
+                    <span class="text-[11px] text-slate-500">Reporte CSV</span>
+                </button>
+                <button type="button" id="pick-threads" data-platform="threads" data-target="others"
+                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-4 text-left transition hover:-translate-y-0.5 hover:border-gray-300/45 hover:bg-gray-300/[.07]">
+                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-slate-500/15 text-lg font-bold text-slate-300">T</span>
+                    <span class="text-sm font-semibold text-white">Threads</span>
+                    <span class="text-[11px] text-slate-500">Exportador web</span>
+                </button>
+                <button type="button" id="pick-reddit" data-platform="reddit" data-target="others"
+                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-4 text-left transition hover:-translate-y-0.5 hover:border-orange-500/45 hover:bg-orange-500/[.07]">
+                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-orange-500/15 text-lg font-bold text-orange-400">R</span>
+                    <span class="text-sm font-semibold text-white">Reddit</span>
+                    <span class="text-[11px] text-slate-500">Truco .json</span>
+                </button>
+                <button type="button" id="pick-linkedin" data-platform="linkedin" data-target="others"
+                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-4 text-left transition hover:-translate-y-0.5 hover:border-sky-500/45 hover:bg-sky-500/[.07]">
+                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-sky-600/15 text-lg font-bold text-sky-300">L</span>
+                    <span class="text-sm font-semibold text-white">LinkedIn</span>
+                    <span class="text-[11px] text-slate-500">Exportador web</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- --- Llamada a la demo en vivo (solo desde la bienvenida) --- -->
+        <section class="card anim-up mt-5 p-0" style="animation-delay:.08s">
+            <div class="grad-risk h-1 w-full rounded-none" style="background-image:linear-gradient(100deg,#6366f1,#a855f7,#ec4899)"></div>
+            <div class="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between lg:p-7">
+                <div class="max-w-xl">
+                    <p class="text-[10px] font-medium uppercase tracking-widest text-fuchsia-300">Demo interactiva</p>
+                    <h3 class="mt-2 text-lg font-semibold text-white">Simular un ataque de bots en directo</h3>
+                    <p class="mt-2 text-xs leading-relaxed text-slate-400">
+                        Genera un ataque sintetico y lo emite comentario a comentario. Usa el mismo
+                        motor (las mismas 9 heuristicas) que el analisis real: no es un video grabado,
+                        es el motor funcionando.
+                    </p>
+                </div>
+                <div class="shrink-0">
+                    <button type="button" id="demo-btn"
+                            class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 via-fuchsia-600 to-pink-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-fuchsia-900/40 transition hover:brightness-110 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50">
+                        <span id="demo-btn-dot" class="h-2 w-2 rounded-full bg-white/80"></span>
+                        <span id="demo-btn-label">Lanzar demo en directo</span>
+                    </button>
+                    <p class="mt-3 text-center text-[10px] text-slate-600">
+                        No requiere URL ni clave de API · no gasta cuota
+                    </p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- ---------------- VISTA 2 · YOUTUBE ---------------- -->
+    <div id="view-youtube" class="hidden">
+        <section class="card anim-up p-6 sm:p-8 lg:p-10">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-red-500/15 text-lg font-bold text-red-400">Y</span>
+                    <div>
+                        <h2 class="text-xl font-semibold tracking-tight text-white sm:text-2xl">Analizar un video de YouTube</h2>
+                        <p class="text-xs text-slate-500">Comentarios publicos de cualquier video</p>
+                    </div>
+                </div>
+                <button type="button" id="youtube-back"
+                        class="rounded-lg border border-white/10 px-3.5 py-2 text-xs text-slate-300 transition hover:border-indigo-500/40 hover:text-indigo-300">
+                    Volver al inicio
+                </button>
+            </div>
+
+            <ol class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <li class="rounded-xl border border-white/5 bg-black/25 p-4">
+                    <p class="text-[10px] font-semibold uppercase tracking-widest text-indigo-400">Paso 1 · Copia el enlace</p>
+                    <p class="mt-1.5 text-xs leading-relaxed text-slate-400">
+                        Abre YouTube, entra en el video y copia la URL. Se aceptan todos estos
+                        formatos (y hasta el ID pelado):
+                    </p>
+                    <p class="mt-2 font-mono text-[11px] leading-relaxed text-slate-500">
+                        /watch?v=ID · youtu.be/ID · /shorts/ID · /embed/ID
+                    </p>
+                </li>
+                <li class="rounded-xl border border-white/5 bg-black/25 p-4">
+                    <p class="text-[10px] font-semibold uppercase tracking-widest text-indigo-400">Paso 2 · Pegala y elige el tamaño</p>
+                    <p class="mt-1.5 text-xs leading-relaxed text-slate-400">
+                        El campo viene relleno con un ejemplo por defecto. Sustituyelo por tu URL y
+                        elige cuantos comentarios analizar: 40, 80 o 150 (los mas relevantes).
+                    </p>
+                </li>
+                <li class="rounded-xl border border-white/5 bg-black/25 p-4">
+                    <p class="text-[10px] font-semibold uppercase tracking-widest text-indigo-400">Paso 3 · Pulsa Analizar</p>
+                    <p class="mt-1.5 text-xs leading-relaxed text-slate-400">
+                        El loader muestra las fases del motor: conexion, extraccion de las 40
+                        features, aplicacion de las 9 heuristicas y calculo de riesgo. No recargues
+                        la pagina mientras dure: lo normal son pocos segundos.{% if data_mode == 'real' %}
+                        La barra superior "YouTube API real" indica que se usa la cuota oficial de
+                        comentarios de cada video.{% endif %}
+                    </p>
+                </li>
+                <li class="rounded-xl border border-white/5 bg-black/25 p-4">
+                    <p class="text-[10px] font-semibold uppercase tracking-widest text-indigo-400">Paso 4 · Interpreta los resultados</p>
+                    <p class="mt-1.5 text-xs leading-relaxed text-slate-400">
+                        Al terminar bajara el panel de resultados con una tarjeta que explica, en
+                        lenguaje natural, que significa cada medidor y cada grafico.
+                    </p>
+                </li>
+            </ol>
 
             <form id="analyze-form" class="mt-6 flex flex-col gap-3 sm:flex-row">
                 <div class="relative flex-1">
@@ -217,36 +406,190 @@
                     </button>
                 </div>
             </form>
+        </section>
+    </div>
 
-            <p class="mt-3 text-[11px] text-slate-600">
-                Formatos aceptados: <span class="font-mono text-slate-500">/watch?v=ID</span> ·
-                <span class="font-mono text-slate-500">youtu.be/ID</span> ·
-                <span class="font-mono text-slate-500">/shorts/ID</span> ·
-                <span class="font-mono text-slate-500">/embed/ID</span> · o el ID pelado.
-            </p>
-        </article>
-
-        <!-- --- Llamada a la demo en vivo --- -->
-        <article class="card card-hover anim-up p-0" style="animation-delay:.08s">
-            <div class="grad-risk h-1 w-full rounded-none" style="background-image:linear-gradient(100deg,#6366f1,#a855f7,#ec4899)"></div>
-            <div class="p-6">
-                <p class="text-[10px] font-medium uppercase tracking-widest text-fuchsia-300">Demo interactiva</p>
-                <h3 class="mt-2 text-lg font-semibold text-white">Simular ataque de bots en directo</h3>
-                <p class="mt-2 text-xs leading-relaxed text-slate-400">
-                    Genera un ataque sintetico y lo emite comentario a comentario. Usa las mismas
-                    9 heuristicas que el analisis real: no es un video grabado, es el motor funcionando.
-                </p>
-                <button type="button" id="demo-btn"
-                        class="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 via-fuchsia-600 to-pink-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-fuchsia-900/40 transition hover:brightness-110 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50">
-                    <span id="demo-btn-dot" class="h-2 w-2 rounded-full bg-white/80"></span>
-                    <span id="demo-btn-label">Lanzar demo en directo</span>
+    <!-- ---------------- VISTA 3 · OTRAS REDES SOCIALES ---------------- -->
+    <div id="view-others" class="hidden">
+        <section class="card anim-up p-6 sm:p-8 lg:p-10">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-slate-600/15 text-lg font-bold text-slate-300">O</span>
+                    <div>
+                        <h2 class="text-xl font-semibold tracking-tight text-white sm:text-2xl">Analizar otra red social</h2>
+                        <p class="text-xs text-slate-500">Guia de <span id="others-sub" class="text-slate-300">TikTok</span></p>
+                    </div>
+                </div>
+                <button type="button" id="others-back"
+                        class="rounded-lg border border-white/10 px-3.5 py-2 text-xs text-slate-300 transition hover:border-indigo-500/40 hover:text-indigo-300">
+                    Volver al inicio
                 </button>
-                <p class="mt-3 text-center text-[10px] text-slate-600">
-                    No requiere URL ni clave de API · no gasta cuota
+            </div>
+
+            <div class="mt-6 rounded-xl border border-amber-500/25 bg-amber-500/[.06] p-4 text-xs leading-relaxed text-amber-200/90">
+                <p class="font-semibold text-amber-200">Por que aqui el procedimiento es distinto</p>
+                <p class="mt-1">
+                    YouTube expone sus comentarios por una API publica: por eso basta una URL. El
+                    resto de plataformas cierran esa via (o la condicionan a permisos con
+                    aprobacion manual de la propia red), asi que la via estable es usar una
+                    herramienta web de exportacion: copias el enlace de la publicacion publica,
+                    la herramienta extrae los comentarios y descargas el archivo CSV (o JSON).
+                    Ese archivo se sube aqui y el motor que
+                    analiza es identico al de YouTube: mismas 40 features y mismas
+                    9 heuristicas.
                 </p>
             </div>
-        </article>
-    </section>
+
+            <div class="mt-6">
+                <label for="app-switch" class="text-[10px] uppercase tracking-widest text-slate-500">Elige la red social</label>
+                <div class="mt-2 flex flex-col gap-2 sm:flex-row sm:items-start">
+                    <select id="app-switch" class="field w-full sm:w-80" aria-label="Red social a configurar" title="Elige la red para ver solo su guia">
+                        <option value="tiktok">TikTok</option>
+                        <option value="instagram">Instagram</option>
+                        <option value="x">X (Twitter)</option>
+                        <option value="facebook">Facebook</option>
+                        <option value="threads">Threads</option>
+                        <option value="reddit">Reddit</option>
+                        <option value="linkedin">LinkedIn</option>
+                    </select>
+                    <p class="text-[11px] leading-relaxed text-slate-500">
+                        Cada red tiene su propia ventana: aqui solo se muestra la guia de la red
+                        elegida y como descargar su archivo CSV/JSON. Cambiar de red no mezcla
+                        informacion.
+                    </p>
+                </div>
+
+                <div id="guide-tiktok" class="app-guide mt-4 rounded-xl border border-white/5 bg-black/25 p-4">
+                    <p class="flex items-center gap-2 text-sm font-semibold text-white"><span class="grid h-7 w-7 place-items-center rounded-lg bg-cyan-500/15 text-xs font-bold text-cyan-300">T</span> TikTok</p>
+                    <p class="mt-2 text-xs leading-relaxed text-slate-400">Como obtener el CSV: copia el enlace del vídeo de TikTok, úsalo en una herramienta de exportación web y descarga el archivo CSV.</p>
+                    <div class="mt-2 flex flex-col gap-1.5">
+                        <a href="https://exporttok.com" target="_blank" rel="noopener"
+                           class="inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-cyan-300 underline decoration-cyan-500/40 underline-offset-2 transition hover:text-cyan-100">
+                            <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                            exporttok.com
+                        </a>
+                        <a href="https://commentpicker.com/tiktok-export.php" target="_blank" rel="noopener"
+                           class="inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-cyan-300 underline decoration-cyan-500/40 underline-offset-2 transition hover:text-cyan-100">
+                            <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                            commentpicker.com/tiktok-export.php
+                        </a>
+                    </div>
+                </div>
+
+                <div id="guide-instagram" class="app-guide mt-4 hidden rounded-xl border border-white/5 bg-black/25 p-4">
+                    <p class="flex items-center gap-2 text-sm font-semibold text-white"><span class="grid h-7 w-7 place-items-center rounded-lg bg-pink-500/15 text-xs font-bold text-pink-400">I</span> Instagram</p>
+                    <p class="mt-2 text-xs leading-relaxed text-slate-400">Como obtener el CSV: copia el enlace del post o Reel, entra a una herramienta de extracción online y descarga el reporte en formato CSV.</p>
+                    <a href="https://commentpicker.com/export-comments-instagram.php" target="_blank" rel="noopener"
+                       class="mt-2 inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-pink-400 underline decoration-pink-500/40 underline-offset-2 transition hover:text-pink-300">
+                        <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        commentpicker.com/export-comments-instagram.php
+                    </a>
+                </div>
+
+                <div id="guide-x" class="app-guide mt-4 hidden rounded-xl border border-white/5 bg-black/25 p-4">
+                    <p class="flex items-center gap-2 text-sm font-semibold text-white"><span class="grid h-7 w-7 place-items-center rounded-lg bg-slate-500/15 text-xs font-bold text-slate-200">X</span> X (Twitter)</p>
+                    <p class="mt-2 text-xs leading-relaxed text-slate-400">Como obtener el CSV: copia el enlace del tuit público y utiliza un servicio web de respaldo de respuestas para exportar el contenido en CSV/JSON.</p>
+                </div>
+
+                <div id="guide-facebook" class="app-guide mt-4 hidden rounded-xl border border-white/5 bg-black/25 p-4">
+                    <p class="flex items-center gap-2 text-sm font-semibold text-white"><span class="grid h-7 w-7 place-items-center rounded-lg bg-blue-500/15 text-xs font-bold text-blue-400">F</span> Facebook</p>
+                    <p class="mt-2 text-xs leading-relaxed text-slate-400">Como obtener el CSV: copia el enlace de la publicación pública de Facebook y usa una herramienta de analítica o generadora de reportes para descargar el archivo CSV.</p>
+                </div>
+
+                <div id="guide-threads" class="app-guide mt-4 hidden rounded-xl border border-white/5 bg-black/25 p-4">
+                    <p class="flex items-center gap-2 text-sm font-semibold text-white"><span class="grid h-7 w-7 place-items-center rounded-lg bg-slate-500/15 text-xs font-bold text-slate-300">T</span> Threads</p>
+                    <p class="mt-2 text-xs leading-relaxed text-slate-400">Como obtener el CSV: copia el enlace de la publicación de Threads, usa una herramienta online de exportación de respuestas y descárgalo a CSV.</p>
+                    <div class="mt-2 flex flex-col gap-1.5">
+                        <a href="https://zocialcomment.com/export/threads" target="_blank" rel="noopener"
+                           class="inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-slate-300 underline decoration-slate-500/40 underline-offset-2 transition hover:text-white">
+                            <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                            zocialcomment.com/export/threads
+                        </a>
+                        <a href="https://commentpicker.com/threads-tools.php" target="_blank" rel="noopener"
+                           class="inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-slate-300 underline decoration-slate-500/40 underline-offset-2 transition hover:text-white">
+                            <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                            commentpicker.com/threads-tools.php
+                        </a>
+                    </div>
+                </div>
+
+                <div id="guide-reddit" class="app-guide mt-4 hidden rounded-xl border border-white/5 bg-black/25 p-4">
+                    <p class="flex items-center gap-2 text-sm font-semibold text-white"><span class="grid h-7 w-7 place-items-center rounded-lg bg-orange-500/15 text-xs font-bold text-orange-400">R</span> Reddit</p>
+                    <p class="mt-2 text-xs leading-relaxed text-slate-400">Como obtener los datos (método instantáneo): copia el enlace de cualquier publicación o hilo público de Reddit, añade <span class="font-mono text-slate-500">.json</span> exactamente al final de la URL en la barra de direcciones del navegador (por ejemplo: <span class="font-mono text-slate-500">https://www.reddit.com/r/subreddit/comments/id/titulo/.json</span>), presiona Enter y guarda la página resultante como archivo <span class="font-mono text-slate-500">.json</span>. Tu aplicación ya acepta archivos <span class="font-mono text-slate-500">.json</span>, por lo que procesará el árbol de comentarios nativo de Reddit de forma directa y limpia al instante.</p>
+                </div>
+
+                <div id="guide-linkedin" class="app-guide mt-4 hidden rounded-xl border border-white/5 bg-black/25 p-4">
+                    <p class="flex items-center gap-2 text-sm font-semibold text-white"><span class="grid h-7 w-7 place-items-center rounded-lg bg-sky-600/15 text-xs font-bold text-sky-300">L</span> LinkedIn</p>
+                    <p class="mt-2 text-xs leading-relaxed text-slate-400">Como obtener el CSV: copia el enlace de la publicación profesional pública de LinkedIn y utiliza un exportador web de comentarios para descargar el archivo en CSV.</p>
+                    <a href="https://exportcomments.com/export-linkedin-comments" target="_blank" rel="noopener"
+                       class="mt-2 inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-sky-300 underline decoration-sky-500/40 underline-offset-2 transition hover:text-sky-100">
+                        <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        exportcomments.com/export-linkedin-comments
+                    </a>
+                </div>
+
+                <p class="mt-4 rounded-lg border border-white/5 bg-white/[.02] p-3 text-[11px] leading-relaxed text-slate-500">
+                    Nota: estas herramientas web suelen entregar el CSV/JSON al instante o por
+                    correo. Si el archivo viene en ZIP, descomprimelo y sube solo el archivo de
+                    comentarios. El limite es de
+                    <span class="text-slate-300">5 MB</span> y hasta <span class="text-slate-300">200 comentarios</span> por
+                    analisis (si tu archivo es mas grande, recorta una muestra).
+                </p>
+            </div>
+
+            <div class="mt-7">
+                <p class="text-[10px] uppercase tracking-widest text-slate-500">Como subir el archivo</p>
+                <form id="upload-form" class="mt-4">
+                    <div id="drop-zone" class="dropzone" tabindex="0" role="button"
+                         aria-label="Arrastra aqui tu archivo CSV o JSON, o pulsa para seleccionarlo">
+                        <input id="file-input" type="file" accept=".csv,.json,text/csv,application/json"
+                               class="absolute h-0 w-0 opacity-0" aria-hidden="true" tabindex="-1">
+                        <span class="grid h-10 w-10 place-items-center rounded-xl bg-indigo-500/12 text-indigo-300">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+                        </span>
+                        <span class="text-sm font-medium text-slate-200">
+                            Arrastra aqui tu archivo o <span class="text-indigo-300 underline decoration-indigo-500/40 underline-offset-2">selecciona uno</span>
+                        </span>
+                        <span id="file-name" class="max-w-full truncate font-mono text-[11px] text-slate-500">Ningun archivo seleccionado</span>
+                        <span id="file-meta" class="text-[10px] text-slate-600">CSV o JSON · maximo 5 MB · hasta 200 comentarios</span>
+                    </div>
+
+                    <div class="mt-3 flex flex-col gap-3 sm:flex-row">
+                        <select id="platform-select" class="field flex-1" aria-label="Red social de origen" title="Selecciona la red de la que viene el archivo">
+                            <option value="">Detectar la plataforma automaticamente</option>
+                            <option value="youtube">YouTube</option>
+                            <option value="tiktok">TikTok</option>
+                            <option value="instagram">Instagram</option>
+                            <option value="x">X (Twitter)</option>
+                            <option value="facebook">Facebook</option>
+                            <option value="threads">Threads</option>
+                            <option value="reddit">Reddit</option>
+                            <option value="linkedin">LinkedIn</option>
+                        </select>
+                        <select id="upload-limit" class="field sm:w-44" aria-label="Filas a analizar">
+                            <option value="100">100 comentarios</option>
+                            <option value="150">150 comentarios</option>
+                            <option value="200" selected>200 comentarios</option>
+                        </select>
+                        <button type="submit" id="upload-btn" disabled
+                                class="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-900/40 transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50">
+                            <span id="upload-label">Analizar archivo</span>
+                            <span id="upload-spinner" class="hidden spinner"></span>
+                        </button>
+                    </div>
+                </form>
+
+                <p class="mt-3 text-[11px] text-slate-600">
+                    Reconoce las columnas por su nombre: <span class="font-mono text-slate-500">autor/usuario</span> ·
+                    <span class="font-mono text-slate-500">texto/comment</span> ·
+                    <span class="font-mono text-slate-500">fecha</span> ·
+                    <span class="font-mono text-slate-500">likes</span> ·
+                    <span class="font-mono text-slate-500">replies</span>.
+                    El analisis es identico al de YouTube: mismas 40 features y mismas 9 heuristicas.
+                </p>
+            </div>
+        </section>
+    </div>
 
     <!-- ===================== ERROR ===================== -->
     <div id="error-box" class="mt-6 hidden rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200"></div>
@@ -323,6 +666,47 @@
 
     <!-- ===================== RESULTADOS ===================== -->
     <section id="results" class="mt-6 hidden grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+
+        <!-- --- Guia de interpretacion: que significa cada dato --- -->
+        <article id="results-guide" class="card card-hover anim-up lg:col-span-3">
+            <div class="flex items-start gap-3">
+                <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-indigo-500/15 text-base font-bold text-indigo-300">i</span>
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest text-slate-500">Guia rapida · que significa cada dato</p>
+                    <p class="mt-2 text-xs leading-relaxed text-slate-400">
+                        Todo el panel mide lo mismo: lo parecido que es cada comentario a un bot,
+                        en una escala del 0 al 100. Colores de riesgo: verde (&lt;30, bajo),
+                        ambar (30-59, medio), rojo (60+, alto) y morado (critico). Detalle:
+                    </p>
+                </div>
+            </div>
+            <div class="mt-4 grid grid-cols-1 gap-3 text-xs leading-relaxed text-slate-400 md:grid-cols-2 lg:grid-cols-3">
+                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
+                    <p class="font-semibold text-white">Gauge central (bots estimados)</p>
+                    <p class="mt-1">Es el % promedio de toda la muestra con su intervalo de confianza (la solidez de la estimacion). No es un usuario concreto: es el riesgo medio del conjunto.</p>
+                </div>
+                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
+                    <p class="font-semibold text-white">Metricas clave (8 tarjetas)</p>
+                    <p class="mt-1">Comentarios analizados y autores unicos (detecta si pocas cuentas dominan), % con enlaces, emojis por comentario, % duplicados y rafagas, score medio y mediana, desviacion (cuanto se dispersan los scores) y pico maximo.</p>
+                </div>
+                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
+                    <p class="font-semibold text-white">Distribucion por veredicto</p>
+                    <p class="mt-1">Cuanto de la muestra cae en cada franja: Alto (score &ge;60, rojo), Medio (30-59, ambar) y Bajo (&lt;30, verde). El grosor de cada barra es el % real.</p>
+                </div>
+                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
+                    <p class="font-semibold text-white">Histograma de scores</p>
+                    <p class="mt-1">10 casillas de 10 puntos (0-9, 10-19... 90-100). Cada barra se pinta del color de su franja de riesgo: una torre a la derecha = muchos comentarios muy sospechosos.</p>
+                </div>
+                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
+                    <p class="font-semibold text-white">9 heuristicas</p>
+                    <p class="mt-1">Las reglas ponderadas que producen el score (pesos suman 1.00). Cada fila muestra su contribucion media, su peso y cuantos comentarios saltaron esa regla; ventana para calibrar por que sube el riesgo.</p>
+                </div>
+                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
+                    <p class="font-semibold text-white">Hallazgos y comentarios sospechosos</p>
+                    <p class="mt-1">Hallazgos resume en lenguaje natural lo notable del analisis. Debajo, los 8 comentarios con score mas alto para que decidas tu mismo: despliega cada tarjeta para ver sus features y motivos.</p>
+                </div>
+            </div>
+        </article>
 
         <!-- --- Veredicto principal --- -->
         <article id="verdict-card" class="card risk-wash anim-up" data-risk="low">
@@ -426,7 +810,7 @@
                 <span class="mx-2 text-slate-700">·</span>
                 <span id="video-meta"></span>
             </p>
-            <p id="api-meta" class="mt-2 hidden text-[11px] text-slate-600"></p>
+            <p id="api-meta" class="source-trace mt-2 hidden text-[11px] text-slate-600"></p>
         </article>
 
         <!-- --- Comentarios sospechosos --- -->
@@ -445,7 +829,7 @@
     <section id="placeholder" class="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
         <article class="card card-hover">
             <p class="text-sm font-semibold text-white">1 · Extraccion</p>
-            <p class="mt-2 text-xs leading-relaxed text-slate-500">CommentThreads.list de la YouTube Data API v3. Sin clave, un simulador determinista genera datos de demo reproducibles.</p>
+            <p class="mt-2 text-xs leading-relaxed text-slate-500">CommentThreads.list de la YouTube Data API v3, o el archivo CSV / JSON que subas de TikTok, Instagram, X, Facebook y demas. Sin clave, un simulador determinista genera datos de demo reproducibles.</p>
         </article>
         <article class="card card-hover">
             <p class="text-sm font-semibold text-white">2 · Heuristicas</p>
@@ -500,6 +884,28 @@
         'Aplicando 9 heurísticas...',
         'Calculando riesgo...'
     ];
+
+    /** Fases cuando no hay clave de YouTube: el simulador es determinista. */
+    const SIM_PHASES = [
+        'Generando comentarios sinteticos...',
+        'Extrayendo 40 features por comentario...',
+        'Aplicando 9 heurísticas ponderadas...',
+        'Calculando riesgo y distribucion...'
+    ];
+
+    /** Fases del mismo motor cuando la fuente es un archivo CSV/JSON subido. */
+    const UPLOAD_PHASES = [
+        'Leyendo el archivo subido...',
+        'Mapeando columnas (autor, texto, fecha, likes)...',
+        'Extrayendo 40 features...',
+        'Aplicando 9 heurísticas...',
+        'Calculando riesgo...'
+    ];
+
+    /** Fichero elegido en la vista de "otra red". Nada hasta que llega. */
+    let selectedFile = null;
+    /** true mientras el servidor responde: bloquea botones y vistas. */
+    let isBusy = false;
 
     let phaseTimer = null;
     let phaseIndex = 0;
@@ -558,17 +964,60 @@
     }
 
     // ==================================================================
-    // Analisis normal
+    // Analisis normal (compartido por la URL de YouTube y por el archivo subido)
     // ==================================================================
+    /**
+     * POST y devuelve el payload ya validado.
+     * El cuerpo se lee como texto y se convierte a mano: si el servidor
+     * devuelve HTML (error 500 de un proxy, pagina en blanco) o una
+     * respuesta vacia, el parseo JSON lanza "Unexpected end of JSON input"
+     * y se pierde el motivo real del fallo.
+     */
+    async function postAnalysis(path, options) {
+        const response = await fetch(path, options);
+
+        const raw = await response.text();
+        let payload = null;
+        let parseError = null;
+        try {
+            payload = raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            parseError = e;
+        }
+
+        if (!response.ok) {
+            let msg = 'El servidor respondio ' + response.status;
+            if (payload && payload.detail) {
+                msg = typeof payload.detail === 'string'
+                    ? payload.detail
+                    : JSON.stringify(payload.detail);
+            } else if (parseError || !raw) {
+                msg += ' con la respuesta vacia. ¿El servidor se reinicio? '
+                    + 'Recarga la pagina y prueba de nuevo.';
+            }
+            throw new Error(msg);
+        }
+        if (parseError) {
+            throw new Error('La respuesta del servidor no es JSON valido. '
+                + 'Comprueba que http://' + window.location.host
+                + ' sea la app y no un proxy. Detalle: ' + parseError.message);
+        }
+        if (!payload) {
+            throw new Error('El servidor devolvio una respuesta vacia. '
+                + 'Recarga la pagina y prueba de nuevo.');
+        }
+        return payload;
+    }
+
     $('analyze-form').addEventListener('submit', async (event) => {
         event.preventDefault();
         stopDemo();
-        setLoading(true);
+        setLoading(true, 'url');
         $('error-box').classList.add('hidden');
         $('warning-box').classList.add('hidden');
 
         try {
-            const response = await fetch('/api/analyze', {
+            const payload = await postAnalysis('/api/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -577,37 +1026,6 @@
                     include_comments: true
                 })
             });
-
-            // El cuerpo se lee como texto y se convierte a mano: si el servidor
-            // devuelve HTML (error 500 de un proxy, pagina en blanco) o una
-            // respuesta vacia, `res.json()` lanza "Unexpected end of JSON
-            // input" y se pierde el motivo real del fallo.
-            const raw = await response.text();
-            let payload = null;
-            let parseError = null;
-            try {
-                payload = raw ? JSON.parse(raw) : null;
-            } catch (e) {
-                parseError = e;
-            }
-
-            if (!response.ok) {
-                let msg = 'El servidor respondio ' + response.status;
-                if (payload && payload.detail) {
-                    msg = typeof payload.detail === 'string'
-                        ? payload.detail
-                        : JSON.stringify(payload.detail);
-                } else if (parseError || !raw) {
-                    msg += ' con la respuesta vacia. ¿El servidor se reinicio? '
-                        + 'Recarga la pagina y prueba de nuevo.';
-                }
-                throw new Error(msg);
-            }
-            if (parseError) {
-                throw new Error('La respuesta del servidor no es JSON valido. '
-                    + 'Comprueba que http://' + window.location.host
-                    + ' sea la app y no un proxy. Detalle: ' + parseError.message);
-            }
             render(payload);
         } catch (error) {
             showError(error.message);
@@ -616,42 +1034,235 @@
         }
     });
 
+    // ==================================================================
+    // Carga de archivos multiplataforma (TikTok, Instagram, X, Facebook...)
+    // ==================================================================
+    $('upload-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        stopDemo();
+        $('error-box').classList.add('hidden');
+        $('warning-box').classList.add('hidden');
+
+        if (!selectedFile) {
+            showError('Selecciona primero un archivo CSV o JSON. Arrastralo a la '
+                + 'zona indicada o pulsa en ella para buscarlo.');
+            return;
+        }
+
+        setLoading(true, 'file');
+        try {
+            // FormData pone el Content-Type multipart solo: fijarlo a mano
+            // romperia el separador de borde que espera FastAPI.
+            const form = new FormData();
+            form.append('file', selectedFile, selectedFile.name);
+            const platform = $('platform-select').value;
+            form.append('platform', platform || '');
+            form.append('comment_limit', $('upload-limit').value || '200');
+            form.append('include_comments', 'true');
+
+            const payload = await postAnalysis('/api/analyze/upload', {
+                method: 'POST',
+                body: form
+            });
+            render(payload);
+        } catch (error) {
+            showError(error.message);
+        } finally {
+            setLoading(false);
+        }
+    });
+
+    // ==================================================================
+    // Navegacion entre vistas (SPA): bienvenida / youtube / otras redes.
+    // ==================================================================
+    function goTo(view) {
+        const views = {
+            welcome: 'view-welcome',
+            youtube: 'view-youtube',
+            others: 'view-others'
+        };
+        const target = views[view];
+        if (!target) return;
+        $('view-welcome').classList.add('hidden');
+        $('view-youtube').classList.add('hidden');
+        $('view-others').classList.add('hidden');
+        $(target).classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Cada red tiene su propia ventana en la vista 'others': elegir una red
+    // oculta el resto de guias y solo deja visible la de la red seleccionada.
+    const APP_NAMES = {
+        tiktok: 'TikTok', instagram: 'Instagram', x: 'X (Twitter)',
+        facebook: 'Facebook', threads: 'Threads', reddit: 'Reddit',
+        linkedin: 'LinkedIn'
+    };
+
+    function showApp(platform) {
+        if (!APP_NAMES[platform]) platform = 'tiktok';
+        const guides = document.querySelectorAll('.app-guide');
+        for (let i = 0; i < guides.length; i++) {
+            guides[i].classList.add('hidden');
+        }
+        $('guide-' + platform).classList.remove('hidden');
+        $('app-switch').value = platform;
+        $('platform-select').value = platform;
+        $('others-sub').textContent = APP_NAMES[platform];
+    }
+
+    $('youtube-back').addEventListener('click', () => goTo('welcome'));
+    $('others-back').addEventListener('click', () => goTo('welcome'));
+    $('nav-home').addEventListener('click', () => goTo('welcome'));
+
+    // Un unico oyente para las tarjetas de plataforma: del dataset salen el
+    // destino ('youtube' u 'others') y, en su caso, la red a abrir.
+    $('platform-grid').addEventListener('click', (event) => {
+        const card = event.target.closest('button[data-platform]');
+        if (!card) return;
+        const target = card.dataset.target || 'others';
+        if (target === 'others') {
+            showApp(card.dataset.platform);
+            goTo('others');
+            return;
+        }
+        goTo(target);
+    });
+
+    // Cambiar de red dentro de la vista 'others' abre la ventana de esa red.
+    $('app-switch').addEventListener('change', (event) => {
+        showApp(event.target.value);
+    });
+
+    // ==================================================================
+    // Selector de archivo + arrastrar y soltar
+    // ==================================================================
+    function humanSize(bytes) {
+        if (!bytes && bytes !== 0) return '';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    /** Valida y adopta el archivo. Devuelve false y deja el error en pantalla. */
+    function acceptFile(file) {
+        if (!file) return false;
+        const name = String(file.name || '').toLowerCase();
+
+        if (!name.endsWith('.csv') && !name.endsWith('.json')) {
+            selectedFile = null;
+            showError('Formato «' + (file.name || '?') + '» no soportado. '
+                + 'Sube un archivo CSV o JSON exportado de la red social.');
+            return false;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            selectedFile = null;
+            showError('El archivo pesa ' + humanSize(file.size)
+                + ' y el maximo aceptado es 5 MB. Analiza una muestra, no el vertido completo.');
+            return false;
+        }
+
+        selectedFile = file;
+        setText('file-name', file.name);
+        setText('file-meta', (name.endsWith('.json') ? 'JSON' : 'CSV')
+            + ' · ' + humanSize(file.size)
+            + ' · se analizaran hasta ' + ($('upload-limit').value || '200') + ' comentarios');
+        $('drop-zone').classList.add('has-file');
+        $('upload-btn').disabled = false;
+        $('error-box').classList.add('hidden');
+        return true;
+    }
+
+    // El click sintetico de file-input burbujea hasta drop-zone: sin el guard
+    // se dispararia a si mismo en bucle infinito.
+    $('drop-zone').addEventListener('click', (event) => {
+        if (event.target === $('file-input')) return;
+        $('file-input').click();
+    });
+    $('drop-zone').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            $('file-input').click();
+        }
+    });
+    $('file-input').addEventListener('change', (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!acceptFile(file)) {
+            event.target.value = '';
+            setText('file-name', 'Ningun archivo seleccionado');
+            setText('file-meta', 'CSV o JSON · maximo 5 MB · hasta 200 comentarios');
+            $('drop-zone').classList.remove('has-file');
+            $('upload-btn').disabled = true;
+            selectedFile = null;
+        }
+    });
+    ['dragenter', 'dragover'].forEach(type => {
+        $('drop-zone').addEventListener(type, (event) => {
+            event.preventDefault();
+            $('drop-zone').classList.add('is-over');
+        });
+    });
+    ['dragleave', 'dragend'].forEach(type => {
+        $('drop-zone').addEventListener(type, (event) => {
+            event.preventDefault();
+            $('drop-zone').classList.remove('is-over');
+        });
+    });
+    $('drop-zone').addEventListener('drop', (event) => {
+        event.preventDefault();
+        $('drop-zone').classList.remove('is-over');
+        const file = event.dataTransfer && event.dataTransfer.files
+            && event.dataTransfer.files[0];
+        if (file) acceptFile(file);
+    });
+    $('upload-limit').addEventListener('change', () => {
+        if (selectedFile) {
+            setText('file-meta', (selectedFile.name.toLowerCase().endsWith('.json') ? 'JSON' : 'CSV')
+                + ' · ' + humanSize(selectedFile.size)
+                + ' · se analizaran hasta ' + $('upload-limit').value + ' comentarios');
+        }
+    });
+
     /** Loader con fases rotativas y barra que se acerca al 100% sin saltos falsos. */
-    function setLoading(active) {
+    function setLoading(active, mode) {
+        const source = mode || 'url';
+        const isFile = source === 'file';
         const loader = $('loader');
         const btn = $('submit-btn');
-        if (!loader || !btn) return;
-        btn.disabled = active;
-        $('btn-spinner').classList.toggle('hidden', !active);
-        setText('btn-label', active ? 'Analizando...' : 'Analizar');
+        const upBtn = $('upload-btn');
+        if (!loader || !btn || !upBtn) return;
+
+        isBusy = active;
+        btn.disabled = isBusy;
+        upBtn.disabled = isBusy || !selectedFile;
+
+        $('btn-spinner').classList.toggle('hidden', !active || isFile);
+        $('upload-spinner').classList.toggle('hidden', !active || !isFile);
+        setText('btn-label', active && !isFile ? 'Analizando...' : 'Analizar');
+        setText('upload-label', active && isFile ? 'Analizando...' : 'Analizar archivo');
+
         loader.classList.toggle('hidden', !active);
         if (!active) { stopPhases(); return; }
 
         const realMode = document.body.dataset.mode === 'real';
+        const phases = isFile ? UPLOAD_PHASES : (realMode ? PHASES : SIM_PHASES);
         phaseIndex = 0;
-        setText('loader-phase', realMode ? PHASES[0] : 'Preparando dataset de demostracion...');
+        setText('loader-phase', phases[0]);
         animateNumber($('loader-pct'), 0, 0, '%');
 
         // Cada fase sube el techo de la barra: nunca llega al 100% hasta que
         // el servidor responde de verdad.
-        const ceilings = realMode ? [22, 48, 74, 92] : [30, 58, 80, 94];
+        const ceilings = isFile ? [18, 44, 68, 86, 94]
+            : (realMode ? [22, 48, 74, 92] : [30, 58, 80, 94]);
         loaderTarget = ceilings[0];
         advancePhase();
 
         phaseTimer = setInterval(() => {
-            phaseIndex = (phaseIndex + 1) % PHASES.length;
-            setText('loader-phase', realMode ? PHASES[phaseIndex] : demoPhase(phaseIndex));
+            phaseIndex = (phaseIndex + 1) % phases.length;
+            setText('loader-phase', phases[phaseIndex]);
             loaderTarget = ceilings[Math.min(phaseIndex + 1, ceilings.length - 1)];
             animateNumber($('loader-pct'), loaderTarget, 0, '%');
             setBar('loader-bar', loaderTarget);
         }, 1100);
-    }
-
-    function demoPhase(index) {
-        return ['Generando comentarios sinteticos...',
-                'Extrayendo 40 features por comentario...',
-                'Aplicando 9 heurísticas ponderadas...',
-                'Calculando riesgo y distribucion...'][index];
     }
 
     function stopPhases() {
@@ -813,6 +1424,20 @@
 
     function renderSource(data) {
         const s = data.source || {};
+
+        // Archivo subido (TikTok, Instagram, X...): la "URL" es el nombre del
+        // fichero y el rastro es el del parser, no el de la YouTube Data API.
+        if (s.is_upload) {
+            setText('video-title', s.title || 'Archivo subido');
+            setText('video-id', 'ARCHIVO');
+            const bits = [];
+            if (s.platform) bits.push('Red social: ' + s.platform);
+            bits.push(plural(s.comment_count || 0, 'comentario', 'comentarios') + ' leidos');
+            setText('video-meta', bits.join(' · '));
+            renderApiMeta(data);
+            return;
+        }
+
         setText('video-title', s.title || '(sin titulo - dataset simulado)');
         setText('video-id', s.is_demo ? 'DEMO' : 'ID ' + s.video_id);
         const parts = [];
@@ -823,11 +1448,26 @@
         renderApiMeta(data);
     }
 
-    /** Traza de la llamada real a la YouTube Data API (vacio en modo simulacion). */
+    /** Traza de la fuente: YouTube Data API v3, simulador o archivo subido. */
     function renderApiMeta(data) {
         const api = data.api || {};
         const box = $('api-meta');
         if (!box) return;
+
+        if (api.engine === 'archivo') {
+            const bits = [];
+            if (api.column_mapping && Object.keys(api.column_mapping).length) {
+                bits.push('columnas: ' + Object.keys(api.column_mapping).join(', '));
+            }
+            if (api.rows_in_file && api.rows_used && api.rows_in_file !== api.rows_used) {
+                bits.push(plural(api.rows_in_file, 'fila', 'filas') + ' en el archivo -> '
+                    + plural(api.rows_used, 'analizadas', 'analizadas'));
+            }
+            box.textContent = 'Archivo subido · ' + (api.trace || '') + ' · ' + bits.join(' · ');
+            box.classList.remove('hidden');
+            return;
+        }
+
         if (!api.pages_fetched) { box.classList.add('hidden'); return; }
 
         const bits = [];

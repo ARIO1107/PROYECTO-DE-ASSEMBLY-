@@ -12,6 +12,7 @@
 fastapi>=0.115.6,<1.0
 uvicorn[standard]>=0.34.0,<1.0        # servidor ASGI + hot-reload en desarrollo
 jinja2>=3.1.5,<4.0                    # motor de plantillas para /templates
+python-multipart>=0.0.18,<1.0         # multipart/form-data: subida de CSV/JSON
 
 # --- Validacion / configuracion --------------------------------------------
 pydantic>=2.10.4,<3.0                 # modelos de request/response y validacion
