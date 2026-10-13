@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# Project Assembly - orquestacion local de desarrollo
+# SocialBotGuard - orquestacion local de desarrollo
 # ---------------------------------------------------------------------------
 # Uso rapido:  docker compose up --build      -> http://localhost:8000
 #
@@ -15,8 +15,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: project-assembly:1.0.0
-    container_name: assembly-api
+    image: project-assembly:2.0.0
+    container_name: socialbotguard-api
     restart: unless-stopped
 
     ports:
@@ -25,11 +25,8 @@ services:
     environment:
       APP_ENV: development
       PORT: "8000"
-      # Vacia = modo simulacion determinista (demo funcional sin cuota).
-      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
-      MAX_COMMENTS: ${MAX_COMMENTS:-120}
-      REQUEST_TIMEOUT: ${REQUEST_TIMEOUT:-10}
-      SIMULATION_SALT: ${SIMULATION_SALT:-assembly-v1}
+      APP_NAME: SocialBotGuard
+      APP_VERSION: "2.0.0"
 
     volumes:
       # Hot-reload del codigo + templates en desarrollo.
@@ -57,9 +54,9 @@ services:
         max-size: "10m"
         max-file: "3"
 
-    # Limite de recursos: evita que un analisis descontrolado tumbe el host.
+    # Limite de recursos: el simulador es ligero, pero acota el contenedor.
     deploy:
       resources:
         limits:
           cpus: "1.0"
-          memory: 768M
+          memory: 512M
