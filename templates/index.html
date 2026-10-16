@@ -256,54 +256,18 @@
                 de bots, con su distribucion por veredicto.
             </p>
 
-            <div id="platform-grid" class="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <div id="platform-grid" class="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-2">
                 <button type="button" id="pick-youtube" data-platform="" data-target="youtube"
-                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-4 text-left transition hover:-translate-y-0.5 hover:border-red-500/45 hover:bg-red-500/[.07]">
+                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-6 text-left transition hover:-translate-y-0.5 hover:border-red-500/45 hover:bg-red-500/[.07]">
                     <span class="grid h-11 w-11 place-items-center rounded-xl bg-red-500/15 text-lg font-bold text-red-400">Y</span>
-                    <span class="text-sm font-semibold text-white">YouTube</span>
+                    <span class="text-base font-semibold text-white">Analizar YouTube</span>
                     <span class="text-[11px] text-slate-500">Pega la URL del video</span>
                 </button>
-                <button type="button" id="pick-tiktok" data-platform="tiktok" data-target="others"
-                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-4 text-left transition hover:-translate-y-0.5 hover:border-cyan-500/45 hover:bg-cyan-500/[.07]">
-                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-cyan-500/15 text-lg font-bold text-cyan-300">T</span>
-                    <span class="text-sm font-semibold text-white">TikTok</span>
-                    <span class="text-[11px] text-slate-500">CSV desde el enlace</span>
-                </button>
-                <button type="button" id="pick-instagram" data-platform="instagram" data-target="others"
-                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-4 text-left transition hover:-translate-y-0.5 hover:border-pink-500/45 hover:bg-pink-500/[.07]">
-                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-pink-500/15 text-lg font-bold text-pink-400">I</span>
-                    <span class="text-sm font-semibold text-white">Instagram</span>
-                    <span class="text-[11px] text-slate-500">CSV desde el enlace</span>
-                </button>
-                <button type="button" id="pick-x" data-platform="x" data-target="others"
-                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-4 text-left transition hover:-translate-y-0.5 hover:border-slate-300/45 hover:bg-slate-400/[.07]">
-                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-slate-500/15 text-lg font-bold text-slate-200">X</span>
-                    <span class="text-sm font-semibold text-white">X (Twitter)</span>
-                    <span class="text-[11px] text-slate-500">CSV/JSON del tuit</span>
-                </button>
-                <button type="button" id="pick-facebook" data-platform="facebook" data-target="others"
-                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-4 text-left transition hover:-translate-y-0.5 hover:border-blue-500/45 hover:bg-blue-500/[.07]">
-                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-blue-500/15 text-lg font-bold text-blue-400">F</span>
-                    <span class="text-sm font-semibold text-white">Facebook</span>
-                    <span class="text-[11px] text-slate-500">Reporte CSV</span>
-                </button>
-                <button type="button" id="pick-threads" data-platform="threads" data-target="others"
-                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-4 text-left transition hover:-translate-y-0.5 hover:border-gray-300/45 hover:bg-gray-300/[.07]">
-                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-slate-500/15 text-lg font-bold text-slate-300">T</span>
-                    <span class="text-sm font-semibold text-white">Threads</span>
-                    <span class="text-[11px] text-slate-500">Exportador web</span>
-                </button>
-                <button type="button" id="pick-reddit" data-platform="reddit" data-target="others"
-                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-4 text-left transition hover:-translate-y-0.5 hover:border-orange-500/45 hover:bg-orange-500/[.07]">
-                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-orange-500/15 text-lg font-bold text-orange-400">R</span>
-                    <span class="text-sm font-semibold text-white">Reddit</span>
-                    <span class="text-[11px] text-slate-500">Truco .json</span>
-                </button>
-                <button type="button" id="pick-linkedin" data-platform="linkedin" data-target="others"
-                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-4 text-left transition hover:-translate-y-0.5 hover:border-sky-500/45 hover:bg-sky-500/[.07]">
-                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-sky-600/15 text-lg font-bold text-sky-300">L</span>
-                    <span class="text-sm font-semibold text-white">LinkedIn</span>
-                    <span class="text-[11px] text-slate-500">Exportador web</span>
+                <button type="button" id="pick-others" data-platform="tiktok" data-target="others"
+                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-6 text-left transition hover:-translate-y-0.5 hover:border-slate-400/45 hover:bg-slate-400/[.07]">
+                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-slate-500/15 text-lg font-bold text-slate-300">O</span>
+                    <span class="text-base font-semibold text-white">Otras redes sociales</span>
+                    <span class="text-[11px] text-slate-500">Sube CSV/JSON</span>
                 </button>
             </div>
         </section>
@@ -641,12 +605,16 @@
                         <p id="demo-status" class="text-[11px] text-slate-500">Conectando con el stream...</p>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button type="button" id="demo-stop"
-                            class="rounded-lg border border-white/10 px-3.5 py-2 text-xs text-slate-300 transition hover:border-rose-500/40 hover:text-rose-300">
-                        Detener
-                    </button>
-                </div>
+            <div class="flex items-center gap-2">
+                <button type="button" id="demo-clear"
+                        class="rounded-lg border border-white/10 px-3.5 py-2 text-xs text-slate-300 transition hover:border-indigo-500/40 hover:text-indigo-300">
+                    Limpiar/Reiniciar muro
+                </button>
+                <button type="button" id="demo-stop"
+                        class="rounded-lg border border-white/10 px-3.5 py-2 text-xs text-slate-300 transition hover:border-rose-500/40 hover:text-rose-300">
+                    Detener
+                </button>
+            </div>
             </div>
 
             <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -833,25 +801,19 @@
             </div>
             <div id="comments-list" class="divide-y divide-white/5"></div>
         </article>
+        <div class="mt-5 flex justify-end lg:col-span-3">
+            <button type="button" id="results-clear"
+                    class="rounded-lg border border-white/10 px-4 py-2 text-xs text-slate-300 transition hover:border-indigo-500/40 hover:text-indigo-300">
+                Limpiar resultados
+            </button>
+        </div>
     </section>
 
     <p id="analysis-id" class="mt-5 text-center text-[11px] text-slate-600"></p>
 
-    <!-- ===================== ESTADO INICIAL ===================== -->
-    <section id="placeholder" class="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <article class="card card-hover">
-            <p class="text-sm font-semibold text-white">1 · Extraccion</p>
-            <p class="mt-2 text-xs leading-relaxed text-slate-500">CommentThreads.list de la YouTube Data API v3, o el archivo CSV / JSON que subas de TikTok, Instagram, X, Facebook y demas. Sin clave, un simulador determinista genera datos de demo reproducibles.</p>
-        </article>
-        <article class="card card-hover">
-            <p class="text-sm font-semibold text-white">2 · Heuristicas</p>
-            <p class="mt-2 text-xs leading-relaxed text-slate-500">9 reglas ponderadas que suman 1.0: lexico de spam, identidad, contenido generico, ruido, temporal, formato, duplicados, emojis e interaccion.</p>
-        </article>
-        <article class="card card-hover">
-            <p class="text-sm font-semibold text-white">3 · Agregacion</p>
-            <p class="mt-2 text-xs leading-relaxed text-slate-500">Media ponderada + efecto cluster (rafagas y duplicados) + intervalo de confianza. pandas hace el agregado.</p>
-        </article>
-    </section>
+    <!-- Solo se muestra el demo en directo en la pantalla principal. Los resultados
+         de un analisis de YouTube u otra red se ocultan al volver al inicio. -->
+    <section id="placeholder" class="hidden"></section>
 </main>
 
 <footer class="border-t border-white/5 py-8 text-center text-[11px] text-slate-600">
@@ -982,51 +944,11 @@
     // ==================================================================
     // Utilidades
     // ==================================================================
-    function escapeHtml(value) {
-        return String(value).replace(/[&<>"']/g,
-            c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    }
+                
 
-    function formatNumber(value) {
-        return new Intl.NumberFormat('es-ES').format(value);
-    }
+            function escapeHtml(v){var s=String(v);return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
-    function formatDate(iso) {
-        try {
-            return new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
-        } catch (e) {
-            return iso;
-        }
-    }
-
-    /** Cuenta animada de 0 al valor pedido (easeOutCubic). */
-    function animateNumber(el, to, decimals, suffix) {
-        if (!el) return;
-        const target = Number(to);
-        if (!isFinite(target)) { el.textContent = String(to); return; }
-        const duration = 950;
-        const started = performance.now();
-        const step = (now) => {
-            const p = Math.min(1, (now - started) / duration);
-            const eased = 1 - Math.pow(1 - p, 3);
-            el.textContent = (target * eased).toFixed(decimals || 0) + (suffix || '');
-            if (p < 1) requestAnimationFrame(step);
-        };
-        requestAnimationFrame(step);
-    }
-
-    /** Escribe el ancho de una barra. Sin esto, un id mal escrito rompe el render. */
-    function setBar(id, pct) {
-        const bar = $(id);
-        if (bar) bar.style.width = Math.max(0, Math.min(100, pct || 0)) + '%';
-    }
-
-    function setText(id, value) {
-        const el = $(id);
-        if (el) el.textContent = value;
-    }
-
-    function plural(n, singular, pluralForm) {
+function plural(n, singular, pluralForm) {
         return formatNumber(n) + ' ' + (n === 1 ? singular : pluralForm);
     }
 
@@ -1153,6 +1075,14 @@
     // ==================================================================
     // Navegacion entre vistas (SPA): bienvenida / youtube / otras redes.
     // ==================================================================
+    // Al volver al inicio, los resultados de un analisis y el muro demo se
+    // limpian: la pantalla principal solo muestra la bienvenida y la demo.
+    function cleanForHome() {
+        if (demoSource) stopDemo(false);
+        clearDemoWall();
+        $('results').classList.add('hidden');
+    }
+
     function goTo(view) {
         const views = {
             welcome: 'view-welcome',
@@ -1161,6 +1091,7 @@
         };
         const target = views[view];
         if (!target) return;
+        if (view === 'welcome') cleanForHome();
         $('view-welcome').classList.add('hidden');
         $('view-youtube').classList.add('hidden');
         $('view-others').classList.add('hidden');
@@ -1769,6 +1700,29 @@
         if (dot) dot.classList.remove('breath');
         setBar('demo-progress', completed ? 100 : 0);
     }
+
+    // Limpieza de demo wall y panel
+    function clearDemoWall() {
+        const wall = $('demo-wall');
+        if (wall) wall.innerHTML = '';
+        setText('demo-stat-total', '0');
+        setText('demo-stat-bots', '0');
+        setText('demo-stat-avg', '0');
+        setText('demo-stat-high', '0');
+        setBar('demo-progress', 0);
+        setText('demo-status', 'Muro reiniciado');
+        const panel = $('demo-panel');
+        if (panel) panel.classList.add('hidden');
+    }
+
+    $('demo-clear').addEventListener('click', () => {
+        if (demoSource) stopDemo(false);
+        clearDemoWall();
+    });
+
+    $('results-clear').addEventListener('click', () => {
+        $('results').classList.add('hidden');
+    });
 </script>
 </body>
 </html>
