@@ -29,11 +29,13 @@ services:
       - key: APP_ENV
         value: production
       - key: APP_NAME
-        value: Project Assembly
+        value: BotWard
       - key: APP_VERSION
         value: "1.0.0"
       - key: MAX_COMMENTS
-        value: "120"
+        value: "300"
+      - key: MAX_API_PAGES
+        value: "10"
       - key: YOUTUBE_API_KEY
         sync: false
       - key: SIMULATION_SALT

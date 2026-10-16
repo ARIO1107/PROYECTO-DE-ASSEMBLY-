@@ -1,5 +1,5 @@
 """
-Project Assembly - MVP de deteccion de bots en comentarios de redes sociales
+BotWard - MVP de deteccion de bots en comentarios de redes sociales
 =============================================================================
 
 Arquitectura
@@ -90,7 +90,7 @@ class Settings(BaseSettings):
         populate_by_name=True,
     )
 
-    app_name: str = Field(default="Project Assembly", validation_alias=AliasChoices("APP_NAME", "app_name"))
+    app_name: str = Field(default="BotWard", validation_alias=AliasChoices("APP_NAME", "app_name"))
     app_version: str = Field(default="1.0.0", validation_alias=AliasChoices("APP_VERSION", "app_version"))
     environment: str = Field(
         default="development",
@@ -104,7 +104,7 @@ class Settings(BaseSettings):
     )
 
     # Limites de recogida del dataset por analisis.
-    max_comments: int = Field(default=120, ge=10, le=300)
+    max_comments: int = Field(default=300, ge=10, le=2000)
     request_timeout: float = Field(default=10.0, gt=0, le=60)
 
     # Semilla del simulador: cambiarla cambia los datos falsos generados.
@@ -113,7 +113,7 @@ class Settings(BaseSettings):
     # --- Parametros de la YouTube Data API v3 ------------------------------
     # Cada llamada a commentThreads.list cuesta 1 unidad de las 10.000/dia
     # gratuitas, con independencia de cuantos comentarios devuelva.
-    max_api_pages: int = Field(default=5, ge=1, le=20, validation_alias=AliasChoices("MAX_API_PAGES"))
+    max_api_pages: int = Field(default=10, ge=1, le=30, validation_alias=AliasChoices("MAX_API_PAGES"))
     api_quota_per_page: int = Field(default=1, ge=1, le=100, validation_alias=AliasChoices("API_QUOTA_PER_PAGE"))
     api_retries: int = Field(default=3, ge=1, le=6, validation_alias=AliasChoices("API_RETRIES"))
     api_backoff_seconds: float = Field(default=1.0, ge=0.1, le=30, validation_alias=AliasChoices("API_BACKOFF_SECONDS"))
@@ -142,7 +142,7 @@ class AnalyzeRequest(BaseModel):
     comment_limit: Optional[int] = Field(
         default=None,
         ge=10,
-        le=300,
+        le=2000,
         description="Numero maximo de comentarios a analizar (por defecto: settings.max_comments).",
     )
     include_comments: bool = Field(
@@ -981,8 +981,8 @@ def _render_bot_text(rng: random.Random) -> str:
 # Limites a proposito: esto analiza MUESTRAS (hasta 200 filas), no vertidos de
 # un millon de comentarios. Un fichero de 100 MB se rechaza antes de leerlo.
 
-UPLOAD_MAX_BYTES = 5 * 1024 * 1024       # 5 MB: suficiente para 200 filas de sobra
-UPLOAD_MAX_ROWS = 200                    # el usuario pide 150-200; fijamos el techo
+UPLOAD_MAX_BYTES = 16 * 1024 * 1024      # 16 MB: margen para muestras grandes (CSV/JSON)
+UPLOAD_MAX_ROWS = 2000                   # techo de la muestra subida por archivo
 UPLOAD_FORMATS = ("csv", "json")
 
 # Alias de columna -> campo canonico. Se normalizan sin acentos ni puntuacion,
@@ -2623,7 +2623,7 @@ async def analyze_upload(
 
 @app.post("/api/demo/live", response_model=AnalyzeResponse, tags=["demo"])
 async def demo_live(
-    comment_limit: int = Query(40, ge=10, le=120, description="Comentarios de la demo."),
+    comment_limit: int = Query(60, ge=10, le=500, description="Comentarios de la demo."),
 ) -> AnalyzeResponse:
     """Analisis instantaneo de un ataque de bots simulado, sin pedir URL.
 
@@ -2639,7 +2639,7 @@ async def demo_live(
 @app.get("/api/demo/stream", tags=["demo"])
 async def demo_stream(
     request: Request,
-    comment_limit: int = Query(30, ge=4, le=120, description="comentarios a emitir."),
+    comment_limit: int = Query(30, ge=4, le=500, description="comentarios a emitir."),
     delay: float = Query(0.28, ge=0.0, le=2.0, description="segundos entre comentarios."),
 ) -> StreamingResponse:
     """Emite un ataque de bots en vivo por Server-Sent Events.

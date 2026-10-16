@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ app_name }} · Detector de bots en comentarios</title>
+    <title>BotWard · Detector de bots en comentarios</title>
     <meta name="description" content="Analisis heuristico de comentarios de YouTube, TikTok, Instagram, X, Facebook y mas redes para estimar la presencia de bots.">
     <meta name="color-scheme" content="dark">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
@@ -184,7 +184,7 @@
     </style>
 </head>
 
-<body class="bg-ink-950 text-slate-200 antialiased selection:bg-indigo-500/30" data-mode="{{ data_mode }}">
+<body class="bg-ink-950 text-slate-200 antialiased selection:bg-indigo-500/30" data-mode="simulated">
 
 <!-- Fondo ambiental: dos focos de color muy suaves, sin coste de red. -->
 <div aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
@@ -196,34 +196,42 @@
 <header class="sticky top-0 z-30 border-b border-white/5 bg-ink-950/75 backdrop-blur-xl">
     <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3.5">
         <div class="flex items-center gap-3">
-            <div class="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-600 text-sm font-bold shadow-lg shadow-indigo-900/40">A</div>
+            <div class="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-600 text-sm font-bold shadow-lg shadow-indigo-900/40">B</div>
             <div>
-                <h1 class="text-sm font-semibold tracking-tight text-white">{{ app_name }}</h1>
+                <h1 class="text-sm font-semibold tracking-tight text-white">BotWard</h1>
                 <p class="text-[11px] leading-tight text-slate-500">Deteccion de bots en comentarios</p>
             </div>
         </div>
 
         <div class="flex items-center gap-2 text-[11px]">
-            <span class="hidden rounded-full border border-white/10 px-2.5 py-1 text-slate-400 sm:inline">v{{ app_version }}</span>
+            <span class="js-version hidden rounded-full border border-white/10 px-2.5 py-1 text-slate-400 sm:inline">v1.0.0</span>
             <button type="button" id="nav-home"
                     class="rounded-full border border-white/10 px-2.5 py-1 text-slate-400 transition hover:border-indigo-500/40 hover:text-indigo-300">
                 Inicio
             </button>
-            {% if data_mode == 'real' %}
-                <span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-emerald-300">
-                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 breath"></span> YouTube API real
-                </span>
-            {% else %}
-                <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-300">
-                    <span class="h-1.5 w-1.5 rounded-full bg-amber-400 breath"></span> Modo simulacion
-                </span>
-            {% endif %}
-            <span class="hidden rounded-full border border-white/10 px-2.5 py-1 text-slate-400 sm:inline">v{{ app_version }}</span>
+            <span id="mode-badge" class="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-300">
+                <span class="h-1.5 w-1.5 rounded-full bg-amber-400 breath"></span> <span id="mode-badge-text">Modo simulacion</span>
+            </span>
+            <span class="js-version hidden rounded-full border border-white/10 px-2.5 py-1 text-slate-400 sm:inline">v1.0.0</span>
         </div>
     </div>
 </header>
 
 <main class="mx-auto max-w-7xl px-5 pb-20 pt-8">
+
+    <!-- Aviso de conexion: solo aparece si la pagina no puede hablar con el
+         servidor (abierta como archivo sin `python app.py`). -->
+    <div id="offline-banner" class="hidden mb-6">
+        <div class="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5 text-sm text-amber-100">
+            <p class="text-base font-semibold text-amber-200">La aplicacion no esta conectada al servidor</p>
+            <p id="offline-banner-text" class="mt-1.5 leading-relaxed text-amber-200/90">
+                Ejecuta <span class="rounded bg-black/30 px-1.5 py-0.5 font-mono text-amber-100">python app.py</span>
+                y abre <span class="rounded bg-black/30 px-1.5 py-0.5 font-mono text-amber-100">http://localhost:8000</span>
+                en el navegador. No abras el archivo <span class="font-mono">index.html</span> directamente:
+                sin el servidor, el analisis no puede funcionar.
+            </p>
+        </div>
+    </div>
 
     <!-- ==================================================================
          VISTAS DE LA SPA.
@@ -359,7 +367,7 @@
                     <p class="text-[10px] font-semibold uppercase tracking-widest text-indigo-400">Paso 2 · Pegala y elige el tamaño</p>
                     <p class="mt-1.5 text-xs leading-relaxed text-slate-400">
                         El campo viene relleno con un ejemplo por defecto. Sustituyelo por tu URL y
-                        elige cuantos comentarios analizar: 40, 80 o 150 (los mas relevantes).
+                        elige cuantos comentarios analizar: 50, 100, 250, 500 o 1000 (los mas relevantes).
                     </p>
                 </li>
                 <li class="rounded-xl border border-white/5 bg-black/25 p-4">
@@ -367,9 +375,9 @@
                     <p class="mt-1.5 text-xs leading-relaxed text-slate-400">
                         El loader muestra las fases del motor: conexion, extraccion de las 40
                         features, aplicacion de las 9 heuristicas y calculo de riesgo. No recargues
-                        la pagina mientras dure: lo normal son pocos segundos.{% if data_mode == 'real' %}
-                        La barra superior "YouTube API real" indica que se usa la cuota oficial de
-                        comentarios de cada video.{% endif %}
+                        la pagina mientras dure: lo normal son pocos segundos.
+                        <span id="mode-note" class="hidden">La barra superior "YouTube API real" indica que se usa la cuota oficial de
+                        comentarios de cada video.</span>
                     </p>
                 </li>
                 <li class="rounded-xl border border-white/5 bg-black/25 p-4">
@@ -387,7 +395,7 @@
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8zM9.5 15.5v-7l6.5 3.5-6.5 3.5z"/></svg>
                     </span>
                     <input id="url" name="url" type="text" required spellcheck="false"
-                           value="{{ default_url }}"
+                           value="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
                            placeholder="https://www.youtube.com/watch?v=..."
                            class="w-full rounded-xl border border-white/10 bg-ink-900 py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-600 outline-none transition focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/20">
                 </div>
@@ -395,9 +403,11 @@
                 <div class="flex gap-3">
                     <select id="limit" name="comment_limit"
                             class="rounded-xl border border-white/10 bg-ink-900 px-3 py-3.5 text-sm text-slate-300 outline-none transition focus:border-indigo-500/60">
-                        <option value="40">40 comentarios</option>
-                        <option value="80" selected>80 comentarios</option>
-                        <option value="150">150 comentarios</option>
+                        <option value="50">50 comentarios</option>
+                        <option value="100" selected>100 comentarios</option>
+                        <option value="250">250 comentarios</option>
+                        <option value="500">500 comentarios</option>
+                        <option value="1000">1000 comentarios</option>
                     </select>
                     <button type="submit" id="submit-btn"
                             class="flex items-center gap-2 rounded-xl bg-indigo-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-50">
@@ -532,7 +542,7 @@
                     Nota: estas herramientas web suelen entregar el CSV/JSON al instante o por
                     correo. Si el archivo viene en ZIP, descomprimelo y sube solo el archivo de
                     comentarios. El limite es de
-                    <span class="text-slate-300">5 MB</span> y hasta <span class="text-slate-300">200 comentarios</span> por
+                    <span class="text-slate-300">16 MB</span> y hasta <span class="text-slate-300">2000 comentarios</span> por
                     analisis (si tu archivo es mas grande, recorta una muestra).
                 </p>
             </div>
@@ -551,7 +561,7 @@
                             Arrastra aqui tu archivo o <span class="text-indigo-300 underline decoration-indigo-500/40 underline-offset-2">selecciona uno</span>
                         </span>
                         <span id="file-name" class="max-w-full truncate font-mono text-[11px] text-slate-500">Ningun archivo seleccionado</span>
-                        <span id="file-meta" class="text-[10px] text-slate-600">CSV o JSON · maximo 5 MB · hasta 200 comentarios</span>
+                        <span id="file-meta" class="text-[10px] text-slate-600">CSV o JSON · maximo 16 MB · hasta 2000 comentarios</span>
                     </div>
 
                     <div class="mt-3 flex flex-col gap-3 sm:flex-row">
@@ -568,8 +578,10 @@
                         </select>
                         <select id="upload-limit" class="field sm:w-44" aria-label="Filas a analizar">
                             <option value="100">100 comentarios</option>
-                            <option value="150">150 comentarios</option>
-                            <option value="200" selected>200 comentarios</option>
+                            <option value="250">250 comentarios</option>
+                            <option value="500" selected>500 comentarios</option>
+                            <option value="1000">1000 comentarios</option>
+                            <option value="2000">2000 comentarios</option>
                         </select>
                         <button type="submit" id="upload-btn" disabled
                                 class="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-900/40 transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50">
@@ -878,6 +890,61 @@
         engagement: 'linear-gradient(90deg,#6366f1,#818cf8)'
     };
 
+    // ------------------------------------------------------------------
+    // Hidratacion de la cabecera desde /api/config.
+    // La plantilla es estatica (se ve bien aun abierta como archivo, sin
+    // pasar por el servidor); aqui se completa la version y el modo
+    // real/simulacion en cuanto hay conexion.
+    // ------------------------------------------------------------------
+    function showOfflineBanner(isFile) {
+        const banner = $('offline-banner');
+        const text = $('offline-banner-text');
+        if (!banner) return;
+        if (text && isFile) {
+            text.innerHTML = 'Has abierto el archivo <span class="font-mono">index.html</span> directamente '
+                + '(protocolo <span class="font-mono">file://</span>). Esta aplicacion necesita su servidor: '
+                + 'ejecuta <span class="rounded bg-black/30 px-1.5 py-0.5 font-mono text-amber-100">python app.py</span> '
+                + 'y abre <span class="rounded bg-black/30 px-1.5 py-0.5 font-mono text-amber-100">http://localhost:8000</span>.';
+        }
+        banner.classList.remove('hidden');
+    }
+
+    (async function hydrateHeader() {
+        if (window.location.protocol === 'file:') { showOfflineBanner(true); return; }
+        try {
+            const res = await fetch('/api/config', { cache: 'no-store' });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const cfg = await res.json();
+            const banner = $('offline-banner');
+            if (banner) banner.classList.add('hidden');
+            const real = !!cfg && (cfg.data_mode === 'real'
+                || (cfg.youtube_api && cfg.youtube_api.configured));
+            document.body.dataset.mode = real ? 'real' : 'simulated';
+
+            if (cfg && cfg.version) {
+                const label = 'v' + cfg.version;
+                document.querySelectorAll('.js-version').forEach((el) => { el.textContent = label; });
+            }
+
+            const badge = $('mode-badge');
+            const badgeText = $('mode-badge-text');
+            if (badge && badgeText) {
+                badgeText.textContent = real ? 'YouTube API real' : 'Modo simulacion';
+                badge.className = 'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 '
+                    + (real ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                            : 'border-amber-500/30 bg-amber-500/10 text-amber-300');
+                const dot = badge.querySelector('span');
+                if (dot) dot.className = 'h-1.5 w-1.5 rounded-full breath '
+                    + (real ? 'bg-emerald-400' : 'bg-amber-400');
+            }
+
+            const note = $('mode-note');
+            if (note) note.classList.toggle('hidden', !real);
+        } catch (e) {
+            showOfflineBanner(false);
+        }
+    })();
+
     const PHASES = [
         'Conectando con YouTube API...',
         'Extrayendo features...',
@@ -974,7 +1041,18 @@
      * y se pierde el motivo real del fallo.
      */
     async function postAnalysis(path, options) {
-        const response = await fetch(path, options);
+        let response;
+        try {
+            response = await fetch(path, options);
+        } catch (networkError) {
+            // `fetch` lanza TypeError ("Failed to fetch") cuando no puede
+            // alcanzar el servidor: archivo abierto sin servidor, app caida o
+            // host/red inalcanzable. Se traduce a una accion concreta.
+            showOfflineBanner(window.location.protocol === 'file:');
+            throw new Error('No se pudo conectar con el servidor (Failed to fetch). '
+                + 'Comprueba que la app esta corriendo (python app.py) y que abriste la pagina en '
+                + 'http://localhost:8000, no el archivo index.html directamente.');
+        }
 
         const raw = await response.text();
         let payload = null;
@@ -1057,7 +1135,7 @@
             form.append('file', selectedFile, selectedFile.name);
             const platform = $('platform-select').value;
             form.append('platform', platform || '');
-            form.append('comment_limit', $('upload-limit').value || '200');
+            form.append('comment_limit', $('upload-limit').value || '500');
             form.append('include_comments', 'true');
 
             const payload = await postAnalysis('/api/analyze/upload', {
@@ -1154,10 +1232,10 @@
                 + 'Sube un archivo CSV o JSON exportado de la red social.');
             return false;
         }
-        if (file.size > 5 * 1024 * 1024) {
+        if (file.size > 16 * 1024 * 1024) {
             selectedFile = null;
             showError('El archivo pesa ' + humanSize(file.size)
-                + ' y el maximo aceptado es 5 MB. Analiza una muestra, no el vertido completo.');
+                + ' y el maximo aceptado es 16 MB. Analiza una muestra, no el vertido completo.');
             return false;
         }
 
@@ -1165,7 +1243,7 @@
         setText('file-name', file.name);
         setText('file-meta', (name.endsWith('.json') ? 'JSON' : 'CSV')
             + ' · ' + humanSize(file.size)
-            + ' · se analizaran hasta ' + ($('upload-limit').value || '200') + ' comentarios');
+            + ' · se analizaran hasta ' + ($('upload-limit').value || '500') + ' comentarios');
         $('drop-zone').classList.add('has-file');
         $('upload-btn').disabled = false;
         $('error-box').classList.add('hidden');
@@ -1189,7 +1267,7 @@
         if (!acceptFile(file)) {
             event.target.value = '';
             setText('file-name', 'Ningun archivo seleccionado');
-            setText('file-meta', 'CSV o JSON · maximo 5 MB · hasta 200 comentarios');
+            setText('file-meta', 'CSV o JSON · maximo 16 MB · hasta 2000 comentarios');
             $('drop-zone').classList.remove('has-file');
             $('upload-btn').disabled = true;
             selectedFile = null;
@@ -1601,7 +1679,7 @@
         setText('demo-stat-avg', '0');
         setText('demo-stat-high', '0');
 
-        demoSource = new EventSource('/api/demo/stream?comment_limit=30&delay=0.28');
+        demoSource = new EventSource('/api/demo/stream?comment_limit=100&delay=0.28');
 
         demoSource.addEventListener('start', (event) => {
             const data = JSON.parse(event.data);
@@ -1639,7 +1717,9 @@
         });
 
         demoSource.onerror = () => {
-            setText('demo-status', 'Stream interrumpido (reinicio del servidor o timeout del proxy).');
+            showOfflineBanner(window.location.protocol === 'file:');
+            setText('demo-status', 'Stream interrumpido. Comprueba que la app esta corriendo '
+                + '(python app.py) y que abriste http://localhost:8000, no el archivo directamente.');
             stopDemo();
         };
     }
