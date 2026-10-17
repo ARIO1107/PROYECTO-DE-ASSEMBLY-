@@ -801,21 +801,7 @@
 
     <p id="analysis-id" class="mt-5 text-center text-[11px] text-slate-600"></p>
 
-    <!-- ===================== ESTADO INICIAL ===================== -->
-    <section id="placeholder" class="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <article class="card card-hover">
-            <p class="text-sm font-semibold text-white">1 · Extraccion</p>
-            <p class="mt-2 text-xs leading-relaxed text-slate-500">CommentThreads.list de la YouTube Data API v3, o el archivo CSV / JSON que subas de TikTok, Instagram, X, Facebook y demas. Sin clave, un simulador determinista genera datos de demo reproducibles.</p>
-        </article>
-        <article class="card card-hover">
-            <p class="text-sm font-semibold text-white">2 · Heuristicas</p>
-            <p class="mt-2 text-xs leading-relaxed text-slate-500">9 reglas ponderadas que suman 1.0: lexico de spam, identidad, contenido generico, ruido, temporal, formato, duplicados, emojis e interaccion.</p>
-        </article>
-        <article class="card card-hover">
-            <p class="text-sm font-semibold text-white">3 · Agregacion</p>
-            <p class="mt-2 text-xs leading-relaxed text-slate-500">Media ponderada + efecto cluster (rafagas y duplicados) + intervalo de confianza. pandas hace el agregado.</p>
-        </article>
-    </section>
+    <section id="placeholder" class="hidden"></section>
 </main>
 
 <footer class="border-t border-white/5 py-8 text-center text-[11px] text-slate-600">
@@ -1125,6 +1111,16 @@
         };
         const target = views[view];
         if (!target) return;
+        if (view === 'welcome') {
+            const results = $('results');
+            if (results) results.classList.add('hidden');
+            const analysisId = $('analysis-id');
+            if (analysisId) analysisId.textContent = '';
+            const errorBox = $('error-box');
+            if (errorBox) errorBox.classList.add('hidden');
+            const warningBox = $('warning-box');
+            if (warningBox) warningBox.classList.add('hidden');
+        }
         $('view-welcome').classList.add('hidden');
         $('view-youtube').classList.add('hidden');
         $('view-others').classList.add('hidden');
