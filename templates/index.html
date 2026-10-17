@@ -606,6 +606,12 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
+                    <button type="button" id="demo-clear"
+                            class="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3.5 py-2 text-xs text-slate-300 transition hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-95"
+                            title="Limpiar y reiniciar el simulador">
+                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        <span>Limpiar</span>
+                    </button>
                     <button type="button" id="demo-stop"
                             class="rounded-lg border border-white/10 px-3.5 py-2 text-xs text-slate-300 transition hover:border-rose-500/40 hover:text-rose-300">
                         Detener
@@ -643,50 +649,30 @@
     <!-- ===================== RESULTADOS ===================== -->
     <section id="results" class="mt-6 hidden grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
 
-        <!-- --- Guia de interpretacion: que significa cada dato --- -->
-        <article id="results-guide" class="card card-hover anim-up lg:col-span-3">
-            <div class="flex items-start gap-3">
-                <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-indigo-500/15 text-base font-bold text-indigo-300">i</span>
+        <!-- --- Encabezado y boton de limpiar resultados --- -->
+        <article class="card anim-up lg:col-span-3 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3.5">
+                <div class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-indigo-500/15 text-indigo-400">
+                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                </div>
                 <div>
-                    <p class="text-[10px] uppercase tracking-widest text-slate-500">Guia rapida · que significa cada dato</p>
-                    <p class="mt-2 text-xs leading-relaxed text-slate-400">
-                        Todo el panel mide lo mismo: lo parecido que es cada comentario a un bot,
-                        en una escala del 0 al 100. Colores de riesgo: verde (&lt;30, bajo),
-                        ambar (30-59, medio), rojo (60+, alto) y morado (critico). Detalle:
-                    </p>
+                    <h3 class="text-base font-semibold text-white">Resultados del análisis</h3>
+                    <p id="results-source-summary" class="text-xs text-slate-400">Resumen claro para comprender la autenticidad de los comentarios</p>
                 </div>
             </div>
-            <div class="mt-4 grid grid-cols-1 gap-3 text-xs leading-relaxed text-slate-400 md:grid-cols-2 lg:grid-cols-3">
-                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
-                    <p class="font-semibold text-white">Gauge central (bots estimados)</p>
-                    <p class="mt-1">Es el % promedio de toda la muestra con su intervalo de confianza (la solidez de la estimacion). No es un usuario concreto: es el riesgo medio del conjunto.</p>
-                </div>
-                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
-                    <p class="font-semibold text-white">Metricas clave (8 tarjetas)</p>
-                    <p class="mt-1">Comentarios analizados y autores unicos (detecta si pocas cuentas dominan), % con enlaces, emojis por comentario, % duplicados y rafagas, score medio y mediana, desviacion (cuanto se dispersan los scores) y pico maximo.</p>
-                </div>
-                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
-                    <p class="font-semibold text-white">Distribucion por veredicto</p>
-                    <p class="mt-1">Cuanto de la muestra cae en cada franja: Alto (score &ge;60, rojo), Medio (30-59, ambar) y Bajo (&lt;30, verde). El grosor de cada barra es el % real.</p>
-                </div>
-                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
-                    <p class="font-semibold text-white">Histograma de scores</p>
-                    <p class="mt-1">10 casillas de 10 puntos (0-9, 10-19... 90-100). Cada barra se pinta del color de su franja de riesgo: una torre a la derecha = muchos comentarios muy sospechosos.</p>
-                </div>
-                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
-                    <p class="font-semibold text-white">9 heuristicas</p>
-                    <p class="mt-1">Las reglas ponderadas que producen el score (pesos suman 1.00). Cada fila muestra su contribucion media, su peso y cuantos comentarios saltaron esa regla; ventana para calibrar por que sube el riesgo.</p>
-                </div>
-                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
-                    <p class="font-semibold text-white">Hallazgos y comentarios sospechosos</p>
-                    <p class="mt-1">Hallazgos resume en lenguaje natural lo notable del analisis. Debajo, los 8 comentarios con score mas alto para que decidas tu mismo: despliega cada tarjeta para ver sus features y motivos.</p>
-                </div>
-            </div>
+            <button type="button" id="results-clear-btn"
+                    class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-95">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                <span>Limpiar resultados</span>
+            </button>
         </article>
 
-        <!-- --- Veredicto principal --- -->
+        <!-- --- Veredicto principal (Estimado de bots) --- -->
         <article id="verdict-card" class="card risk-wash anim-up" data-risk="low">
-            <p class="text-[10px] uppercase tracking-widest text-slate-500">Bots estimados</p>
+            <div class="flex items-center justify-between">
+                <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Estimado de bots</p>
+                <span id="verdict-risk-pill" class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full border">Riesgo Bajo</span>
+            </div>
 
             <div class="relative mx-auto mt-4 h-40 w-40">
                 <svg viewBox="0 0 120 120" class="h-full w-full -rotate-90">
@@ -704,99 +690,133 @@
                 <div class="absolute inset-0 grid place-items-center">
                     <div class="text-center">
                         <span id="bot-percent" class="block text-4xl font-bold tabular-nums text-white">0%</span>
-                        <span class="text-[10px] uppercase tracking-wider text-slate-500">confianza</span>
-                        <span id="confidence" class="mt-1 block text-[11px] font-medium text-slate-400">0%</span>
+                        <span class="text-[10px] uppercase tracking-wider text-slate-500">probabilidad</span>
+                        <span id="confidence" class="mt-0.5 block text-[11px] font-medium text-slate-400">0% precisión</span>
                     </div>
                 </div>
             </div>
 
-            <div id="risk-badge" class="risk-chip mt-5 rounded-xl border px-3 py-2.5 text-center" data-risk="low">
+            <div id="risk-badge" class="risk-chip mt-5 rounded-xl border px-3 py-2 text-center" data-risk="low">
                 <span id="risk-label" class="text-xs font-semibold uppercase tracking-wider">—</span>
             </div>
-            <p id="risk-action" class="mt-3 text-center text-[11px] leading-relaxed text-slate-500"></p>
+            <p id="risk-action" class="mt-3 text-center text-xs leading-relaxed text-slate-300"></p>
         </article>
 
-        <!-- --- Contadores --- -->
-        <article class="card card-hover anim-up" style="animation-delay:.06s">
-            <p class="text-[10px] uppercase tracking-widest text-slate-500">Metricas clave</p>
-            <div id="kpi-grid" class="mt-4 grid grid-cols-2 gap-3"></div>
+        <!-- --- Metricas clave --- -->
+        <article class="card card-hover anim-up lg:col-span-2" style="animation-delay:.06s">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Métricas clave</p>
+                    <p class="text-xs text-slate-500">Indicadores esenciales explicados de forma sencilla</p>
+                </div>
+            </div>
+            <div id="kpi-grid" class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3.5"></div>
         </article>
 
         <!-- --- Distribucion --- -->
-        <article class="card card-hover anim-up" style="animation-delay:.12s">
-            <p class="text-[10px] uppercase tracking-widest text-slate-500">Distribucion por veredicto</p>
+        <article class="card card-hover anim-up lg:col-span-1" style="animation-delay:.12s">
+            <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Clasificación de comentarios</p>
+            <p class="text-xs text-slate-500 mt-0.5">Cómo se dividen según su nivel de sospecha</p>
             <div class="mt-5 space-y-4">
                 <div>
                     <div class="mb-1.5 flex justify-between text-xs">
-                        <span class="text-rose-300">Alto (score &ge;60)</span>
-                        <span id="bar-high-label" class="tabular-nums text-slate-400">0</span>
+                        <span class="flex items-center gap-1.5 text-rose-300 font-medium">
+                            <span class="h-2 w-2 rounded-full bg-rose-500"></span>
+                            Sospecha Alta (Bots casi seguros)
+                        </span>
+                        <span id="bar-high-label" class="tabular-nums font-semibold text-slate-300">0</span>
                     </div>
                     <div class="track"><div id="bar-high" class="fill" style="background-image:linear-gradient(90deg,#f87171,#ef4444)"></div></div>
                 </div>
                 <div>
                     <div class="mb-1.5 flex justify-between text-xs">
-                        <span class="text-amber-300">Medio (30-59)</span>
-                        <span id="bar-medium-label" class="tabular-nums text-slate-400">0</span>
+                        <span class="flex items-center gap-1.5 text-amber-300 font-medium">
+                            <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+                            Sospecha Media (Dudosos)
+                        </span>
+                        <span id="bar-medium-label" class="tabular-nums font-semibold text-slate-300">0</span>
                     </div>
                     <div class="track"><div id="bar-medium" class="fill" style="background-image:linear-gradient(90deg,#fbbf24,#f59e0b)"></div></div>
                 </div>
                 <div>
                     <div class="mb-1.5 flex justify-between text-xs">
-                        <span class="text-emerald-300">Bajo (score &lt;30)</span>
-                        <span id="bar-low-label" class="tabular-nums text-slate-400">0</span>
+                        <span class="flex items-center gap-1.5 text-emerald-300 font-medium">
+                            <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+                            Comentarios Seguros (Reales)
+                        </span>
+                        <span id="bar-low-label" class="tabular-nums font-semibold text-slate-300">0</span>
                     </div>
                     <div class="track"><div id="bar-low" class="fill" style="background-image:linear-gradient(90deg,#34d399,#10b981)"></div></div>
                 </div>
             </div>
         </article>
 
-        <!-- --- Histograma de scores --- -->
-        <article class="card card-hover anim-up md:col-span-2" style="animation-delay:.18s">
-            <div class="flex items-baseline justify-between">
-                <p class="text-[10px] uppercase tracking-widest text-slate-500">Histograma de scores</p>
-                <p class="text-[10px] text-slate-600">10 bins de 10 puntos · la barra se pinta del color de su franja de riesgo</p>
-            </div>
-            <div id="histogram" class="mt-5 flex h-40 items-end gap-1.5"></div>
-            <div class="mt-2 flex justify-between text-[10px] text-slate-600">
-                <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
-            </div>
-        </article>
-
-        <!-- --- Heuristicas --- -->
-        <article class="card card-hover anim-up md:col-span-2 lg:col-span-3" style="animation-delay:.22s">
-            <div class="flex flex-wrap items-baseline justify-between gap-2">
-                <p class="text-[10px] uppercase tracking-widest text-slate-500">Desglose de las 9 heuristicas</p>
-                <p class="text-[10px] text-slate-600">Puntos = peso &times; valor de la regla · pesos suman 1.00</p>
-            </div>
-            <div id="signals-list" class="mt-5 grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-2 lg:grid-cols-3"></div>
-        </article>
-
         <!-- --- Hallazgos --- -->
-        <article class="card card-hover anim-up" style="animation-delay:.26s">
-            <p class="text-[10px] uppercase tracking-widest text-slate-500">Hallazgos</p>
-            <ul id="findings-list" class="mt-4 space-y-2.5 text-sm leading-relaxed text-slate-300"></ul>
-        </article>
+        <article class="card card-hover anim-up lg:col-span-2" style="animation-delay:.18s">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Hallazgos del análisis</p>
+                    <p class="text-xs text-slate-500">Lo más importante que se descubrió en la conversación</p>
+                </div>
+                <span class="rounded-full bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 text-[11px] text-indigo-300">Resumen claro</span>
+            </div>
+            <ul id="findings-list" class="mt-4 space-y-2.5 text-xs sm:text-sm leading-relaxed text-slate-300"></ul>
 
-        <!-- --- Fuente --- -->
-        <article class="card card-hover anim-up md:col-span-2" style="animation-delay:.3s">
-            <p class="text-[10px] uppercase tracking-widest text-slate-500">Fuente de datos</p>
-            <p id="video-title" class="mt-2 text-sm font-medium text-white">—</p>
-            <p class="mt-1 text-xs text-slate-500">
-                <span id="video-id" class="font-mono"></span>
-                <span class="mx-2 text-slate-700">·</span>
-                <span id="video-meta"></span>
-            </p>
-            <p id="api-meta" class="source-trace mt-2 hidden text-[11px] text-slate-600"></p>
+            <!-- Fuente de datos simplificada -->
+            <div class="mt-5 pt-3.5 border-t border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                <div>
+                    <span class="text-slate-500">Origen: </span>
+                    <span id="video-title" class="font-medium text-slate-200">—</span>
+                    <span id="video-id" class="ml-1 text-[11px] font-mono text-slate-500"></span>
+                </div>
+                <div id="video-meta" class="text-slate-400"></div>
+                <div id="api-meta" class="hidden"></div>
+            </div>
         </article>
 
         <!-- --- Comentarios sospechosos --- -->
-        <article class="card anim-up p-0 md:col-span-2 lg:col-span-3" style="animation-delay:.34s">
-            <div class="flex items-center justify-between border-b border-white/5 px-6 py-4">
-                <p class="text-[10px] uppercase tracking-widest text-slate-500">Comentarios mas sospechosos</p>
-                <button id="toggle-all" type="button" class="text-[11px] text-indigo-400 transition hover:text-indigo-300">Ver todos</button>
+        <article class="card anim-up p-0 lg:col-span-3" style="animation-delay:.22s">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 px-6 py-4">
+                <div>
+                    <p class="text-sm font-semibold text-white">Comentarios más sospechosos</p>
+                    <p class="text-xs text-slate-500">Comentarios detectados con mayor probabilidad de ser automatizados y por qué</p>
+                </div>
+                <button id="toggle-all" type="button" class="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-indigo-300 transition hover:border-indigo-500/40 hover:text-white">
+                    Ver todos
+                </button>
             </div>
             <div id="comments-list" class="divide-y divide-white/5"></div>
         </article>
+
+        <!-- --- Detalles tecnicos avanzados (colapsados por defecto para personas comunes) --- -->
+        <details class="card group anim-up lg:col-span-3 p-4 border border-white/5 bg-black/20" style="animation-delay:.26s">
+            <summary class="flex cursor-pointer items-center justify-between text-xs font-medium text-slate-400 transition hover:text-slate-200">
+                <span class="flex items-center gap-2">
+                    <svg class="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
+                    Ver detalles técnicos avanzados (algoritmo, 9 heurísticas e histograma)
+                </span>
+                <span class="text-[11px] text-slate-500 group-open:rotate-180 transition-transform">▼ Desplegar</span>
+            </summary>
+            <div class="mt-5 space-y-6 pt-4 border-t border-white/5">
+                <div>
+                    <div class="flex items-baseline justify-between">
+                        <p class="text-[10px] uppercase tracking-widest text-slate-500">Histograma estadístico de scores</p>
+                        <p class="text-[10px] text-slate-600">10 rangos de 10 puntos (0-100)</p>
+                    </div>
+                    <div id="histogram" class="mt-3 flex h-32 items-end gap-1.5"></div>
+                    <div class="mt-2 flex justify-between text-[10px] text-slate-600">
+                        <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex flex-wrap items-baseline justify-between gap-2">
+                        <p class="text-[10px] uppercase tracking-widest text-slate-500">Desglose de las 9 heurísticas ponderadas</p>
+                        <p class="text-[10px] text-slate-600">Pesos ponderados del motor heurístico</p>
+                    </div>
+                    <div id="signals-list" class="mt-3 grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2 lg:grid-cols-3"></div>
+                </div>
+            </div>
+        </details>
     </section>
 
     <p id="analysis-id" class="mt-5 text-center text-[11px] text-slate-600"></p>
@@ -1039,7 +1059,7 @@
 
     $('analyze-form').addEventListener('submit', async (event) => {
         event.preventDefault();
-        stopDemo();
+        clearDemo();
         setLoading(true, 'url');
         $('error-box').classList.add('hidden');
         $('warning-box').classList.add('hidden');
@@ -1067,7 +1087,7 @@
     // ==================================================================
     $('upload-form').addEventListener('submit', async (event) => {
         event.preventDefault();
-        stopDemo();
+        clearDemo();
         $('error-box').classList.add('hidden');
         $('warning-box').classList.add('hidden');
 
@@ -1111,16 +1131,12 @@
         };
         const target = views[view];
         if (!target) return;
-        if (view === 'welcome') {
-            const results = $('results');
-            if (results) results.classList.add('hidden');
-            const analysisId = $('analysis-id');
-            if (analysisId) analysisId.textContent = '';
-            const errorBox = $('error-box');
-            if (errorBox) errorBox.classList.add('hidden');
-            const warningBox = $('warning-box');
-            if (warningBox) warningBox.classList.add('hidden');
-        }
+
+        // Limpia automaticamente el simulador de ataque de bots al cambiar de pagina
+        clearDemo();
+        // Limpia automaticamente los resultados previos al cambiar de pagina
+        clearResults();
+
         $('view-welcome').classList.add('hidden');
         $('view-youtube').classList.add('hidden');
         $('view-others').classList.add('hidden');
@@ -1376,9 +1392,19 @@
         if (arc) arc.style.strokeDashoffset = String(GAUGE_CIRCUMFERENCE * (1 - pct / 100));
 
         animateNumber($('bot-percent'), pct, 1, '%');
-        animateNumber($('confidence'), data.metrics.confidence, 0, ' conf.');
-        setText('risk-label', 'Riesgo ' + data.risk.label);
+        animateNumber($('confidence'), data.metrics.confidence, 0, '% precisión');
+        setText('risk-label', 'Nivel de Riesgo: ' + data.risk.label);
         setText('risk-action', data.risk.action);
+
+        const pill = $('verdict-risk-pill');
+        if (pill) {
+            pill.textContent = 'Riesgo ' + data.risk.label;
+            pill.className = 'text-[11px] font-semibold px-2.5 py-0.5 rounded-full border '
+                + (level === 'critical' ? 'border-purple-500/40 bg-purple-500/15 text-purple-300'
+                   : level === 'high' ? 'border-rose-500/40 bg-rose-500/15 text-rose-300'
+                   : level === 'medium' ? 'border-amber-500/40 bg-amber-500/15 text-amber-300'
+                   : 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300');
+        }
     }
 
     function renderDistribution(distribution, total) {
@@ -1391,32 +1417,56 @@
     }
 
     function renderKpis(metrics, averages) {
-        const avg = averages || {};
+        const total = metrics.total_comments_analyzed || 0;
+        const suspectedCount = Math.round(total * (metrics.bot_percentage || 0) / 100);
+
         const cards = [
-            { label: 'Comentarios', value: metrics.total_comments_analyzed, dec: 0,
-              hint: plural(metrics.unique_authors, 'autor unico', 'autores unicos'), tone: 'text-white' },
-            { label: 'con enlaces', value: metrics.link_ratio, dec: 1, suffix: '%',
-              hint: plural(metrics.comments_with_links, 'comentario', 'comentarios'), tone: 'text-white' },
-            { label: 'emojis / com.', value: metrics.emoji_per_comment, dec: 2,
-              hint: 'densidad media', tone: 'text-white' },
-            { label: 'duplicados', value: metrics.duplicate_ratio, dec: 1, suffix: '%',
-              hint: metrics.burst_detected ? 'rafaga detectada' : 'sin rafagas',
-              tone: metrics.burst_detected ? 'text-amber-300' : 'text-white' },
-            { label: 'score medio', value: metrics.mean_bot_score, dec: 1,
-              hint: 'mediana ' + metrics.median_bot_score, tone: 'text-white' },
-            { label: 'desviacion', value: metrics.score_std_dev, dec: 1,
-              hint: 'dispersion de scores', tone: 'text-white' },
-            { label: 'longitud media', value: avg.longitud_media_caracteres, dec: 0,
-              hint: 'caracteres', tone: 'text-white' },
-            { label: 'score maximo', value: metrics.max_bot_score, dec: 1,
-              hint: 'peor comentario', tone: 'text-rose-300' }
+            {
+                label: 'Comentarios analizados',
+                value: total,
+                dec: 0,
+                hint: plural(metrics.unique_authors || 0, 'cuenta o autor único', 'cuentas o autores únicos'),
+                tone: 'text-white',
+                desc: 'Muestra total examinada'
+            },
+            {
+                label: 'Estimado de bots',
+                value: metrics.bot_percentage,
+                dec: 1,
+                suffix: '%',
+                hint: plural(suspectedCount, 'comentario sospechoso', 'comentarios sospechosos'),
+                tone: metrics.bot_percentage >= 40 ? 'text-rose-400' : (metrics.bot_percentage >= 25 ? 'text-amber-400' : 'text-emerald-400'),
+                desc: 'Nivel global de sospecha'
+            },
+            {
+                label: 'Mensajes repetidos (Copia y pega)',
+                value: metrics.duplicate_ratio,
+                dec: 1,
+                suffix: '%',
+                hint: metrics.burst_detected ? '⚠️ Ráfagas coordinadas detectadas' : 'Comentarios idénticos detectados',
+                tone: metrics.burst_detected || metrics.duplicate_ratio >= 10 ? 'text-amber-300' : 'text-white',
+                desc: 'Patrón típico de bots masivos'
+            },
+            {
+                label: 'Comentarios con enlaces o spam',
+                value: metrics.link_ratio,
+                dec: 1,
+                suffix: '%',
+                hint: plural(metrics.comments_with_links || 0, 'comentario con links', 'comentarios con links'),
+                tone: metrics.link_ratio >= 15 ? 'text-rose-300' : 'text-white',
+                desc: 'Promociones o links externos'
+            }
         ];
-        $('kpi-grid').innerHTML = cards.map((card, i) => `
-            <div class="rounded-xl border border-white/5 bg-black/20 p-3 transition hover:border-white/15">
-                <p class="text-[9px] uppercase tracking-wider text-slate-500">${escapeHtml(card.label)}</p>
-                <p class="stat-value mt-1 text-xl font-semibold tabular-nums ${card.tone}"
+
+        $('kpi-grid').innerHTML = cards.map((card) => `
+            <div class="rounded-xl border border-white/5 bg-black/25 p-4 transition hover:border-white/15 hover:bg-black/40">
+                <div class="flex items-center justify-between gap-2">
+                    <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">${escapeHtml(card.label)}</p>
+                    <span class="text-[10px] text-slate-500">${escapeHtml(card.desc)}</span>
+                </div>
+                <p class="stat-value mt-2 text-2xl font-bold tabular-nums ${card.tone}"
                    data-to="${card.value}" data-dec="${card.dec}" data-suffix="${escapeHtml(card.suffix || '')}">0</p>
-                <p class="mt-0.5 truncate text-[9px] text-slate-600">${escapeHtml(String(card.hint))}</p>
+                <p class="mt-1 text-xs text-slate-400 font-medium">${escapeHtml(String(card.hint))}</p>
             </div>`).join('');
 
         // Los contadores arrancan en 0 y suben: el dato "aparece" en pantalla.
@@ -1460,22 +1510,21 @@
         // fichero y el rastro es el del parser, no el de la YouTube Data API.
         if (s.is_upload) {
             setText('video-title', s.title || 'Archivo subido');
-            setText('video-id', 'ARCHIVO');
-            const bits = [];
-            if (s.platform) bits.push('Red social: ' + s.platform);
-            bits.push(plural(s.comment_count || 0, 'comentario', 'comentarios') + ' leidos');
-            setText('video-meta', bits.join(' · '));
+            setText('video-id', s.platform ? 'Red: ' + s.platform.toUpperCase() : 'ARCHIVO');
+            setText('video-meta', plural(s.comment_count || data.metrics.total_comments_analyzed || 0, 'comentario', 'comentarios') + ' procesados');
+            setText('results-source-summary', 'Archivo: ' + (s.title || 'CSV/JSON') + ' · ' + plural(data.metrics.total_comments_analyzed || 0, 'comentario analizado', 'comentarios analizados'));
             renderApiMeta(data);
             return;
         }
 
-        setText('video-title', s.title || '(sin titulo - dataset simulado)');
-        setText('video-id', s.is_demo ? 'DEMO' : 'ID ' + s.video_id);
+        const title = s.title || (s.is_demo ? 'Simulación de ataque de bots en directo' : 'Video de YouTube');
+        setText('video-title', title);
+        setText('video-id', s.is_demo ? 'DEMO EN VIVO' : (s.video_id ? 'ID ' + s.video_id : ''));
         const parts = [];
         if (s.channel) parts.push(s.channel);
-        if (s.view_count) parts.push(plural(s.view_count, 'visita', 'visitas'));
-        if (s.comment_count) parts.push(plural(s.comment_count, 'comentario', 'comentarios') + ' totales');
+        parts.push(plural(data.metrics.total_comments_analyzed || 0, 'comentario analizado', 'comentarios analizados'));
         setText('video-meta', parts.join(' · '));
+        setText('results-source-summary', title + ' · ' + plural(data.metrics.total_comments_analyzed || 0, 'comentario', 'comentarios'));
         renderApiMeta(data);
     }
 
@@ -1547,8 +1596,17 @@
     }
 
     function renderFindings(findings) {
-        $('findings-list').innerHTML = (findings || []).map(f =>
-            `<li class="flex gap-2.5"><span class="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-indigo-400"></span><span>${escapeHtml(f)}</span></li>`
+        const list = $('findings-list');
+        if (!list) return;
+        if (!findings || !findings.length) {
+            list.innerHTML = '<li class="text-xs text-slate-500">No se detectaron hallazgos inusuales en este análisis.</li>';
+            return;
+        }
+        list.innerHTML = findings.map(f =>
+            `<li class="flex items-start gap-3 rounded-xl border border-white/5 bg-black/25 p-3">
+                <span class="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-indigo-500/20 text-xs font-bold text-indigo-300">✓</span>
+                <span class="text-xs sm:text-sm text-slate-200 leading-relaxed">${escapeHtml(f)}</span>
+            </li>`
         ).join('');
     }
 
@@ -1564,34 +1622,59 @@
 
     function paintComments() {
         const subset = showingAll ? currentComments : currentComments.slice(0, 8);
-        const scoreColor = (score) => score >= 60 ? 'text-rose-300' : score >= 30 ? 'text-amber-300' : 'text-emerald-300';
+        const list = $('comments-list');
+        if (!list) return;
 
-        $('comments-list').innerHTML = subset.map((comment, i) => `
-            <details class="group px-6 py-5 transition hover:bg-white/[.02] anim-up" style="animation-delay:${Math.min(i, 8) * 50}ms">
-                <summary class="flex cursor-pointer list-none items-start gap-4">
-                    <span class="mt-0.5 min-w-[3.1rem] rounded-lg bg-ink-700 px-2.5 py-1 text-center font-mono text-sm font-semibold tabular-nums ${scoreColor(comment.bot_score)}">
-                        ${comment.bot_score}
-                    </span>
-                    <div class="min-w-0 flex-1">
-                        <p class="truncate text-xs text-slate-500">
-                            <span class="text-slate-300">@${escapeHtml(comment.author)}</span>
-                            ${comment.is_reply ? ' · respuesta' : ''}
-                            ${comment.published_at ? ' · ' + formatDate(comment.published_at) : ''}
-                        </p>
-                        <p class="mt-1 text-sm leading-relaxed text-slate-200">${escapeHtml(comment.text_preview)}</p>
+        if (!subset.length) {
+            list.innerHTML = '<div class="p-6 text-center text-xs text-slate-500">No hay comentarios para mostrar.</div>';
+            return;
+        }
+
+        const scoreColor = (score) => score >= 60
+            ? 'border-rose-500/30 bg-rose-500/10 text-rose-300'
+            : score >= 30
+                ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+
+        const scoreLabel = (score) => score >= 60 ? 'Sospecha Alta' : score >= 30 ? 'Sospecha Media' : 'Sospecha Baja';
+
+        list.innerHTML = subset.map((comment, i) => `
+            <div class="px-5 py-4 transition hover:bg-white/[.02] anim-up" style="animation-delay:${Math.min(i, 8) * 45}ms">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold tabular-nums ${scoreColor(comment.bot_score)}">
+                            <span>${comment.bot_score}%</span>
+                            <span class="text-[10px] font-normal opacity-90 hidden sm:inline">· ${scoreLabel(comment.bot_score)}</span>
+                        </span>
+                        <span class="text-xs font-semibold text-slate-200">@${escapeHtml(comment.author)}</span>
+                        ${comment.is_reply ? '<span class="rounded bg-white/5 border border-white/10 px-1.5 py-0.5 text-[10px] text-slate-400">Respuesta</span>' : ''}
                     </div>
-                </summary>
-                <div class="mt-4 space-y-2 border-l-2 border-indigo-500/30 pl-4">
-                    ${comment.reasons.map(r => `<p class="text-xs leading-relaxed text-slate-400">${escapeHtml(r)}</p>`).join('')}
-                    <div class="flex flex-wrap gap-1.5 pt-1">
-                        ${Object.entries(comment.features)
-                            .filter(([, v]) => typeof v === 'number' && v !== 0)
-                            .map(([k, v]) => `<span class="rounded bg-ink-700 px-2 py-0.5 font-mono text-[10px] text-slate-400">${escapeHtml(k)}: ${v}</span>`)
-                            .join('')}
-                        ${(comment.features.spam_terms || []).map(t => `<span class="rounded bg-rose-500/10 px-2 py-0.5 font-mono text-[10px] text-rose-300">${escapeHtml(t)}</span>`).join('')}
-                    </div>
+                    <span class="text-[11px] text-slate-500">${comment.published_at ? formatDate(comment.published_at) : ''}</span>
                 </div>
-            </details>`).join('');
+
+                <div class="mt-2.5 rounded-xl border border-white/5 bg-black/30 p-3">
+                    <p class="text-sm leading-relaxed text-slate-200">${escapeHtml(comment.text_preview)}</p>
+                </div>
+
+                <div class="mt-2.5 space-y-1.5">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <span class="text-[11px] font-medium text-slate-400">Por qué parece bot:</span>
+                        ${(comment.reasons || []).map(r => `
+                            <span class="inline-flex items-center gap-1 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-200">
+                                <span>⚠️</span>
+                                <span>${escapeHtml(r)}</span>
+                            </span>
+                        `).join('')}
+                    </div>
+
+                    ${(comment.features && comment.features.spam_terms && comment.features.spam_terms.length) ? `
+                        <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
+                            <span class="text-[11px] font-medium text-rose-400">Palabras sospechosas:</span>
+                            ${comment.features.spam_terms.map(t => `<span class="rounded border border-rose-500/30 bg-rose-500/15 px-2 py-0.5 font-mono text-[10px] text-rose-300">${escapeHtml(t)}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>`).join('');
     }
 
     $('toggle-all').addEventListener('click', () => {
@@ -1721,6 +1804,58 @@
         const dot = $('demo-btn-dot');
         if (dot) dot.classList.remove('breath');
         setBar('demo-progress', completed ? 100 : 0);
+    }
+
+    /**
+     * Limpia y resetea por completo el simulador de ataque de bots.
+     */
+    function clearDemo() {
+        stopDemo(false);
+        const panel = $('demo-panel');
+        if (panel) panel.classList.add('hidden');
+        const wall = $('demo-wall');
+        if (wall) wall.innerHTML = '';
+        setText('demo-stat-total', '0');
+        setText('demo-stat-bots', '0');
+        setText('demo-stat-avg', '0');
+        setText('demo-stat-high', '0');
+        setBar('demo-progress', 0);
+        setText('demo-status', 'Simulación detenida');
+        setText('demo-btn-label', 'Lanzar demo en directo');
+        const dot = $('demo-btn-dot');
+        if (dot) dot.classList.remove('breath');
+        const btn = $('demo-btn');
+        if (btn) btn.disabled = false;
+    }
+
+    /**
+     * Limpia y oculta el panel de resultados, avisos y errores.
+     */
+    function clearResults() {
+        const results = $('results');
+        if (results) results.classList.add('hidden');
+        const analysisId = $('analysis-id');
+        if (analysisId) analysisId.textContent = '';
+        const errorBox = $('error-box');
+        if (errorBox) errorBox.classList.add('hidden');
+        const warningBox = $('warning-box');
+        if (warningBox) warningBox.classList.add('hidden');
+    }
+
+    const demoClearBtn = $('demo-clear');
+    if (demoClearBtn) {
+        demoClearBtn.addEventListener('click', () => {
+            clearDemo();
+            clearResults();
+        });
+    }
+
+    const resultsClearBtn = $('results-clear-btn');
+    if (resultsClearBtn) {
+        resultsClearBtn.addEventListener('click', () => {
+            clearResults();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
     }
 </script>
 </body>
