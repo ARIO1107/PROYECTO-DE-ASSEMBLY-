@@ -1715,12 +1715,12 @@ function plural(n, singular, pluralForm) {
         if (panel) panel.classList.add('hidden');
     }
 
-    $('demo-clear').addEventListener('click', () => {
+    if ($('demo-clear')) $('demo-clear').addEventListener('click', () => {
         if (demoSource) stopDemo(false);
         clearDemoWall();
     });
 
-    $('results-clear').addEventListener('click', () => {
+    if ($('results-clear')) $('results-clear').addEventListener('click', () => {
         $('results').classList.add('hidden');
     });
 </script>
