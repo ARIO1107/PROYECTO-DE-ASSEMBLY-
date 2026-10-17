@@ -104,7 +104,7 @@ class Settings(BaseSettings):
     )
 
     # Limites de recogida del dataset por analisis.
-    max_comments: int = Field(default=300, ge=10, le=2000)
+    max_comments: int = Field(default=1500, ge=10, le=2000)
     request_timeout: float = Field(default=10.0, gt=0, le=60)
 
     # Semilla del simulador: cambiarla cambia los datos falsos generados.
@@ -113,7 +113,7 @@ class Settings(BaseSettings):
     # --- Parametros de la YouTube Data API v3 ------------------------------
     # Cada llamada a commentThreads.list cuesta 1 unidad de las 10.000/dia
     # gratuitas, con independencia de cuantos comentarios devuelva.
-    max_api_pages: int = Field(default=10, ge=1, le=30, validation_alias=AliasChoices("MAX_API_PAGES"))
+    max_api_pages: int = Field(default=15, ge=1, le=50, validation_alias=AliasChoices("MAX_API_PAGES"))
     api_quota_per_page: int = Field(default=1, ge=1, le=100, validation_alias=AliasChoices("API_QUOTA_PER_PAGE"))
     api_retries: int = Field(default=3, ge=1, le=6, validation_alias=AliasChoices("API_RETRIES"))
     api_backoff_seconds: float = Field(default=1.0, ge=0.1, le=30, validation_alias=AliasChoices("API_BACKOFF_SECONDS"))
@@ -143,7 +143,7 @@ class AnalyzeRequest(BaseModel):
         default=None,
         ge=10,
         le=2000,
-        description="Numero maximo de comentarios a analizar (por defecto: settings.max_comments).",
+        description="Numero maximo de comentarios a analizar (por defecto: 1500, tope: 1500).",
     )
     include_comments: bool = Field(
         default=True,
@@ -982,7 +982,7 @@ def _render_bot_text(rng: random.Random) -> str:
 # un millon de comentarios. Un fichero de 100 MB se rechaza antes de leerlo.
 
 UPLOAD_MAX_BYTES = 16 * 1024 * 1024      # 16 MB: margen para muestras grandes (CSV/JSON)
-UPLOAD_MAX_ROWS = 2000                   # techo de la muestra subida por archivo
+UPLOAD_MAX_ROWS = 1500                   # tope de la muestra subida por archivo (maximo 1500 comentarios)
 UPLOAD_FORMATS = ("csv", "json")
 
 # Alias de columna -> campo canonico. Se normalizan sin acentos ni puntuacion,
@@ -1400,11 +1400,11 @@ def parse_uploaded_comments(
         )
 
     rows_in_file = len(records)
-    records = records[: max(limit, 1)]
+    records = records[: min(max(limit, 1), 1500)]
     if rows_in_file > len(records):
         warnings.append(
             f"Se analizaron {len(records)} de {rows_in_file} filas del archivo "
-            f"(limite de muestra: {UPLOAD_MAX_ROWS} comentarios)."
+            f"(tope de muestra: {UPLOAD_MAX_ROWS} comentarios)."
         )
 
     comments: list[RawComment] = []
@@ -2579,7 +2579,7 @@ async def analyze(payload: AnalyzeRequest) -> AnalyzeResponse:
              -d "{\\"url\\":\\"https://youtu.be/dQw4w9WgXcQ\\",\\"comment_limit\\":60}"
     """
     video_id = resolve_video(payload.url)
-    limit = payload.comment_limit or settings.max_comments
+    limit = min(payload.comment_limit or 1500, 1500)
     return run_analysis(video_id, limit, include_comments=payload.include_comments)
 
 
@@ -2609,7 +2609,7 @@ async def analyze_upload(
         file.filename or "",
         raw,
         platform,
-        comment_limit or UPLOAD_MAX_ROWS,
+        min(comment_limit or UPLOAD_MAX_ROWS, 1500),
     )
     verdicts = await asyncio.to_thread(score_dataset, dataset)
     return build_analysis(
