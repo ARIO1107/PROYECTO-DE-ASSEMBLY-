@@ -307,7 +307,7 @@
                     <span class="grid h-11 w-11 place-items-center rounded-xl bg-red-500/15 text-lg font-bold text-red-400">Y</span>
                     <div>
                         <h2 class="text-xl font-semibold tracking-tight text-white sm:text-2xl">Analizar un video de YouTube</h2>
-                        <p class="text-xs text-slate-500">Comentarios publicos de cualquier video</p>
+                        <p class="text-xs text-slate-500">Comentarios publicos de cualquier video <span id="mode-note" class="hidden">· Modo API oficial</span></p>
                     </div>
                 </div>
                 <button type="button" id="youtube-back"
@@ -315,43 +315,6 @@
                     Volver al inicio
                 </button>
             </div>
-
-            <ol class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <li class="rounded-xl border border-white/5 bg-black/25 p-4">
-                    <p class="text-[10px] font-semibold uppercase tracking-widest text-indigo-400">Paso 1 · Copia el enlace</p>
-                    <p class="mt-1.5 text-xs leading-relaxed text-slate-400">
-                        Abre YouTube, entra en el video y copia la URL. Se aceptan todos estos
-                        formatos (y hasta el ID pelado):
-                    </p>
-                    <p class="mt-2 font-mono text-[11px] leading-relaxed text-slate-500">
-                        /watch?v=ID · youtu.be/ID · /shorts/ID · /embed/ID
-                    </p>
-                </li>
-                <li class="rounded-xl border border-white/5 bg-black/25 p-4">
-                    <p class="text-[10px] font-semibold uppercase tracking-widest text-indigo-400">Paso 2 · Pegala y analiza</p>
-                    <p class="mt-1.5 text-xs leading-relaxed text-slate-400">
-                        El campo viene relleno con un ejemplo por defecto. Sustituyelo por tu URL.
-                        Se analizara la cantidad de comentarios que tenga el video (hasta un tope maximo de 1500).
-                    </p>
-                </li>
-                <li class="rounded-xl border border-white/5 bg-black/25 p-4">
-                    <p class="text-[10px] font-semibold uppercase tracking-widest text-indigo-400">Paso 3 · Pulsa Analizar</p>
-                    <p class="mt-1.5 text-xs leading-relaxed text-slate-400">
-                        El loader muestra las fases del motor: conexion, extraccion de las 40
-                        features, aplicacion de las 9 heuristicas y calculo de riesgo. No recargues
-                        la pagina mientras dure: lo normal son pocos segundos.
-                        <span id="mode-note" class="hidden">La barra superior "YouTube API real" indica que se usa la cuota oficial de
-                        comentarios de cada video.</span>
-                    </p>
-                </li>
-                <li class="rounded-xl border border-white/5 bg-black/25 p-4">
-                    <p class="text-[10px] font-semibold uppercase tracking-widest text-indigo-400">Paso 4 · Interpreta los resultados</p>
-                    <p class="mt-1.5 text-xs leading-relaxed text-slate-400">
-                        Al terminar bajara el panel de resultados con una tarjeta que explica, en
-                        lenguaje natural, que significa cada medidor y cada grafico.
-                    </p>
-                </li>
-            </ol>
 
             <form id="analyze-form" class="mt-6 flex flex-col gap-3 sm:flex-row">
                 <div class="relative flex-1">
@@ -383,7 +346,7 @@
                     <span class="grid h-11 w-11 place-items-center rounded-xl bg-slate-600/15 text-lg font-bold text-slate-300">O</span>
                     <div>
                         <h2 class="text-xl font-semibold tracking-tight text-white sm:text-2xl">Analizar otra red social</h2>
-                        <p class="text-xs text-slate-500">Guia de <span id="others-sub" class="text-slate-300">TikTok</span></p>
+                        <p class="text-xs text-slate-500">Analiza comentarios en formato CSV o JSON de cualquier red social <span id="others-sub" class="hidden">TikTok</span></p>
                     </div>
                 </div>
                 <button type="button" id="others-back"
@@ -406,116 +369,19 @@
                 </p>
             </div>
 
-            <div class="mt-6">
-                <label for="app-switch" class="text-[10px] uppercase tracking-widest text-slate-500">Elige la red social</label>
-                <div class="mt-2 flex flex-col gap-2 sm:flex-row sm:items-start">
-                    <select id="app-switch" class="field w-full sm:w-80" aria-label="Red social a configurar" title="Elige la red para ver solo su guia">
-                        <option value="tiktok">TikTok</option>
-                        <option value="instagram">Instagram</option>
-                        <option value="x">X (Twitter)</option>
-                        <option value="facebook">Facebook</option>
-                        <option value="threads">Threads</option>
-                        <option value="reddit">Reddit</option>
-                        <option value="linkedin">LinkedIn</option>
-                    </select>
-                    <p class="text-[11px] leading-relaxed text-slate-500">
-                        Cada red tiene su propia ventana: aqui solo se muestra la guia de la red
-                        elegida y como descargar su archivo CSV/JSON. Cambiar de red no mezcla
-                        informacion.
-                    </p>
-                </div>
-
-                <div id="guide-tiktok" class="app-guide mt-4 rounded-xl border border-white/5 bg-black/25 p-4">
-                    <p class="flex items-center gap-2 text-sm font-semibold text-white"><span class="grid h-7 w-7 place-items-center rounded-lg bg-cyan-500/15 text-xs font-bold text-cyan-300">T</span> TikTok</p>
-                    <p class="mt-2 text-xs leading-relaxed text-slate-400">Como obtener el CSV: copia el enlace del vídeo de TikTok, úsalo en una herramienta de exportación web y descarga el archivo CSV.</p>
-                    <div class="mt-2 flex flex-col gap-1.5">
-                        <a href="https://exporttok.com" target="_blank" rel="noopener"
-                           class="inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-cyan-300 underline decoration-cyan-500/40 underline-offset-2 transition hover:text-cyan-100">
-                            <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                            exporttok.com
-                        </a>
-                        <a href="https://commentpicker.com/tiktok-export.php" target="_blank" rel="noopener"
-                           class="inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-cyan-300 underline decoration-cyan-500/40 underline-offset-2 transition hover:text-cyan-100">
-                            <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                            commentpicker.com/tiktok-export.php
-                        </a>
-                    </div>
-                </div>
-
-                <div id="guide-instagram" class="app-guide mt-4 hidden rounded-xl border border-white/5 bg-black/25 p-4">
-                    <p class="flex items-center gap-2 text-sm font-semibold text-white"><span class="grid h-7 w-7 place-items-center rounded-lg bg-pink-500/15 text-xs font-bold text-pink-400">I</span> Instagram</p>
-                    <p class="mt-2 text-xs leading-relaxed text-slate-400">Como obtener el CSV: copia el enlace del post o Reel, entra a una herramienta de extracción online y descarga el reporte en formato CSV.</p>
-                    <a href="https://commentpicker.com/export-comments-instagram.php" target="_blank" rel="noopener"
-                       class="mt-2 inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-pink-400 underline decoration-pink-500/40 underline-offset-2 transition hover:text-pink-300">
-                        <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                        commentpicker.com/export-comments-instagram.php
-                    </a>
-                </div>
-
-                <div id="guide-x" class="app-guide mt-4 hidden rounded-xl border border-white/5 bg-black/25 p-4">
-                    <p class="flex items-center gap-2 text-sm font-semibold text-white"><span class="grid h-7 w-7 place-items-center rounded-lg bg-slate-500/15 text-xs font-bold text-slate-200">X</span> X (Twitter)</p>
-                    <p class="mt-2 text-xs leading-relaxed text-slate-400">Como obtener el CSV: copia el enlace del tuit público y utiliza un servicio web de respaldo de respuestas para exportar el contenido en CSV/JSON.</p>
-                </div>
-
-                <div id="guide-facebook" class="app-guide mt-4 hidden rounded-xl border border-white/5 bg-black/25 p-4">
-                    <p class="flex items-center gap-2 text-sm font-semibold text-white"><span class="grid h-7 w-7 place-items-center rounded-lg bg-blue-500/15 text-xs font-bold text-blue-400">F</span> Facebook</p>
-                    <p class="mt-2 text-xs leading-relaxed text-slate-400">Como obtener el CSV: copia el enlace de la publicación pública de Facebook y usa una herramienta de analítica o generadora de reportes para descargar el archivo CSV.</p>
-                </div>
-
-                <div id="guide-threads" class="app-guide mt-4 hidden rounded-xl border border-white/5 bg-black/25 p-4">
-                    <p class="flex items-center gap-2 text-sm font-semibold text-white"><span class="grid h-7 w-7 place-items-center rounded-lg bg-slate-500/15 text-xs font-bold text-slate-300">T</span> Threads</p>
-                    <p class="mt-2 text-xs leading-relaxed text-slate-400">Como obtener el CSV: copia el enlace de la publicación de Threads, usa una herramienta online de exportación de respuestas y descárgalo a CSV.</p>
-                    <div class="mt-2 flex flex-col gap-1.5">
-                        <a href="https://zocialcomment.com/export/threads" target="_blank" rel="noopener"
-                           class="inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-slate-300 underline decoration-slate-500/40 underline-offset-2 transition hover:text-white">
-                            <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                            zocialcomment.com/export/threads
-                        </a>
-                        <a href="https://commentpicker.com/threads-tools.php" target="_blank" rel="noopener"
-                           class="inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-slate-300 underline decoration-slate-500/40 underline-offset-2 transition hover:text-white">
-                            <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                            commentpicker.com/threads-tools.php
-                        </a>
-                    </div>
-                </div>
-
-                <div id="guide-reddit" class="app-guide mt-4 hidden rounded-xl border border-white/5 bg-black/25 p-4">
-                    <p class="flex items-center gap-2 text-sm font-semibold text-white"><span class="grid h-7 w-7 place-items-center rounded-lg bg-orange-500/15 text-xs font-bold text-orange-400">R</span> Reddit</p>
-                    <p class="mt-2 text-xs leading-relaxed text-slate-400">Como obtener los datos (método instantáneo): copia el enlace de cualquier publicación o hilo público de Reddit, añade <span class="font-mono text-slate-500">.json</span> exactamente al final de la URL en la barra de direcciones del navegador (por ejemplo: <span class="font-mono text-slate-500">https://www.reddit.com/r/subreddit/comments/id/titulo/.json</span>), presiona Enter y guarda la página resultante como archivo <span class="font-mono text-slate-500">.json</span>. Tu aplicación ya acepta archivos <span class="font-mono text-slate-500">.json</span>, por lo que procesará el árbol de comentarios nativo de Reddit de forma directa y limpia al instante.</p>
-                </div>
-
-                <div id="guide-linkedin" class="app-guide mt-4 hidden rounded-xl border border-white/5 bg-black/25 p-4">
-                    <p class="flex items-center gap-2 text-sm font-semibold text-white"><span class="grid h-7 w-7 place-items-center rounded-lg bg-sky-600/15 text-xs font-bold text-sky-300">L</span> LinkedIn</p>
-                    <p class="mt-2 text-xs leading-relaxed text-slate-400">Como obtener el CSV: copia el enlace de la publicación profesional pública de LinkedIn y utiliza un exportador web de comentarios para descargar el archivo en CSV.</p>
-                    <a href="https://exportcomments.com/export-linkedin-comments" target="_blank" rel="noopener"
-                       class="mt-2 inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-sky-300 underline decoration-sky-500/40 underline-offset-2 transition hover:text-sky-100">
-                        <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                        exportcomments.com/export-linkedin-comments
-                    </a>
-                </div>
-
-                <div class="mt-4 rounded-xl border border-indigo-500/20 bg-indigo-500/[.06] p-4">
-                    <p class="flex items-center gap-2 text-sm font-semibold text-white">
-                        <span class="grid h-7 w-7 place-items-center rounded-lg bg-indigo-500/20 text-xs font-bold text-indigo-300">★</span>
-                        Método universal (válido para cualquier red social)
-                    </p>
-                    <p class="mt-2 text-xs leading-relaxed text-slate-300">
-                        Esta opción sirve para cualquier app o red social. Es más limitada en el número de comentarios, por lo que sirve perfecto para cantidades pequeñas:
-                    </p>
-                    <a href="https://es.exportcomments.com/" target="_blank" rel="noopener"
-                       class="mt-2.5 inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-indigo-300 underline decoration-indigo-500/40 underline-offset-2 transition hover:text-indigo-100">
-                        <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                        es.exportcomments.com
-                    </a>
-                </div>
-
-                <p class="mt-4 rounded-lg border border-white/5 bg-white/[.02] p-3 text-[11px] leading-relaxed text-slate-500">
-                    Nota: estas herramientas web suelen entregar el CSV/JSON al instante o por
-                    correo. Si el archivo viene en ZIP, descomprimelo y sube solo el archivo de
-                    comentarios. La aplicación acepta cualquier cantidad de comentarios que vengan:
-                    si son muchos (miles), se analizará un tope de hasta <span class="text-slate-300">1500 comentarios</span>.
-                    El límite de archivo es de <span class="text-slate-300">16 MB</span>.
+            <div class="mt-6 rounded-xl border border-indigo-500/20 bg-indigo-500/[.06] p-4">
+                <p class="flex items-center gap-2 text-sm font-semibold text-white">
+                    <span class="grid h-7 w-7 place-items-center rounded-lg bg-indigo-500/20 text-xs font-bold text-indigo-300">★</span>
+                    Método universal (válido para cualquier red social)
                 </p>
+                <p class="mt-2 text-xs leading-relaxed text-slate-300">
+                    Esta opción sirve para cualquier app o red social. Es más limitada en el número de comentarios, por lo que sirve perfecto para cantidades pequeñas:
+                </p>
+                <a href="https://es.exportcomments.com/" target="_blank" rel="noopener"
+                   class="mt-2.5 inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-indigo-300 underline decoration-indigo-500/40 underline-offset-2 transition hover:text-indigo-100">
+                    <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    es.exportcomments.com
+                </a>
             </div>
 
             <div class="mt-7">
@@ -1158,10 +1024,14 @@
         for (let i = 0; i < guides.length; i++) {
             guides[i].classList.add('hidden');
         }
-        $('guide-' + platform).classList.remove('hidden');
-        $('app-switch').value = platform;
-        $('platform-select').value = platform;
-        $('others-sub').textContent = APP_NAMES[platform];
+        const g = $('guide-' + platform);
+        if (g) g.classList.remove('hidden');
+        const sw = $('app-switch');
+        if (sw) sw.value = platform;
+        const ps = $('platform-select');
+        if (ps) ps.value = platform;
+        const os = $('others-sub');
+        if (os) os.textContent = APP_NAMES[platform];
     }
 
     $('youtube-back').addEventListener('click', () => goTo('welcome'));
@@ -1182,10 +1052,13 @@
         goTo(target);
     });
 
-    // Cambiar de red dentro de la vista 'others' abre la ventana de esa red.
-    $('app-switch').addEventListener('change', (event) => {
-        showApp(event.target.value);
-    });
+    // Cambiar de red dentro de la vista 'others' si existe el selector
+    const appSwitch = $('app-switch');
+    if (appSwitch) {
+        appSwitch.addEventListener('change', (event) => {
+            showApp(event.target.value);
+        });
+    }
 
     // ==================================================================
     // Selector de archivo + arrastrar y soltar
