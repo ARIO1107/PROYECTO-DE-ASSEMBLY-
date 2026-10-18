@@ -816,7 +816,7 @@
         </div>
 
         <form id="ai-form" class="flex items-end gap-2 border-t border-white/5 px-3 py-3">
-            <textarea id="ai-input" rows="1" maxlength="500" placeholder="Pregúntale sobre el análisis o la app..."
+            <textarea id="ai-input" rows="1" maxlength="500" placeholder="Pregúntale lo que quieras: la app, los resultados..."
                       aria-label="Escribe tu pregunta para el asistente"
                       class="field flex-1 !text-xs"></textarea>
             <button type="submit" id="ai-send" aria-label="Enviar pregunta"
@@ -2042,9 +2042,9 @@
         const box = $('ai-messages');
         if (!box || !aiEnabled || box.childElementCount > 0) return;
         addAiMessage('robot',
-            '¡Hola! Soy Wardo, el asistente de BotWard. Puedo explicarte qué '
-            + 'significa cada dato del análisis o cómo funciona la app. '
-            + '¡Pregunta lo que quieras!');
+            '¡Hola! Soy Wardo, tu asistente de BotWard. Puedo explicarte los '
+            + 'resultados de un análisis, cómo funciona la app o cualquier otra '
+            + 'cosa que quieras preguntar. ¡Adelante!');
     }
 
     function setAiBusy(busy) {
@@ -2219,6 +2219,27 @@
             if (question) askAi(question);
         });
     }
+
+    // Presentacion automatica: el robot se muestra solo al cargar, una vez
+    // por sesion (sessionStorage evita que vuelva a abrirse en cada recarga
+    // de la misma pestana; el usuario siempre puede minimizarlo).
+    (function scheduleAiGreeting() {
+        let already = false;
+        try { already = !!sessionStorage.getItem('bw_ai_greeted'); } catch (e) { already = false; }
+        if (already) return;
+        setTimeout(async () => {
+            try { await configReady; } catch (e) { /* sin servidor */ }
+            if (!aiEnabled) return;
+            const box = $('ai-messages');
+            // Si ya hay contenido (p.ej. el resumen de un analisis), no
+            // duplicamos: el panel ya estaria abierto con su mensaje.
+            if (!box || box.childElementCount === 0) {
+                openAiPanel();
+                ensureAiGreeting();
+            }
+            try { sessionStorage.setItem('bw_ai_greeted', '1'); } catch (e) {}
+        }, 1600);
+    })();
 </script>
 </body>
 </html>
