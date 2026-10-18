@@ -38,5 +38,10 @@ services:
         value: "10"
       - key: YOUTUBE_API_KEY
         sync: false
+      # Asistente IA (Groq, tier gratuito). Se anade en
+      #   Dashboard -> Environment -> Add a secret -> GROQ_API_KEY
+      # Sin clave la app funciona igual: solo no se muestra el robot.
+      - key: GROQ_API_KEY
+        sync: false
       - key: SIMULATION_SALT
         generateValue: true

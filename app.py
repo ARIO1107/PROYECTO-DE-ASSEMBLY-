@@ -118,6 +118,21 @@ class Settings(BaseSettings):
     api_retries: int = Field(default=3, ge=1, le=6, validation_alias=AliasChoices("API_RETRIES"))
     api_backoff_seconds: float = Field(default=1.0, ge=0.1, le=30, validation_alias=AliasChoices("API_BACKOFF_SECONDS"))
 
+    # --- Asistente IA (tier gratuito de Groq) -------------------------------
+    # Sin clave la app arranca igual y el robot asistente simplemente no se
+    # muestra (ai_enabled=false). La clave NUNCA sale del servidor.
+    llm_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("LLM_API_KEY", "GROQ_API_KEY", "llm_api_key"),
+    )
+    llm_provider: str = Field(default="groq", validation_alias=AliasChoices("LLM_PROVIDER"))
+    llm_model: str = Field(
+        default="openai/gpt-oss-20b",
+        validation_alias=AliasChoices("LLM_MODEL", "llm_model"),
+    )
+    llm_timeout: float = Field(default=25.0, gt=0, le=60, validation_alias=AliasChoices("LLM_TIMEOUT"))
+    llm_max_tokens: int = Field(default=420, ge=64, le=2000, validation_alias=AliasChoices("LLM_MAX_TOKENS"))
+
 
 settings = Settings()
 
@@ -180,6 +195,63 @@ class HealthResponse(BaseModel):
     version: str
     environment: str
     data_mode: str
+
+
+# --- Modelos del asistente IA ----------------------------------------------
+# El cliente envia SIEMPRE un subconjunto compacto del analisis (metrics,
+# risk, findings, top-K comentarios): nunca el AnalyzeResponse entero, que con
+# 10.000 comentarios pesaria cientos de KB por cada resumen pedido.
+
+class AIAnalysisContext(BaseModel):
+    """Subconjunto compacto del analisis que el robot usa como contexto."""
+
+    metrics: dict[str, Any] = Field(default_factory=dict)
+    risk: dict[str, Any] = Field(default_factory=dict)
+    distribution: dict[str, int] = Field(default_factory=dict)
+    findings: list[str] = Field(default_factory=list)
+    source: dict[str, Any] = Field(default_factory=dict)
+    comments: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Top-K comentarios ya recortados por el cliente (<=12).",
+    )
+
+
+class AISummaryRequest(BaseModel):
+    """POST /api/ai/summary: resumen automatico tras cada analisis."""
+
+    analysis: AIAnalysisContext
+
+
+class AISummaryResponse(BaseModel):
+    enabled: bool
+    summary: str = ""
+    recommendations: str = ""
+    provider: str = ""
+    model: str = ""
+    error: Optional[str] = None
+
+
+class AIChatTurn(BaseModel):
+    """Un mensaje del historial de la conversacion con el robot."""
+
+    role: str = Field(..., pattern="^(user|assistant)$")
+    content: str = Field(..., min_length=1, max_length=1200)
+
+
+class AIAskRequest(BaseModel):
+    """POST /api/ai/ask: pregunta libre del usuario sobre la app o los datos."""
+
+    question: str = Field(..., min_length=1, max_length=500)
+    analysis: Optional[AIAnalysisContext] = None
+    history: list[AIChatTurn] = Field(default_factory=list)
+
+
+class AIAskResponse(BaseModel):
+    enabled: bool
+    answer: str = ""
+    provider: str = ""
+    model: str = ""
+    error: Optional[str] = None
 
 
 # ===========================================================================
@@ -2450,6 +2522,200 @@ async def _demo_event_stream(
 
 
 # ===========================================================================
+# 9b. ASISTENTE IA (Groq, tier gratuito)
+# ===========================================================================
+# El robot de la esquina hace dos cosas:
+#   1. `/api/ai/summary` -> resumen automatico (carateres) tras cada analisis.
+#   2. `/api/ai/ask`     -> responde preguntas del usuario sobre la app o los
+#                           datos del analisis en curso.
+#
+# Decisiones:
+#   * Proveedor Groq (tier gratis, ~14.400 peticiones/dia, sin tarjeta). La
+#     clave vive en GROQ_API_KEY / LLM_API_KEY y NUNCA llega al navegador.
+#   * Sin clave o con la cuota agotada los endpoints devuelven 200 con
+#     `enabled=false`: la app sigue funcionando igual que antes de existir
+#     el robot. Nunca un 500 que rompa la interfaz.
+#   * El cliente manda un subconjunto compacto del analisis, no el completo.
+
+GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
+
+# Ficha estatica de la app: permite responder preguntas generales ("¿como
+# funciona esto?", "¿que significa el riesgo medio?") aunque no haya ningun
+# analisis cargado. Mantenida corta para no quemar tokens del tier gratis.
+ASSISTANT_SYSTEM_PROMPT = """\
+Eres "Wardo", el asistente de BotWard, una web que estima que porcentaje de los \
+comentarios de un video o publicacion son bots (cuentas automatizadas).
+
+Como funciona BotWard (ficha tecnica):
+- Analiza comentarios de YouTube (via YouTube Data API) y de otras redes sociales \
+subiendo un CSV/JSON exportado (TikTok, Instagram, X, Facebook, Threads, Reddit, LinkedIn).
+- De cada comentario extrae 40 features (texto, autor, tiempo, enlaces, emojis, \
+duplicados, entropia del texto...) y aplica 9 heuristicas ponderadas: \
+spam lexicon, patron de identidad, contenido generico, ruido textual, temporal, \
+duplicacion, emojis, formato y engagement.
+- Cada comentario recibe un score 0-100. El agregado produce un porcentaje global \
+de bots y un nivel de riesgo: BAJO (verde, comentarios mayormente reales), \
+MEDIO (amarillo, conviene revisar), ALTO (rojo, probable ataque), \
+CRITICO (morado, ataque casi seguro).
+- El score es una estimacion heuristica orientativa, NUNCA una verificacion de \
+identidad ni una verdad absoluta. No hay certeza al 100% sobre ningun comentario.
+- La demo en directo genera comentarios sinteticos con el mismo motor; no gastan \
+cuota ni prueban nada sobre videos reales.
+- Limites: hasta 10.000 comentarios por analisis, archivos CSV/JSON de maximo 16 MB.
+
+Reglas de respuesta:
+- Responde SIEMPRE en espanol, en un tono amable y cercano, como un robot companero.
+- Corto: 2 a 4 frases como maximo, sin listas largas ni markdown complicado.
+- Si te preguntan algo fuera del alcance de BotWard, dilo con amabilidad y \
+vuelve al tema de la app.
+- Nunca inventes datos de un analisis: si el contexto trae metricas, usalas tal cual.
+"""
+
+# Errores de la IA traducidos a algo que el usuario pueda entender.
+LLM_ERROR_MESSAGES = {
+    "no_key": "El asistente IA no esta configurado en este despliegue.",
+    "quota": "El asistente ha alcanzado su limite gratuito por hoy. "
+             "Vuelve a probarle mas tarde; el resto de la app funciona con normalidad.",
+    "timeout": "El asistente tardo demasiado en responder. Intentalo de nuevo en un momento.",
+    "bad_response": "El asistente devolvio una respuesta inesperada. Intentalo de nuevo.",
+}
+
+
+def llm_enabled() -> bool:
+    """True si hay clave de IA configurada (el robot se muestra)."""
+    return bool((settings.llm_api_key or "").strip())
+
+
+def _call_llm(messages: list[dict[str, str]]) -> tuple[Optional[str], Optional[str]]:
+    """POST al chat de Groq. Devuelve (texto, codigo_de_error).
+
+    Sincrono a proposito: se invoca dentro de `asyncio.to_thread` desde los
+    endpoints para no bloquear el event loop mientras la IA responde.
+    """
+    key = (settings.llm_api_key or "").strip()
+    if not key:
+        return None, "no_key"
+
+    body = {
+        "model": settings.llm_model,
+        "messages": messages,
+        "max_tokens": settings.llm_max_tokens,
+        "temperature": 0.4,
+    }
+    try:
+        response = requests.post(
+            GROQ_CHAT_URL,
+            json=body,
+            headers={"Authorization": f"Bearer {key}"},
+            timeout=settings.llm_timeout,
+        )
+    except requests.Timeout:
+        return None, "timeout"
+    except requests.RequestException:
+        return None, "bad_response"
+
+    if response.status_code == 429:
+        return None, "quota"
+    if response.status_code in (401, 403):
+        return None, "no_key"
+    if response.status_code != 200:
+        return None, "bad_response"
+
+    try:
+        payload = response.json()
+        text = str(payload["choices"][0]["message"]["content"]).strip()
+    except (ValueError, KeyError, IndexError, TypeError):
+        return None, "bad_response"
+    if not text:
+        return None, "bad_response"
+    return text, None
+
+
+def _analysis_brief(context: AIAnalysisContext) -> str:
+    """Convierte el subconjunto del analisis en un bloque de texto compacto
+    para el prompt (mas barato y mas estable que mandar JSON crudo)."""
+    metrics = context.metrics or {}
+    risk = context.risk or {}
+    source = context.source or {}
+    lines = [
+        "ANALISIS EN CURSO:",
+        f"- Fuente: {source.get('title') or 'desconocida'}"
+        + (f" ({source.get('channel')})" if source.get("channel") else ""),
+        f"- Comentarios analizados: {metrics.get('total_comments_analyzed', 0)}",
+        f"- Porcentaje estimado de bots: {metrics.get('bot_percentage', 0)}%",
+        f"- Nivel de riesgo: {risk.get('label', '-')}"
+        + (f" -> {risk.get('action')}" if risk.get("action") else ""),
+        f"- Autores unicos: {metrics.get('unique_authors', 0)}"
+        + f" · duplicados: {metrics.get('duplicate_ratio', 0)}%"
+        + f" · con enlaces: {metrics.get('link_ratio', 0)}%",
+    ]
+    distribution = context.distribution or {}
+    if distribution:
+        lines.append(
+            "- Distribucion: alto={high} / medio={medium} / bajo={low}".format(
+                high=distribution.get("high", 0),
+                medium=distribution.get("medium", 0),
+                low=distribution.get("low", 0),
+            )
+        )
+    if context.findings:
+        lines.append("- Hallazgos: " + " | ".join(context.findings[:6]))
+    if context.comments:
+        lines.append("- Comentarios mas sospechosos (score, autor, texto, razones):")
+        for comment in context.comments[:8]:
+            reasons = ", ".join(str(r) for r in (comment.get("reasons") or [])[:3])
+            lines.append(
+                f"  * {comment.get('bot_score', 0)}% @{comment.get('author', '?')}: "
+                f"\"{str(comment.get('text_preview', ''))[:140]}\""
+                + (f" ({reasons})" if reasons else "")
+            )
+    return "\n".join(lines)
+
+
+def _split_summary(text: str) -> tuple[str, str]:
+    """Separa el output en (resumen, recomendacion) por el marcador esperado.
+
+    Si el modelo no respeta el formato, todo el texto va al resumen y la
+    recomendacion queda vacia: mejor un resumen completo que un error.
+    """
+    normalized = text.replace("**", "")
+    marker = "RECOMENDACION:"
+    if marker in normalized.upper():
+        index = normalized.upper().index(marker)
+        head = normalized[:index].strip()
+        tail = normalized[index + len(marker):].strip()
+        head = re.sub(r"^(RESUMEN:)\s*", "", head, flags=re.IGNORECASE).strip()
+        if head and tail:
+            return head, tail
+    return normalized, ""
+
+
+def build_summary_messages(context: AIAnalysisContext) -> list[dict[str, str]]:
+    """Prompt del resumen automatico post-analisis."""
+    user = (
+        _analysis_brief(context)
+        + "\n\nRedacta el resumen para el usuario de la web. Formato EXACTO:\n"
+        "RESUMEN: <2-3 frases en lenguaje natural con lo que pasa en estos comentarios>\n"
+        "RECOMENDACION: <1-2 frases con que deberia hacer el moderador segun el riesgo>"
+    )
+    return [
+        {"role": "system", "content": ASSISTANT_SYSTEM_PROMPT},
+        {"role": "user", "content": user},
+    ]
+
+
+def build_ask_messages(request: AIAskRequest) -> list[dict[str, str]]:
+    """Prompt de una pregunta del chat, con analisis y hilo corto si existen."""
+    messages: list[dict[str, str]] = [{"role": "system", "content": ASSISTANT_SYSTEM_PROMPT}]
+    if request.analysis is not None:
+        messages.append({"role": "system", "content": _analysis_brief(request.analysis)})
+    for turn in request.history[-6:]:
+        messages.append({"role": turn.role, "content": turn.content})
+    messages.append({"role": "user", "content": request.question.strip()})
+    return messages
+
+
+# ===========================================================================
 # 10. FASTAPI
 # ===========================================================================
 
@@ -2553,6 +2819,15 @@ async def api_config() -> dict[str, Any]:
             "phases": list(DEMO_PHASES),
             "requires_api_key": False,
         },
+        "ai": {
+            "enabled": llm_enabled(),
+            "provider": settings.llm_provider,
+            # Nunca se devuelve el modelo interno completo de la clave, solo
+            # el nombre del modelo de lenguaje usado (no es secreto).
+            "model": settings.llm_model,
+            "summary_url": "/api/ai/summary",
+            "ask_url": "/api/ai/ask",
+        },
         "file_upload": {
             "enabled": True,
             "endpoint": "/api/analyze/upload",
@@ -2565,6 +2840,63 @@ async def api_config() -> dict[str, Any]:
             "requires_api_key": False,
         },
     }
+
+
+@app.post("/api/ai/summary", response_model=AISummaryResponse, tags=["asistente"])
+async def ai_summary(payload: AISummaryRequest) -> AISummaryResponse:
+    """Resumen automatico del analisis para el robot asistente.
+
+    El frontend lo llama tras cada analisis (YouTube, archivo o demo) y
+    escribe el resultado en la burbuja del robot. Sin clave de IA devuelve
+    `enabled=false` con 200: la app no depende de este endpoint.
+    """
+    if not llm_enabled():
+        return AISummaryResponse(enabled=False, error=LLM_ERROR_MESSAGES["no_key"])
+
+    messages = await asyncio.to_thread(build_summary_messages, payload.analysis)
+    text, error = await asyncio.to_thread(_call_llm, messages)
+    if error:
+        return AISummaryResponse(
+            enabled=False,
+            provider=settings.llm_provider,
+            model=settings.llm_model,
+            error=LLM_ERROR_MESSAGES.get(error, LLM_ERROR_MESSAGES["bad_response"]),
+        )
+    summary, recommendations = _split_summary(text or "")
+    return AISummaryResponse(
+        enabled=True,
+        summary=summary,
+        recommendations=recommendations,
+        provider=settings.llm_provider,
+        model=settings.llm_model,
+    )
+
+
+@app.post("/api/ai/ask", response_model=AIAskResponse, tags=["asistente"])
+async def ai_ask(payload: AIAskRequest) -> AIAskResponse:
+    """Pregunta libre al robot: sobre la app o sobre los datos cargados.
+
+    El cliente manda `analysis` (subconjunto compacto) si hay un analisis
+    visible y los ultimos turnos de la conversacion para mantener el hilo.
+    """
+    if not llm_enabled():
+        return AIAskResponse(enabled=False, error=LLM_ERROR_MESSAGES["no_key"])
+
+    messages = await asyncio.to_thread(build_ask_messages, payload)
+    text, error = await asyncio.to_thread(_call_llm, messages)
+    if error:
+        return AIAskResponse(
+            enabled=False,
+            provider=settings.llm_provider,
+            model=settings.llm_model,
+            error=LLM_ERROR_MESSAGES.get(error, LLM_ERROR_MESSAGES["bad_response"]),
+        )
+    return AIAskResponse(
+        enabled=True,
+        answer=text or "",
+        provider=settings.llm_provider,
+        model=settings.llm_model,
+    )
 
 
 @app.post("/api/analyze", response_model=AnalyzeResponse, tags=["analisis"])
