@@ -23,7 +23,15 @@
                         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace']
                     },
                     colors: {
-                        ink: { 950: '#07080b', 900: '#0d0f14', 800: '#141822', 700: '#1c2130' }
+                        // Fondo corporativo cálido (estilo HubSpot dark): marron
+                        // grisaceo muy oscuro en vez del azul frio anterior.
+                        ink: { 950: '#1a1613', 900: '#221e1a', 800: '#2a2520', 700: '#352f28' },
+                        // Acento naranja corporativo (CTA, enlaces, foco).
+                        brand: {
+                            100: '#ffe8de', 200: '#ffcdb8', 300: '#ffab85',
+                            400: '#ff7a4d', 500: '#ff5c35', 600: '#e64a19',
+                            700: '#b83a12', 900: '#5c1d0c', 950: '#3d1206'
+                        }
                     }
                 }
             }
@@ -44,7 +52,7 @@
             position: relative;
             border-radius: 1.15rem;
             border: 1px solid rgba(255, 255, 255, .07);
-            background: linear-gradient(158deg, rgba(28, 33, 48, .92) 0%, rgba(13, 15, 20, .94) 62%);
+            background: linear-gradient(158deg, rgba(48, 42, 36, .92) 0%, rgba(26, 22, 19, .94) 62%);
             padding: 1.5rem;
             box-shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 14px 34px -14px rgba(0, 0, 0, .8);
             transition: transform .4s var(--ease), box-shadow .4s var(--ease), border-color .4s var(--ease);
@@ -120,7 +128,7 @@
             width: 1.15rem; height: 1.15rem;
             border-radius: 999px;
             border: 2px solid rgba(255, 255, 255, .22);
-            border-top-color: #a5b4fc;
+            border-top-color: #ff7a4d;
             animation: spin .7s linear infinite;
         }
 
@@ -139,11 +147,11 @@
             transition: border-color .3s var(--ease), background-color .3s var(--ease),
                         transform .3s var(--ease);
         }
-        .dropzone:hover { border-color: rgba(129, 140, 248, .55); background: rgba(99, 102, 241, .07); }
-        .dropzone:focus-visible { outline: 2px solid rgba(129, 140, 248, .8); outline-offset: 2px; }
+        .dropzone:hover { border-color: rgba(255, 122, 77, .55); background: rgba(255, 92, 53, .07); }
+        .dropzone:focus-visible { outline: 2px solid rgba(255, 122, 77, .8); outline-offset: 2px; }
         .dropzone.is-over {
-            border-color: #818cf8;
-            background: rgba(99, 102, 241, .14);
+            border-color: #ff7a4d;
+            background: rgba(255, 92, 53, .14);
             transform: translateY(-2px);
         }
         .dropzone.has-file {
@@ -155,14 +163,14 @@
         .field {
             border-radius: .9rem;
             border: 1px solid rgba(255, 255, 255, .10);
-            background: #0d0f14;
-            color: #cbd5e1;
+            background: #1f1b17;
+            color: #d6d3d1;
             font-size: .82rem;
             padding: .8rem .9rem;
             outline: none;
             transition: border-color .3s var(--ease), box-shadow .3s var(--ease);
         }
-        .field:focus { border-color: rgba(99, 102, 241, .6); box-shadow: 0 0 0 3px rgba(99, 102, 241, .18); }
+        .field:focus { border-color: rgba(255, 92, 53, .6); box-shadow: 0 0 0 3px rgba(255, 92, 53, .18); }
 
         /* --- Fila de la traza de la fuente (archivo subido vs API) --- */
         .source-trace { font-variant-numeric: tabular-nums; }
@@ -199,9 +207,9 @@
         }
         .ai-msg-user {
             align-self: flex-end;
-            background: rgba(99, 102, 241, .18);
-            border: 1px solid rgba(129, 140, 248, .32);
-            color: #e0e7ff;
+            background: rgba(255, 92, 53, .16);
+            border: 1px solid rgba(255, 122, 77, .32);
+            color: #ffe8de;
             border-radius: 1rem .35rem 1rem 1rem;
             padding: .6rem .8rem;
         }
@@ -230,7 +238,7 @@
             border-radius: 999px;
             transition: border-color .25s var(--ease), background-color .25s var(--ease), color .25s var(--ease);
         }
-        .ai-chip:hover { border-color: rgba(129, 140, 248, .5); background: rgba(99, 102, 241, .12); color: #e0e7ff; }
+        .ai-chip:hover { border-color: rgba(255, 122, 77, .5); background: rgba(255, 92, 53, .12); color: #ffe8de; }
         /* Indicador "escribiendo..." */
         .ai-dots { display: inline-flex; gap: 4px; padding: .35rem .1rem; }
         .ai-dots span {
@@ -274,28 +282,36 @@
     </style>
 </head>
 
-<body class="bg-ink-950 text-slate-200 antialiased selection:bg-indigo-500/30" data-mode="simulated">
+<body class="bg-ink-950 text-stone-200 antialiased selection:bg-brand-500/30" data-mode="simulated">
 
 <!-- Fondo ambiental: un unico foco tenue en la parte superior. Sin coste de red. -->
 <div aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-    <div class="absolute left-1/2 -top-64 h-[42rem] w-[42rem] -translate-x-1/2 rounded-full bg-indigo-600/[.08] blur-[130px]"></div>
+    <div class="absolute left-1/2 -top-64 h-[42rem] w-[42rem] -transtone-x-1/2 rounded-full bg-brand-500/[.06] blur-[130px]"></div>
 </div>
 
 <!-- ===================== NAVBAR ===================== -->
 <header class="sticky top-0 z-30 border-b border-white/5 bg-ink-950/75 backdrop-blur-xl">
     <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3.5">
-        <div id="header-home" role="button" tabindex="0" class="flex items-center gap-3 cursor-pointer select-none rounded-lg pr-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50">
-            <div class="grid h-9 w-9 place-items-center rounded-lg bg-indigo-600 text-sm font-bold text-white shadow-sm shadow-indigo-950/50 ring-1 ring-inset ring-white/10">B</div>
+        <div id="header-home" role="button" tabindex="0" class="flex items-center gap-3 cursor-pointer select-none rounded-lg pr-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50">
+            <div class="grid h-9 w-9 place-items-center rounded-lg bg-brand-500 text-sm font-bold text-white shadow-sm shadow-brand-950/50 ring-1 ring-inset ring-white/10">B</div>
             <div>
                 <h1 class="text-sm font-semibold tracking-tight text-white">BotWard</h1>
-                <p class="text-[11px] leading-tight text-slate-500">Deteccion de bots en comentarios</p>
+                <p class="text-[11px] leading-tight text-stone-500">Deteccion de bots en comentarios</p>
             </div>
         </div>
+        <nav class="hidden items-center gap-1 md:flex">
+            <button type="button" data-nav="youtube" class="nav-link rounded-lg px-3 py-1.5 text-[13px] font-medium text-stone-400 transition hover:bg-white/5 hover:text-white">YouTube</button>
+            <button type="button" data-nav="others" class="nav-link rounded-lg px-3 py-1.5 text-[13px] font-medium text-stone-400 transition hover:bg-white/5 hover:text-white">Otras redes</button>
+        </nav>
         <div class="flex items-center gap-3">
             <span id="mode-badge" class="hidden items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-300">
                 <span class="h-1.5 w-1.5 rounded-full bg-amber-400 breath"></span>
                 <span id="mode-badge-text">Modo simulacion</span>
             </span>
+            <button type="button" id="nav-cta" class="hidden items-center gap-1.5 rounded-lg bg-brand-500 px-4 py-2 text-[13px] font-semibold text-white shadow-sm shadow-brand-900/40 transition hover:bg-brand-400 active:scale-[.98] sm:inline-flex">
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Analizar
+            </button>
         </div>
     </div>
 </header>
@@ -331,37 +347,37 @@
             <h2 class="max-w-2xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                 Que quieres analizar?
             </h2>
-            <p class="mt-3 max-w-2xl text-sm leading-relaxed text-slate-400">
+            <p class="mt-3 max-w-2xl text-sm leading-relaxed text-stone-400">
                 Elige la red social en la que estan los comentarios que te preocupan. El servicio
-                extrae <span class="text-slate-300">40 features</span> de cada comentario y aplica
-                <span class="text-slate-300">9 heuristicas ponderadas</span> para estimar el porcentaje
+                extrae <span class="text-stone-300">40 features</span> de cada comentario y aplica
+                <span class="text-stone-300">9 heuristicas ponderadas</span> para estimar el porcentaje
                 de bots, con su distribucion por veredicto.
             </p>
 
             <div id="platform-grid" class="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <button type="button" id="pick-youtube" data-platform="" data-target="youtube"
-                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-6 text-left transition hover:-translate-y-0.5 hover:border-red-500/45 hover:bg-red-500/[.07]">
+                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-6 text-left transition hover:-transtone-y-0.5 hover:border-red-500/45 hover:bg-red-500/[.07]">
                     <span class="grid h-11 w-11 place-items-center rounded-xl bg-red-500/15 text-lg font-bold text-red-400">Y</span>
                     <span class="text-base font-semibold text-white">YouTube</span>
-                    <span class="text-xs text-slate-500">Pega la URL del video</span>
+                    <span class="text-xs text-stone-500">Pega la URL del video</span>
                 </button>
                 <button type="button" id="pick-others" data-platform="tiktok" data-target="others"
-                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-6 text-left transition hover:-translate-y-0.5 hover:border-slate-400/45 hover:bg-slate-400/[.07]">
-                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-slate-500/15 text-lg font-bold text-slate-300">O</span>
+                        class="group flex flex-col items-start gap-2.5 rounded-xl border border-white/10 bg-white/[.03] p-6 text-left transition hover:-transtone-y-0.5 hover:border-stone-400/45 hover:bg-stone-400/[.07]">
+                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-stone-500/15 text-lg font-bold text-stone-300">O</span>
                     <span class="text-base font-semibold text-white">Otras redes sociales</span>
-                    <span class="text-xs text-slate-500">Sube CSV o JSON (TikTok, Instagram, X, Facebook, Threads, Reddit, LinkedIn)</span>
+                    <span class="text-xs text-stone-500">Sube CSV o JSON (TikTok, Instagram, X, Facebook, Threads, Reddit, LinkedIn)</span>
                 </button>
             </div>
         </section>
 
         <!-- --- Llamada a la demo en vivo (solo desde la bienvenida) --- -->
         <section class="card anim-up mt-5 p-0" style="animation-delay:.08s">
-            <div class="h-1 w-full rounded-none bg-gradient-to-r from-indigo-500 to-violet-500"></div>
+            <div class="h-1 w-full rounded-none bg-gradient-to-r from-brand-500 to-brand-600"></div>
             <div class="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between lg:p-7">
                 <div class="max-w-xl">
-                    <p class="text-[10px] font-medium uppercase tracking-widest text-indigo-300">Demo interactiva</p>
+                    <p class="text-[10px] font-medium uppercase tracking-widest text-brand-300">Demo interactiva</p>
                     <h3 class="mt-2 text-lg font-semibold text-white">Simular un ataque de bots en directo</h3>
-                    <p class="mt-2 text-xs leading-relaxed text-slate-400">
+                    <p class="mt-2 text-xs leading-relaxed text-stone-400">
                         Genera un ataque sintetico y lo emite comentario a comentario. Usa el mismo
                         motor (las mismas 9 heuristicas) que el analisis real: no es un video grabado,
                         es el motor funcionando.
@@ -369,11 +385,11 @@
                 </div>
                 <div class="shrink-0">
                     <button type="button" id="demo-btn"
-                            class="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm shadow-indigo-950/50 ring-1 ring-inset ring-white/10 transition hover:bg-indigo-500 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50">
+                            class="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm shadow-brand-950/50 ring-1 ring-inset ring-white/10 transition hover:bg-brand-500 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50">
                         <span id="demo-btn-dot" class="h-2 w-2 rounded-full bg-white/80"></span>
                         <span id="demo-btn-label">Lanzar demo en directo</span>
                     </button>
-                    <p class="mt-3 text-center text-[10px] text-slate-600">
+                    <p class="mt-3 text-center text-[10px] text-stone-600">
                         No requiere URL ni clave de API · no gasta cuota
                     </p>
                 </div>
@@ -389,34 +405,34 @@
                     <span class="grid h-11 w-11 place-items-center rounded-xl bg-red-500/15 text-lg font-bold text-red-400">Y</span>
                     <div>
                         <h2 class="text-xl font-semibold tracking-tight text-white sm:text-2xl">Analizar un video de YouTube</h2>
-                        <p class="text-xs text-slate-500">Comentarios publicos de cualquier video <span id="mode-note" class="hidden">· Modo API oficial</span></p>
+                        <p class="text-xs text-stone-500">Comentarios publicos de cualquier video <span id="mode-note" class="hidden">· Modo API oficial</span></p>
                     </div>
                 </div>
                 <button type="button" id="youtube-back"
-                        class="rounded-lg border border-white/10 px-3.5 py-2 text-xs text-slate-300 transition hover:border-indigo-500/40 hover:text-indigo-300">
+                        class="rounded-lg border border-white/10 px-3.5 py-2 text-xs text-stone-300 transition hover:border-brand-500/40 hover:text-brand-300">
                     Volver al inicio
                 </button>
             </div>
 
             <form id="analyze-form" class="mt-6 flex flex-col gap-3 sm:flex-row">
                 <div class="relative flex-1">
-                    <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-600">
+                    <span class="pointer-events-none absolute left-4 top-1/2 -transtone-y-1/2 text-stone-600">
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8zM9.5 15.5v-7l6.5 3.5-6.5 3.5z"/></svg>
                     </span>
                     <input id="url" name="url" type="text" required spellcheck="false"
                            value="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
                            placeholder="https://www.youtube.com/watch?v=..."
-                           class="w-full rounded-xl border border-white/10 bg-ink-900 py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-600 outline-none transition focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/20">
+                           class="w-full rounded-xl border border-white/10 bg-ink-900 py-3.5 pl-12 pr-4 text-sm text-white placeholder-stone-600 outline-none transition focus:border-brand-500/60 focus:ring-2 focus:ring-brand-500/20">
                 </div>
 
                 <div class="flex flex-wrap gap-3">
                     <button type="submit" id="submit-btn"
-                            class="flex items-center gap-2 rounded-xl bg-indigo-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-50">
+                            class="flex items-center gap-2 rounded-xl bg-brand-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-900/40 transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:opacity-50">
                         <span id="btn-label">Analizar</span>
                         <span id="btn-spinner" class="hidden spinner"></span>
                     </button>
                     <button type="button" id="results-clear-btn"
-                            class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3.5 text-sm font-semibold text-slate-300 transition hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-95">
+                            class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3.5 text-sm font-semibold text-stone-300 transition hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-95">
                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                         <span>Limpiar resultados</span>
                     </button>
@@ -429,9 +445,9 @@
                 <img id="yt-thumb" alt="Miniatura del video de YouTube"
                      class="h-[5.25rem] w-[9.3rem] shrink-0 rounded-lg bg-ink-800 object-cover">
                 <div class="min-w-0">
-                    <p class="text-[10px] uppercase tracking-widest text-slate-500">Vista previa del video</p>
-                    <p id="yt-preview-id" class="mt-0.5 truncate font-mono text-xs text-slate-300"></p>
-                    <p class="mt-0.5 text-[11px] text-slate-500">Miniatura oficial de YouTube</p>
+                    <p class="text-[10px] uppercase tracking-widest text-stone-500">Vista previa del video</p>
+                    <p id="yt-preview-id" class="mt-0.5 truncate font-mono text-xs text-stone-300"></p>
+                    <p class="mt-0.5 text-[11px] text-stone-500">Miniatura oficial de YouTube</p>
                 </div>
             </div>
         </section>
@@ -442,14 +458,14 @@
         <section class="card anim-up p-6 sm:p-8 lg:p-10">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
-                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-slate-600/15 text-lg font-bold text-slate-300">O</span>
+                    <span class="grid h-11 w-11 place-items-center rounded-xl bg-stone-600/15 text-lg font-bold text-stone-300">O</span>
                     <div>
                         <h2 class="text-xl font-semibold tracking-tight text-white sm:text-2xl">Analizar otra red social</h2>
-                        <p class="text-xs text-slate-500">Analiza comentarios en formato CSV o JSON de cualquier red social <span id="others-sub" class="hidden">TikTok</span></p>
+                        <p class="text-xs text-stone-500">Analiza comentarios en formato CSV o JSON de cualquier red social <span id="others-sub" class="hidden">TikTok</span></p>
                     </div>
                 </div>
                 <button type="button" id="others-back"
-                        class="rounded-lg border border-white/10 px-3.5 py-2 text-xs text-slate-300 transition hover:border-indigo-500/40 hover:text-indigo-300">
+                        class="rounded-lg border border-white/10 px-3.5 py-2 text-xs text-stone-300 transition hover:border-brand-500/40 hover:text-brand-300">
                     Volver al inicio
                 </button>
             </div>
@@ -466,18 +482,18 @@
                     </p>
                 </div>
 
-                <div class="rounded-xl border border-indigo-500/20 bg-indigo-500/[.06] p-4">
+                <div class="rounded-xl border border-brand-500/20 bg-brand-500/[.06] p-4">
                     <p class="flex items-center gap-2 text-sm font-semibold text-white">
-                        <span class="grid h-7 w-7 place-items-center rounded-lg bg-indigo-500/20 text-indigo-300">
+                        <span class="grid h-7 w-7 place-items-center rounded-lg bg-brand-500/20 text-brand-300">
                             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/></svg>
                         </span>
                         Método universal (cualquier red social)
                     </p>
-                    <p class="mt-2 text-xs leading-relaxed text-slate-300">
+                    <p class="mt-2 text-xs leading-relaxed text-stone-300">
                         Sirve para cualquier app o red social. Va limitado en el número de comentarios, ideal para cantidades pequeñas:
                     </p>
                     <a href="https://es.exportcomments.com/" target="_blank" rel="noopener"
-                       class="mt-2.5 inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-indigo-300 underline decoration-indigo-500/40 underline-offset-2 transition hover:text-indigo-100">
+                       class="mt-2.5 inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-brand-300 underline decoration-brand-500/40 underline-offset-2 transition hover:text-brand-100">
                         <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                         es.exportcomments.com
                     </a>
@@ -485,56 +501,56 @@
             </div>
 
             <div class="mt-7">
-                <p class="text-[10px] uppercase tracking-widest text-slate-500">Como subir el archivo</p>
+                <p class="text-[10px] uppercase tracking-widest text-stone-500">Como subir el archivo</p>
                 <form id="upload-form" class="mt-4">
                     <div id="drop-zone" class="dropzone" tabindex="0" role="button"
                          aria-label="Arrastra aqui tu archivo CSV o JSON, o pulsa para seleccionarlo">
                         <input id="file-input" type="file" accept=".csv,.json,text/csv,application/json"
                                class="absolute h-0 w-0 opacity-0" aria-hidden="true" tabindex="-1">
-                        <span class="grid h-10 w-10 place-items-center rounded-xl bg-indigo-500/12 text-indigo-300">
+                        <span class="grid h-10 w-10 place-items-center rounded-xl bg-brand-500/12 text-brand-300">
                             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
                         </span>
-                        <span class="text-sm font-medium text-slate-200">
-                            Arrastra aqui tu archivo o <span class="text-indigo-300 underline decoration-indigo-500/40 underline-offset-2">selecciona uno</span>
+                        <span class="text-sm font-medium text-stone-200">
+                            Arrastra aqui tu archivo o <span class="text-brand-300 underline decoration-brand-500/40 underline-offset-2">selecciona uno</span>
                         </span>
-                        <span id="file-name" class="max-w-full truncate font-mono text-[11px] text-slate-500">Ningun archivo seleccionado</span>
-                        <span id="file-meta" class="text-[10px] text-slate-600">CSV o JSON · maximo 16 MB · hasta 10.000 comentarios</span>
+                        <span id="file-name" class="max-w-full truncate font-mono text-[11px] text-stone-500">Ningun archivo seleccionado</span>
+                        <span id="file-meta" class="text-[10px] text-stone-600">CSV o JSON · maximo 16 MB · hasta 10.000 comentarios</span>
                     </div>
 
                     <!-- Miniatura del archivo: card-documento con icono, tipo,
                          nombre y peso. Aparece al elegir o arrastrar el CSV/JSON. -->
                     <div id="file-preview" class="hidden mt-3 flex items-center gap-3.5 rounded-xl border border-white/10 bg-white/[.03] p-3">
-                        <span class="relative grid h-[5.25rem] w-[4.2rem] shrink-0 place-items-center rounded-lg border border-white/10 bg-ink-800 text-slate-400">
+                        <span class="relative grid h-[5.25rem] w-[4.2rem] shrink-0 place-items-center rounded-lg border border-white/10 bg-ink-800 text-stone-400">
                             <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            <span id="file-preview-ext" class="absolute -bottom-1.5 -right-1.5 rounded-md bg-indigo-500 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white shadow">CSV</span>
+                            <span id="file-preview-ext" class="absolute -bottom-1.5 -right-1.5 rounded-md bg-brand-500 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white shadow">CSV</span>
                         </span>
                         <div class="min-w-0">
-                            <p class="text-[10px] uppercase tracking-widest text-slate-500">Archivo seleccionado</p>
-                            <p id="file-preview-name" class="mt-0.5 truncate text-xs font-medium text-slate-200"></p>
-                            <p id="file-preview-size" class="mt-0.5 text-[11px] text-slate-500"></p>
+                            <p class="text-[10px] uppercase tracking-widest text-stone-500">Archivo seleccionado</p>
+                            <p id="file-preview-name" class="mt-0.5 truncate text-xs font-medium text-stone-200"></p>
+                            <p id="file-preview-size" class="mt-0.5 text-[11px] text-stone-500"></p>
                         </div>
                     </div>
 
                     <div class="mt-3 flex flex-col gap-3 sm:flex-row">
                         <button type="submit" id="upload-btn" disabled
-                                class="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-900/40 transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50">
+                                class="flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-900/40 transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:opacity-50">
                             <span id="upload-label">Analizar archivo</span>
                             <span id="upload-spinner" class="hidden spinner"></span>
                         </button>
                         <button type="button" id="upload-clear-btn"
-                                class="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3.5 text-sm font-semibold text-slate-300 transition hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-95">
+                                class="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3.5 text-sm font-semibold text-stone-300 transition hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-95">
                             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                             <span>Limpiar resultados</span>
                         </button>
                     </div>
                 </form>
 
-                <p class="mt-3 text-[11px] text-slate-600">
-                    Reconoce las columnas por su nombre: <span class="font-mono text-slate-500">autor/usuario</span> ·
-                    <span class="font-mono text-slate-500">texto/comment</span> ·
-                    <span class="font-mono text-slate-500">fecha</span> ·
-                    <span class="font-mono text-slate-500">likes</span> ·
-                    <span class="font-mono text-slate-500">replies</span>.
+                <p class="mt-3 text-[11px] text-stone-600">
+                    Reconoce las columnas por su nombre: <span class="font-mono text-stone-500">autor/usuario</span> ·
+                    <span class="font-mono text-stone-500">texto/comment</span> ·
+                    <span class="font-mono text-stone-500">fecha</span> ·
+                    <span class="font-mono text-stone-500">likes</span> ·
+                    <span class="font-mono text-stone-500">replies</span>.
                     El analisis es identico al de YouTube: mismas 40 features y mismas 9 heuristicas.
                 </p>
             </div>
@@ -551,17 +567,17 @@
     <section id="loader" class="card anim-up mt-6 hidden" style="animation-delay:.04s">
         <div class="flex flex-col items-center gap-4 py-4 text-center sm:flex-row sm:text-left">
             <div class="relative grid h-14 w-14 shrink-0 place-items-center">
-                <div class="absolute inset-0 rounded-full bg-indigo-500/20 halo" style="--rg: 129, 140, 248"></div>
-                <svg class="h-8 w-8 animate-spin text-indigo-300" viewBox="0 0 24 24" fill="none">
+                <div class="absolute inset-0 rounded-full bg-brand-500/20 halo" style="--rg: 255, 92, 53"></div>
+                <svg class="h-8 w-8 animate-spin text-brand-300" viewBox="0 0 24 24" fill="none">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-opacity=".2" stroke-width="2.5"/>
                     <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
                 </svg>
             </div>
             <div class="min-w-0 flex-1">
-                <p class="text-[10px] uppercase tracking-widest text-slate-500">Procesando</p>
+                <p class="text-[10px] uppercase tracking-widest text-stone-500">Procesando</p>
                 <p id="loader-phase" class="mt-1 truncate text-sm font-medium text-white">Conectando con YouTube API...</p>
                 <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-white/5">
-                    <div id="loader-bar" class="h-full w-0 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-700 ease-out"></div>
+                    <div id="loader-bar" class="h-full w-0 rounded-full bg-gradient-to-r from-brand-500 to-brand-600 transition-all duration-700 ease-out"></div>
                 </div>
             </div>
             <p id="loader-pct" class="text-2xl font-semibold tabular-nums text-white/80">0%</p>
@@ -576,18 +592,18 @@
                     <span class="h-2.5 w-2.5 rounded-full bg-rose-500 breath"></span>
                     <div>
                         <p class="text-sm font-semibold text-white">Muro de moderacion en directo</p>
-                        <p id="demo-status" class="text-[11px] text-slate-500">Conectando con el stream...</p>
+                        <p id="demo-status" class="text-[11px] text-stone-500">Conectando con el stream...</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <button type="button" id="demo-clear"
-                            class="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3.5 py-2 text-xs text-slate-300 transition hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-95"
+                            class="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3.5 py-2 text-xs text-stone-300 transition hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-95"
                             title="Limpiar y reiniciar el simulador">
                         <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                         <span>Limpiar</span>
                     </button>
                     <button type="button" id="demo-stop"
-                            class="rounded-lg border border-white/10 px-3.5 py-2 text-xs text-slate-300 transition hover:border-rose-500/40 hover:text-rose-300">
+                            class="rounded-lg border border-white/10 px-3.5 py-2 text-xs text-stone-300 transition hover:border-rose-500/40 hover:text-rose-300">
                         Detener
                     </button>
                 </div>
@@ -595,19 +611,19 @@
 
             <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
-                    <p class="text-[10px] uppercase tracking-wider text-slate-500">Recibidos</p>
+                    <p class="text-[10px] uppercase tracking-wider text-stone-500">Recibidos</p>
                     <p id="demo-stat-total" class="mt-1 text-xl font-semibold tabular-nums text-white">0</p>
                 </div>
                 <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
-                    <p class="text-[10px] uppercase tracking-wider text-slate-500">Sospechosos</p>
+                    <p class="text-[10px] uppercase tracking-wider text-stone-500">Sospechosos</p>
                     <p id="demo-stat-bots" class="mt-1 text-xl font-semibold tabular-nums text-amber-300">0</p>
                 </div>
                 <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
-                    <p class="text-[10px] uppercase tracking-wider text-slate-500">Score medio</p>
+                    <p class="text-[10px] uppercase tracking-wider text-stone-500">Score medio</p>
                     <p id="demo-stat-avg" class="mt-1 text-xl font-semibold tabular-nums text-white">0</p>
                 </div>
                 <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
-                    <p class="text-[10px] uppercase tracking-wider text-slate-500">Veredictos altos</p>
+                    <p class="text-[10px] uppercase tracking-wider text-stone-500">Veredictos altos</p>
                     <p id="demo-stat-high" class="mt-1 text-xl font-semibold tabular-nums text-rose-300">0</p>
                 </div>
             </div>
@@ -627,8 +643,8 @@
         <article id="verdict-card" class="card risk-wash anim-up" data-risk="low">
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Estimado de bots</p>
-                    <p id="results-source-summary" class="text-xs text-slate-400 mt-1 leading-snug">Resumen claro para comprender la autenticidad de los comentarios</p>
+                    <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Estimado de bots</p>
+                    <p id="results-source-summary" class="text-xs text-stone-400 mt-1 leading-snug">Resumen claro para comprender la autenticidad de los comentarios</p>
                 </div>
                 <span id="verdict-risk-pill" class="shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border">Riesgo Bajo</span>
             </div>
@@ -649,8 +665,8 @@
                 <div class="absolute inset-0 grid place-items-center">
                     <div class="text-center">
                         <span id="bot-percent" class="block text-4xl font-bold tabular-nums text-white">0%</span>
-                        <span class="text-[10px] uppercase tracking-wider text-slate-500">probabilidad</span>
-                        <span id="confidence" class="mt-0.5 block text-[11px] font-medium text-slate-400">0% precisión</span>
+                        <span class="text-[10px] uppercase tracking-wider text-stone-500">probabilidad</span>
+                        <span id="confidence" class="mt-0.5 block text-[11px] font-medium text-stone-400">0% precisión</span>
                     </div>
                 </div>
             </div>
@@ -658,15 +674,15 @@
             <div id="risk-badge" class="risk-chip mt-5 rounded-xl border px-3 py-2 text-center" data-risk="low">
                 <span id="risk-label" class="text-xs font-semibold uppercase tracking-wider">—</span>
             </div>
-            <p id="risk-action" class="mt-3 text-center text-xs leading-relaxed text-slate-300"></p>
+            <p id="risk-action" class="mt-3 text-center text-xs leading-relaxed text-stone-300"></p>
         </article>
 
         <!-- --- Metricas clave --- -->
         <article class="card card-hover anim-up lg:col-span-2" style="animation-delay:.06s">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Métricas clave</p>
-                    <p class="text-xs text-slate-500">Indicadores esenciales explicados de forma sencilla</p>
+                    <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Métricas clave</p>
+                    <p class="text-xs text-stone-500">Indicadores esenciales explicados de forma sencilla</p>
                 </div>
             </div>
             <div id="kpi-grid" class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3.5"></div>
@@ -674,8 +690,8 @@
 
         <!-- --- Distribucion --- -->
         <article class="card card-hover anim-up lg:col-span-1" style="animation-delay:.12s">
-            <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Clasificación de comentarios</p>
-            <p class="text-xs text-slate-500 mt-0.5">Cómo se dividen según su nivel de sospecha</p>
+            <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Clasificación de comentarios</p>
+            <p class="text-xs text-stone-500 mt-0.5">Cómo se dividen según su nivel de sospecha</p>
             <div class="mt-5 space-y-4">
                 <div>
                     <div class="mb-1.5 flex justify-between text-xs">
@@ -683,7 +699,7 @@
                             <span class="h-2 w-2 rounded-full bg-rose-500"></span>
                             Sospecha Alta (Bots casi seguros)
                         </span>
-                        <span id="bar-high-label" class="tabular-nums font-semibold text-slate-300">0</span>
+                        <span id="bar-high-label" class="tabular-nums font-semibold text-stone-300">0</span>
                     </div>
                     <div class="track"><div id="bar-high" class="fill" style="background-image:linear-gradient(90deg,#f87171,#ef4444)"></div></div>
                 </div>
@@ -693,7 +709,7 @@
                             <span class="h-2 w-2 rounded-full bg-amber-400"></span>
                             Sospecha Media (Dudosos)
                         </span>
-                        <span id="bar-medium-label" class="tabular-nums font-semibold text-slate-300">0</span>
+                        <span id="bar-medium-label" class="tabular-nums font-semibold text-stone-300">0</span>
                     </div>
                     <div class="track"><div id="bar-medium" class="fill" style="background-image:linear-gradient(90deg,#fbbf24,#f59e0b)"></div></div>
                 </div>
@@ -703,7 +719,7 @@
                             <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
                             Comentarios Seguros (Reales)
                         </span>
-                        <span id="bar-low-label" class="tabular-nums font-semibold text-slate-300">0</span>
+                        <span id="bar-low-label" class="tabular-nums font-semibold text-stone-300">0</span>
                     </div>
                     <div class="track"><div id="bar-low" class="fill" style="background-image:linear-gradient(90deg,#34d399,#10b981)"></div></div>
                 </div>
@@ -714,30 +730,30 @@
         <details class="card group anim-up lg:col-span-2" style="animation-delay:.18s">
             <summary class="flex cursor-pointer items-center justify-between select-none">
                 <div class="flex items-center gap-3">
-                    <span class="grid h-8 w-8 place-items-center rounded-lg bg-indigo-500/12 text-indigo-400">
+                    <span class="grid h-8 w-8 place-items-center rounded-lg bg-brand-500/12 text-brand-400">
                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
                     </span>
                     <div>
                         <p class="text-sm font-semibold text-white">Hallazgos del análisis</p>
-                        <p class="text-xs text-slate-500">Lo más importante que se descubrió en la conversación</p>
+                        <p class="text-xs text-stone-500">Lo más importante que se descubrió en la conversación</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
-                    <span class="hidden rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-1 text-[11px] text-indigo-300 sm:inline">Resumen</span>
-                    <svg class="h-4 w-4 text-slate-500 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    <span class="hidden rounded-full border border-brand-500/20 bg-brand-500/10 px-2.5 py-1 text-[11px] text-brand-300 sm:inline">Resumen</span>
+                    <svg class="h-4 w-4 text-stone-500 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                 </div>
             </summary>
             <div class="mt-4 pt-4 border-t border-white/5">
-                <ul id="findings-list" class="space-y-2.5 text-xs sm:text-sm leading-relaxed text-slate-300"></ul>
+                <ul id="findings-list" class="space-y-2.5 text-xs sm:text-sm leading-relaxed text-stone-300"></ul>
 
                 <!-- Fuente de datos simplificada -->
-                <div class="mt-5 pt-3.5 border-t border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                <div class="mt-5 pt-3.5 border-t border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs text-stone-400">
                     <div>
-                        <span class="text-slate-500">Origen: </span>
-                        <span id="video-title" class="font-medium text-slate-200">—</span>
-                        <span id="video-id" class="ml-1 text-[11px] font-mono text-slate-500"></span>
+                        <span class="text-stone-500">Origen: </span>
+                        <span id="video-title" class="font-medium text-stone-200">—</span>
+                        <span id="video-id" class="ml-1 text-[11px] font-mono text-stone-500"></span>
                     </div>
-                    <div id="video-meta" class="text-slate-400"></div>
+                    <div id="video-meta" class="text-stone-400"></div>
                     <div id="api-meta" class="hidden"></div>
                 </div>
             </div>
@@ -752,14 +768,14 @@
                     </span>
                     <div>
                         <p class="text-sm font-semibold text-white">Comentarios más sospechosos</p>
-                        <p class="text-xs text-slate-500">Comentarios detectados con mayor probabilidad de ser automatizados y por qué</p>
+                        <p class="text-xs text-stone-500">Comentarios detectados con mayor probabilidad de ser automatizados y por qué</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
-                    <button id="toggle-all" type="button" onclick="event.stopPropagation()" class="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-indigo-300 transition hover:border-indigo-500/40 hover:text-white">
+                    <button id="toggle-all" type="button" onclick="event.stopPropagation()" class="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-brand-300 transition hover:border-brand-500/40 hover:text-white">
                         Ver todos
                     </button>
-                    <svg class="h-4 w-4 text-slate-500 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    <svg class="h-4 w-4 text-stone-500 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                 </div>
             </summary>
             <div class="border-t border-white/5">
@@ -769,28 +785,28 @@
 
         <!-- --- Detalles tecnicos avanzados (colapsados por defecto para personas comunes) --- -->
         <details class="card group anim-up lg:col-span-3 p-4 border border-white/5 bg-black/20" style="animation-delay:.26s">
-            <summary class="flex cursor-pointer items-center justify-between text-xs font-medium text-slate-400 transition hover:text-slate-200">
+            <summary class="flex cursor-pointer items-center justify-between text-xs font-medium text-stone-400 transition hover:text-stone-200">
                 <span class="flex items-center gap-2">
-                    <svg class="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
+                    <svg class="h-4 w-4 text-stone-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
                     Ver detalles técnicos avanzados (algoritmo, 9 heurísticas e histograma)
                 </span>
-                <svg class="h-4 w-4 text-slate-500 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                <svg class="h-4 w-4 text-stone-500 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
             </summary>
             <div class="mt-5 space-y-6 pt-4 border-t border-white/5">
                 <div>
                     <div class="flex items-baseline justify-between">
-                        <p class="text-[10px] uppercase tracking-widest text-slate-500">Histograma estadístico de scores</p>
-                        <p class="text-[10px] text-slate-600">10 rangos de 10 puntos (0-100)</p>
+                        <p class="text-[10px] uppercase tracking-widest text-stone-500">Histograma estadístico de scores</p>
+                        <p class="text-[10px] text-stone-600">10 rangos de 10 puntos (0-100)</p>
                     </div>
                     <div id="histogram" class="mt-3 flex h-32 items-end gap-1.5"></div>
-                    <div class="mt-2 flex justify-between text-[10px] text-slate-600">
+                    <div class="mt-2 flex justify-between text-[10px] text-stone-600">
                         <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
                     </div>
                 </div>
                 <div>
                     <div class="flex flex-wrap items-baseline justify-between gap-2">
-                        <p class="text-[10px] uppercase tracking-widest text-slate-500">Desglose de las 9 heurísticas ponderadas</p>
-                        <p class="text-[10px] text-slate-600">Pesos ponderados del motor heurístico</p>
+                        <p class="text-[10px] uppercase tracking-widest text-stone-500">Desglose de las 9 heurísticas ponderadas</p>
+                        <p class="text-[10px] text-stone-600">Pesos ponderados del motor heurístico</p>
                     </div>
                     <div id="signals-list" class="mt-3 grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2 lg:grid-cols-3"></div>
                 </div>
@@ -798,12 +814,12 @@
         </details>
     </section>
 
-    <p id="analysis-id" class="mt-5 text-center text-[11px] text-slate-600"></p>
+    <p id="analysis-id" class="mt-5 text-center text-[11px] text-stone-600"></p>
 
     <section id="placeholder" class="hidden"></section>
 </main>
 
-<footer class="border-t border-white/5 py-8 text-center text-[11px] text-slate-600">
+<footer class="border-t border-white/5 py-8 text-center text-[11px] text-stone-600">
     Estimacion heuristica orientativa. No es una verificacion de identidad.
 </footer>
 
@@ -815,7 +831,7 @@
     <section id="ai-panel" class="hidden w-[22rem] flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink-900 shadow-2xl shadow-black/60 anim-pop">
         <header class="flex items-center justify-between gap-3 border-b border-white/5 bg-ink-800/70 px-4 py-3">
             <div class="flex items-center gap-2.5">
-                <span class="grid h-8 w-8 place-items-center rounded-lg bg-indigo-500/15 text-indigo-300">
+                <span class="grid h-8 w-8 place-items-center rounded-lg bg-brand-500/15 text-brand-300">
                     <svg class="h-4.5 w-4.5" width="18" height="18" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M16 4v3.5"/><circle cx="16" cy="3.2" r="1.6" fill="currentColor" stroke="none"/>
                         <rect x="5.5" y="8" width="21" height="15.5" rx="5"/>
@@ -827,11 +843,11 @@
                 </span>
                 <div>
                     <p class="text-sm font-semibold leading-tight text-white">Wardo</p>
-                    <p class="text-[10px] leading-tight text-slate-500">Asistente de BotWard</p>
+                    <p class="text-[10px] leading-tight text-stone-500">Asistente de BotWard</p>
                 </div>
             </div>
             <button type="button" id="ai-minimize" aria-label="Minimizar asistente"
-                    class="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-slate-400 transition hover:border-white/20 hover:text-white">
+                    class="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-stone-400 transition hover:border-white/20 hover:text-white">
                 <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg>
             </button>
         </header>
@@ -849,14 +865,14 @@
                       aria-label="Escribe tu pregunta para el asistente"
                       class="field flex-1 !text-xs"></textarea>
             <button type="submit" id="ai-send" aria-label="Enviar pregunta"
-                    class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-indigo-600 text-white shadow-sm shadow-indigo-950/50 transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">
+                    class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-600 text-white shadow-sm shadow-brand-950/50 transition hover:bg-brand-500 disabled:cursor-not-allowed disabled:opacity-50">
                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/></svg>
             </button>
         </form>
     </section>
 
     <button type="button" id="ai-open" aria-label="Abrir asistente Wardo"
-            class="relative grid h-14 w-14 place-items-center rounded-full border border-white/10 bg-ink-800 text-indigo-300 shadow-xl shadow-black/50 transition hover:border-indigo-500/40 hover:text-indigo-200 active:scale-95">
+            class="relative grid h-14 w-14 place-items-center rounded-full border border-white/10 bg-ink-800 text-brand-300 shadow-xl shadow-black/50 transition hover:border-brand-500/40 hover:text-brand-200 active:scale-95">
         <svg class="h-7 w-7" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M16 4v3.5"/><circle cx="16" cy="3.2" r="1.6" fill="currentColor" stroke="none"/>
             <rect x="5.5" y="8" width="21" height="15.5" rx="5"/>
@@ -871,7 +887,7 @@
                 <circle cx="12" cy="12" r="3"/>
             </svg>
         </span>
-        <span id="ai-unread" class="hidden absolute right-0.5 top-0.5 h-3.5 w-3.5 rounded-full border-2 border-ink-950 bg-indigo-500"></span>
+        <span id="ai-unread" class="hidden absolute right-0.5 top-0.5 h-3.5 w-3.5 rounded-full border-2 border-ink-950 bg-brand-500"></span>
     </button>
 </div>
 
@@ -904,7 +920,7 @@
         duplication: 'linear-gradient(90deg,#d946ef,#e879f9)',
         emojis: 'linear-gradient(90deg,#10b981,#34d399)',
         formatting: 'linear-gradient(90deg,#14b8a6,#2dd4bf)',
-        engagement: 'linear-gradient(90deg,#6366f1,#818cf8)'
+        engagement: 'linear-gradient(90deg,#ff5c35,#ff7a4d)'
     };
 
     // ------------------------------------------------------------------
@@ -1248,6 +1264,17 @@
     const headerHome = $('header-home');
     if (headerHome) headerHome.addEventListener('click', () => goTo('welcome'));
 
+    // Enlaces discretos del navbar + CTA naranja "Analizar".
+    document.querySelectorAll('.nav-link[data-nav]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const target = btn.dataset.nav;
+            if (target === 'youtube') goTo('youtube');
+            else if (target === 'others') { showApp('tiktok'); goTo('others'); }
+        });
+    });
+    const navCta = $('nav-cta');
+    if (navCta) navCta.addEventListener('click', () => goTo('welcome'));
+
     // Un unico oyente para las tarjetas de plataforma: del dataset salen el
     // destino ('youtube' u 'others') y, en su caso, la red a abrir.
     $('platform-grid').addEventListener('click', (event) => {
@@ -1529,7 +1556,7 @@
     function renderVerdict(data) {
         const pct = data.metrics.bot_percentage;
         const level = data.risk.level;
-        const hex = RISK_HEX[level] || '#6366f1';
+        const hex = RISK_HEX[level] || '#ff5c35';
 
         // Tema de riesgo propagado por atributo: el CSS hace el resto.
         const card = $('verdict-card');
@@ -1615,12 +1642,12 @@
         $('kpi-grid').innerHTML = cards.map((card) => `
             <div class="rounded-xl border border-white/5 bg-black/25 p-4 transition hover:border-white/15 hover:bg-black/40">
                 <div class="flex items-center justify-between gap-2">
-                    <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">${escapeHtml(card.label)}</p>
-                    <span class="text-[10px] text-slate-500">${escapeHtml(card.desc)}</span>
+                    <p class="text-[10px] font-semibold uppercase tracking-wider text-stone-400">${escapeHtml(card.label)}</p>
+                    <span class="text-[10px] text-stone-500">${escapeHtml(card.desc)}</span>
                 </div>
                 <p class="stat-value mt-2 text-2xl font-bold tabular-nums ${card.tone}"
                    data-to="${card.value}" data-dec="${card.dec}" data-suffix="${escapeHtml(card.suffix || '')}">0</p>
-                <p class="mt-1 text-xs text-slate-400 font-medium">${escapeHtml(String(card.hint))}</p>
+                <p class="mt-1 text-xs text-stone-400 font-medium">${escapeHtml(String(card.hint))}</p>
             </div>`).join('');
 
         // Los contadores arrancan en 0 y suben: el dato "aparece" en pantalla.
@@ -1646,7 +1673,7 @@
                 <div class="group relative flex h-full flex-1 flex-col justify-end" title="Scores ${i * 10}-${i * 10 + 9}: ${n} comentarios">
                     <div class="hist-bar w-full rounded-t-md"
                          style="height:${height}%;background-image:linear-gradient(180deg,${color},${color}55)"></div>
-                    <span class="absolute -top-5 left-1/2 hidden -translate-x-1/2 text-[10px] text-slate-300 group-hover:block">${n}</span>
+                    <span class="absolute -top-5 left-1/2 hidden -transtone-x-1/2 text-[10px] text-stone-300 group-hover:block">${n}</span>
                 </div>`;
         }).join('');
 
@@ -1722,23 +1749,23 @@
     function renderSignals(signals) {
         const list = $('signals-list');
         if (!signals || !signals.length) {
-            list.innerHTML = '<p class="text-xs text-slate-500">Ninguna senal supero el umbral minimo.</p>';
+            list.innerHTML = '<p class="text-xs text-stone-500">Ninguna senal supero el umbral minimo.</p>';
             return;
         }
         const max = signals[0].average_contribution || 1;
         list.innerHTML = signals.map((signal, i) => {
             const width = (signal.average_contribution / max) * 100;
-            const gradient = SIGNAL_GRADIENT[signal.key] || 'linear-gradient(90deg,#6366f1,#818cf8)';
+            const gradient = SIGNAL_GRADIENT[signal.key] || 'linear-gradient(90deg,#ff5c35,#ff7a4d)';
             return `
                 <div class="anim-up" style="animation-delay:${i * 70}ms">
                     <div class="mb-1.5 flex flex-wrap items-baseline justify-between gap-2">
-                        <span class="text-sm text-slate-200">${escapeHtml(signal.label)}</span>
-                        <span class="font-mono text-[10px] text-slate-500">${signal.average_contribution} pts · peso ${signal.weight} · ${signal.flagged} afectados</span>
+                        <span class="text-sm text-stone-200">${escapeHtml(signal.label)}</span>
+                        <span class="font-mono text-[10px] text-stone-500">${signal.average_contribution} pts · peso ${signal.weight} · ${signal.flagged} afectados</span>
                     </div>
                     <div class="track">
                         <div class="fill fill-stripe" style="background-image:${gradient}" data-width="${width}"></div>
                     </div>
-                    <p class="mt-1.5 text-[11px] leading-relaxed text-slate-600">${escapeHtml(signal.description)}</p>
+                    <p class="mt-1.5 text-[11px] leading-relaxed text-stone-600">${escapeHtml(signal.description)}</p>
                 </div>`;
         }).join('');
 
@@ -1753,13 +1780,13 @@
         const list = $('findings-list');
         if (!list) return;
         if (!findings || !findings.length) {
-            list.innerHTML = '<li class="text-xs text-slate-500">No se detectaron hallazgos inusuales en este análisis.</li>';
+            list.innerHTML = '<li class="text-xs text-stone-500">No se detectaron hallazgos inusuales en este análisis.</li>';
             return;
         }
         list.innerHTML = findings.map(f =>
             `<li class="flex items-start gap-3 rounded-xl border border-white/5 bg-black/25 p-3">
-                <span class="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-indigo-500/20 text-xs font-bold text-indigo-300">✓</span>
-                <span class="text-xs sm:text-sm text-slate-200 leading-relaxed">${escapeHtml(f)}</span>
+                <span class="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand-500/20 text-xs font-bold text-brand-300">✓</span>
+                <span class="text-xs sm:text-sm text-stone-200 leading-relaxed">${escapeHtml(f)}</span>
             </li>`
         ).join('');
     }
@@ -1780,7 +1807,7 @@
         if (!list) return;
 
         if (!subset.length) {
-            list.innerHTML = '<div class="p-6 text-center text-xs text-slate-500">No hay comentarios para mostrar.</div>';
+            list.innerHTML = '<div class="p-6 text-center text-xs text-stone-500">No hay comentarios para mostrar.</div>';
             return;
         }
 
@@ -1800,19 +1827,19 @@
                             <span>${comment.bot_score}%</span>
                             <span class="text-[10px] font-normal opacity-90 hidden sm:inline">· ${scoreLabel(comment.bot_score)}</span>
                         </span>
-                        <span class="text-xs font-semibold text-slate-200">@${escapeHtml(comment.author)}</span>
-                        ${comment.is_reply ? '<span class="rounded bg-white/5 border border-white/10 px-1.5 py-0.5 text-[10px] text-slate-400">Respuesta</span>' : ''}
+                        <span class="text-xs font-semibold text-stone-200">@${escapeHtml(comment.author)}</span>
+                        ${comment.is_reply ? '<span class="rounded bg-white/5 border border-white/10 px-1.5 py-0.5 text-[10px] text-stone-400">Respuesta</span>' : ''}
                     </div>
-                    <span class="text-[11px] text-slate-500">${comment.published_at ? formatDate(comment.published_at) : ''}</span>
+                    <span class="text-[11px] text-stone-500">${comment.published_at ? formatDate(comment.published_at) : ''}</span>
                 </div>
 
                 <div class="mt-2.5 rounded-xl border border-white/5 bg-black/30 p-3">
-                    <p class="text-sm leading-relaxed text-slate-200">${escapeHtml(comment.text_preview)}</p>
+                    <p class="text-sm leading-relaxed text-stone-200">${escapeHtml(comment.text_preview)}</p>
                 </div>
 
                 <div class="mt-2.5 space-y-1.5">
                     <div class="flex flex-wrap items-center gap-1.5">
-                        <span class="text-[11px] font-medium text-slate-400">Por qué parece bot:</span>
+                        <span class="text-[11px] font-medium text-stone-400">Por qué parece bot:</span>
                         ${(comment.reasons || []).map(r => `
                             <span class="inline-flex items-center gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-200">
                                 <span class="h-1 w-1 rounded-full bg-amber-400"></span>
@@ -1931,14 +1958,14 @@
                     ${comment.bot_score}
                 </span>
                 <div class="min-w-0 flex-1">
-                    <p class="truncate text-[11px] text-slate-500">
-                        <span class="text-slate-300">@${escapeHtml(comment.author)}</span>
+                    <p class="truncate text-[11px] text-stone-500">
+                        <span class="text-stone-300">@${escapeHtml(comment.author)}</span>
                         ${comment.is_reply ? ' · respuesta' : ''}
                     </p>
-                    <p class="mt-0.5 truncate text-sm text-slate-200">${escapeHtml(comment.text_preview)}</p>
+                    <p class="mt-0.5 truncate text-sm text-stone-200">${escapeHtml(comment.text_preview)}</p>
                     <p class="mt-1 text-[10px] ${chip}">${escapeHtml((comment.reasons || [])[0] || '')}</p>
                 </div>
-                <span class="shrink-0 text-[10px] tabular-nums text-slate-600">${running.analyzed}</span>
+                <span class="shrink-0 text-[10px] tabular-nums text-stone-600">${running.analyzed}</span>
             </div>`;
 
         wall.insertBefore(card, wall.firstChild);
