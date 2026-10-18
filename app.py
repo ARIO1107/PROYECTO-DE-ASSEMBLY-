@@ -854,19 +854,39 @@ _HUMAN_TEMPLATES = [
     "tengo una duda: como hiciste para grabar eso sin equipo?",
     "el final me dejo pensando mucho, no lo esperaba",
     "Otro video mas de {topic} y aun asi sigue manteniendo el interes",
+    "quede sin palabras, la calidad de este canal no para de subir",
+    "alguien mas vino por el titulo y se quedo por el contenido?",
+    "esto estaria genial en la escuela, esta explicado de 10",
+    "lo mejor que he visto sobre {topic} en mucho tiempo",
+    "me lo he visto dos veces y aun asi aprendi algo nuevo",
+    "el esfuerzo se nota en cada corte, buen trabajo",
+    "llevamos años en el canal y sigues superandote",
+    "compartido con mis colegas, les va a interesar",
+    "podrias hacer una parte sobre {topic}? seria genial",
 ]
 
 _HUMAN_OPINIONS = [
     "totalmente de acuerdo", "no estoy seguro", "me parece una buena idea",
-    "lo dudo mucho", "claro que si", "pues mira tu",
+    "lo dudo mucho", "claro que si", "pues mira tu", "no me lo esperaba",
+    "a mi me pasa igual", "tienes razon en eso", "buen punto",
+    "me ha gustado mucho", "esto ya lo habia visto",
 ]
 
 _HUMAN_TOPICS = [
     "este tema", "el algoritmo", "la musica", "el cine", "la ciencia",
     "los juegos", "la fotografia", "la historia", "el analisis",
+    "los tutoriales", "la edicion", "el montaje", "las recomendaciones",
+    "los datos", "el proceso creativo",
 ]
 
 _HUMAN_SHOUTS = ["BUEN VIDEO!!", "QUE LOCURA", "ME ENCANTO ESTO 🔥", "TOP 1", "INCREIBLE!!!!"]
+
+# Conectores para encadenar frases en los comentarios largos: antes se
+# juntaban palabras sueltas al azar y salia un salad imposible en un hilo real.
+_HUMAN_CONNECTORS = (
+    "", "ademas, ", "aun asi, ", "por cierto, ", "ya de paso, ",
+    "lo mejor de todo, ", "sin importar el tema, ", "aun recuerdo cuando ",
+)
 
 _BOT_TEXT_TEMPLATES = [
     "GANA DINERO DESDE CASA 👉 {link} promocion limitada hoy!!!",
@@ -881,6 +901,14 @@ _BOT_TEXT_TEMPLATES = [
     "🔥🔥🔥 OFERTA IMPERDIBLE 🔥🔥🔥 -{link}- ENVIO GRATIS TODO EL PAIS",
     "MIRA ESTO QUE ENCONTRE {link} wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww",
     "hola a todos saludos a mi familia y a los amigos 🔥🔥 me gusta mucho este video",
+    "siguen mi perfil, subo contenido todos los dias link en la bio",
+    "GANA HASTA 5000€ SEMANALES sin salir de casa, escribe por whatsapp",
+    "promotion in my page, check the link in bio",
+    "el bot que multiplica tus ingresos, prueba gratis aqui {link}",
+    "SORTEO OFICIAL {link} participa antes de que acabe el dia",
+    "follow me and i follow back 4ever",
+    "quien quiera la plaza que me escriba por privado YA",
+    "mira lo que consigui con esta app {link} funciona de verdad",
 ]
 
 _BOT_SHORT_SPAM = [
@@ -890,6 +918,10 @@ _BOT_SHORT_SPAM = [
     "🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥",
     "AAAAAAAAAAAAA MIRA ESTO",
     "+34 6XX XXX XXX compruebalo ya",
+    "PRUEBA GRATIS 3 DIAS",
+    "mira mi perfil",
+    "first!!!",
+    "check bio check bio check bio",
 ]
 
 _BOT_USERNAMES = [
@@ -914,6 +946,116 @@ _VIDEO_TITLES = [
 ]
 
 
+# --- Base de muestras reales para la demo -----------------------------------
+# Cada analisis real (YouTube o archivo subido) deposita aqui una muestra
+# ANONIMA: solo el texto y su clase, jamas autores, IDs ni enlaces de perfil.
+# `simulate_comments()` la mezcla con las plantillas de arriba, asi que el
+# simulador deja de repetir siempre los mismos textos y gana verosimilitud
+# con cada analisis real. El fichero vive en `data/` (en .gitignore por
+# privacidad): si no existe o no se puede escribir, la demo funciona igual
+# solo con plantillas.
+
+COMMENT_SAMPLES_PATH = BASE_DIR / "data" / "comment_samples.json"
+COMMENT_SAMPLES_MAX = 400        # entradas conservadas (las mas recientes)
+SAMPLES_PER_CLASS = 12           # muestras tomadas por analisis real y clase
+HARVEST_SOURCES = ("youtube_api", "file_upload")   # "simulated" queda fuera
+
+_samples_cache: dict[str, Any] = {"mtime": -1.0, "bot": [], "human": []}
+
+
+def _normalize_sample(text: str) -> str:
+    """Colapsa espacios y limita el largo del texto que viaja a la demo."""
+    return re.sub(r"\s+", " ", text or "").strip()[:400]
+
+
+def _load_comment_samples() -> tuple[list[str], list[str]]:
+    """Lee la base de muestras con cache por mtime (una stat por analisis)."""
+    try:
+        mtime = COMMENT_SAMPLES_PATH.stat().st_mtime
+    except OSError:
+        return [], []
+    if _samples_cache["mtime"] == mtime:
+        return _samples_cache["bot"], _samples_cache["human"]
+    bot: list[str] = []
+    human: list[str] = []
+    try:
+        raw = json.loads(COMMENT_SAMPLES_PATH.read_text(encoding="utf-8"))
+        bot = [str(t) for t in raw.get("bot", []) if t]
+        human = [str(t) for t in raw.get("human", []) if t]
+    except (OSError, ValueError, AttributeError, TypeError):
+        bot, human = [], []
+    _samples_cache.update(mtime=mtime, bot=bot, human=human)
+    return bot, human
+
+
+def _save_comment_samples(bot: list[str], human: list[str]) -> None:
+    """Escritura atomica: un fallo de disco nunca debe romper el analisis."""
+    try:
+        COMMENT_SAMPLES_PATH.parent.mkdir(parents=True, exist_ok=True)
+        payload = json.dumps(
+            {
+                "bot": bot[-COMMENT_SAMPLES_MAX:],
+                "human": human[-COMMENT_SAMPLES_MAX:],
+            },
+            ensure_ascii=False,
+            indent=1,
+        )
+        tmp = COMMENT_SAMPLES_PATH.with_suffix(".json.tmp")
+        tmp.write_text(payload, encoding="utf-8")
+        os.replace(tmp, COMMENT_SAMPLES_PATH)
+        _samples_cache["mtime"] = -1.0   # forzar recarga en la proxima lectura
+    except OSError:
+        pass
+
+
+def harvest_comment_samples(dataset: Dataset, verdicts: list[Verdict]) -> None:
+    """Guarda un puñado de textos anonimos de un analisis REAL.
+
+    Clasifica cada comentario con el MISMO corte que usa la interfaz: lo que
+    el motor puntua >= umbral medio ya es "conviene revisar" y entra al pozo
+    "bot"; por debajo va al pozo "human". Solo las fuentes reales participan:
+    un dataset "simulated" rellenaria la base con sus propios textos falsos.
+    """
+    if dataset.source not in HARVEST_SOURCES:
+        return
+    try:
+        picked: dict[str, list[str]] = {"bot": [], "human": []}
+        for comment, verdict in zip(dataset.comments, verdicts):
+            score = verdict.bot_score
+            kind = "bot" if score >= MEDIUM_THRESHOLD else "human"
+            text = _normalize_sample(comment.text)
+            if len(text) < 12:          # demasiado corto para aportar variedad
+                continue
+            if text not in picked[kind]:
+                picked[kind].append(text)
+            if (len(picked["bot"]) >= SAMPLES_PER_CLASS
+                    and len(picked["human"]) >= SAMPLES_PER_CLASS):
+                break
+        if not picked["bot"] and not picked["human"]:
+            return
+
+        def merge(old: list[str], fresh: list[str]) -> list[str]:
+            known = set(old)
+            merged = old[:]
+            added = 0
+            for text in fresh:
+                if text in known or added >= SAMPLES_PER_CLASS:
+                    continue
+                known.add(text)
+                merged.append(text)
+                added += 1
+            return merged[-COMMENT_SAMPLES_MAX:]
+
+        old_bot, old_human = _load_comment_samples()
+        _save_comment_samples(
+            merge(old_bot, picked["bot"]),
+            merge(old_human, picked["human"]),
+        )
+    except Exception:
+        # La recoleccion es optativa: jamas debe tumbar un analisis.
+        return
+
+
 def simulate_comments(video_id: str, limit: int) -> Dataset:
     """Genera un dataset sintetico pero verosimil, deterministico por video_id."""
     rng = random.Random(f"{settings.simulation_salt}:{video_id}")
@@ -930,9 +1072,22 @@ def simulate_comments(video_id: str, limit: int) -> Dataset:
     base_time = datetime.now(timezone.utc) - timedelta(days=rng.randint(1, 9))
     comments: list[RawComment] = []
 
+    # Muestras reales (si las hay): se consumen sin repetir dentro del mismo
+    # dataset y se mezclan con las plantillas para que dos demos seguidas no
+    # enseñen siempre exactamente los mismos textos. Copia antes de barajar:
+    # la lista viene de la cache del modulo y barajarla/purgarla la estropearia.
+    bot_samples, human_samples = _load_comment_samples()
+    real_bot_pool = bot_samples[:]
+    real_human_pool = human_samples[:]
+    rng.shuffle(real_bot_pool)
+    rng.shuffle(real_human_pool)
+
     # --- Comentarios humanos: distribucion realista (muchos cortos, pocos largos)
     for _ in range(human_count):
-        text = _render_human_text(rng)
+        if real_human_pool and rng.random() < 0.5:
+            text = real_human_pool.pop()
+        else:
+            text = _render_human_text(rng)
         has_channel = rng.random() < 0.35
         comments.append(
             RawComment(
@@ -955,6 +1110,9 @@ def simulate_comments(video_id: str, limit: int) -> Dataset:
             text = _BOT_TEXT_TEMPLATES[0].format(link=f"https://promo-{rng.randint(1, 4)}.example/x")
         elif rng.random() < 0.28:
             text = rng.choice(_BOT_SHORT_SPAM)
+        elif real_bot_pool and rng.random() < 0.65:
+            # Texto bot real capturado en analisis previos (el mas creible).
+            text = real_bot_pool.pop()
         else:
             text = _render_bot_text(rng)
 
@@ -1026,7 +1184,23 @@ def _render_human_text(rng: random.Random) -> str:
             n=rng.randint(2, 59),
             topic=rng.choice(_HUMAN_TOPICS),
         )
-    return " ".join(rng.choice(_HUMAN_TOPICS + _HUMAN_OPINIONS) for _ in range(rng.randint(12, 45)))
+    return _render_long_human(rng)
+
+
+def _render_long_human(rng: random.Random) -> str:
+    """Comentario largo creible: 2-3 frases encadenadas con conectores."""
+    parts: list[str] = []
+    for index in range(rng.randint(2, 3)):
+        sentence = rng.choice(_HUMAN_TEMPLATES).format(
+            op=rng.choice(_HUMAN_OPINIONS),
+            n=rng.randint(2, 59),
+            topic=rng.choice(_HUMAN_TOPICS),
+        )
+        connector = rng.choice(_HUMAN_CONNECTORS) if index else ""
+        if connector:
+            sentence = connector + sentence[0].lower() + sentence[1:]
+        parts.append(sentence)
+    return " ".join(parts) + rng.choice((".", ".", "!", " igualmente."))
 
 
 def _render_bot_text(rng: random.Random) -> str:
@@ -2342,6 +2516,12 @@ def build_analysis(
     findings = build_findings(metrics, signals, dataset.source)
     ordered = sorted(verdicts, key=lambda v: v.bot_score, reverse=True)
 
+    # Recolecta muestras anonimas para la base de la demo. Solo en analisis
+    # reales: `simulate_comments()` no debe ser la fuente de sus propias
+    # muestras (entraria en un bucle de auto-alimentacion con textos falsos).
+    if not demo:
+        harvest_comment_samples(dataset, verdicts)
+
     if source_url is None:
         source_url = canonical_url(video_id) if not demo else ""
 
@@ -2443,9 +2623,10 @@ def build_demo_dataset(count: int, seed: Optional[str] = None) -> tuple[str, Dat
         "is_demo": True,
     }
     dataset.warnings = [
-        "DEMO en vivo: comentarios sinteticos generados en memoria. "
-        "No proceden de YouTube, no gastan cuota y no demuestran nada sobre "
-        "ningun video real.",
+        "DEMO en vivo: comentarios generados en memoria con plantillas propias "
+        "y muestras anonimas de comentarios reales analizados previamente "
+        "(solo texto, sin autores ni identificadores). No gastan cuota ni se "
+        "refieren a ningun video concreto.",
     ]
     return video_id, dataset
 
@@ -2559,8 +2740,9 @@ MEDIO (amarillo, conviene revisar), ALTO (rojo, probable ataque), \
 CRITICO (morado, ataque casi seguro).
 - El score es una estimacion heuristica orientativa, NUNCA una verificacion de \
 identidad ni una verdad absoluta. No hay certeza al 100% sobre ningun comentario.
-- La demo en directo genera comentarios sinteticos con el mismo motor; no gastan \
-cuota ni prueban nada sobre videos reales.
+- La demo en directo genera comentarios en memoria (plantillas propias y \
+muestras reales anonimas) con el mismo motor; no gastan cuota ni se refieren \
+a un video concreto.
 - Limites: hasta 10.000 comentarios por analisis, archivos CSV/JSON de maximo 16 MB.
 
 Reglas de respuesta:
@@ -2589,12 +2771,24 @@ def llm_enabled() -> bool:
     return bool((settings.llm_api_key or "").strip())
 
 
+# Momento (epoch) hasta el que la cuota gratuita se considera agotada: se
+# marca al recibir un 429 y se limpia con la primera llamada con exito. Sirve
+# para que /api/config avise al frontend (modo "mantenimiento") y para no
+# seguir martillando a Groq mientras no hay presupuesto.
+_LLM_QUOTA_UNTIL = 0.0
+
+
+def llm_quota_exhausted() -> bool:
+    return time.time() < _LLM_QUOTA_UNTIL
+
+
 def _call_llm(messages: list[dict[str, str]]) -> tuple[Optional[str], Optional[str]]:
     """POST al chat de Groq. Devuelve (texto, codigo_de_error).
 
     Sincrono a proposito: se invoca dentro de `asyncio.to_thread` desde los
     endpoints para no bloquear el event loop mientras la IA responde.
     """
+    global _LLM_QUOTA_UNTIL
     key = (settings.llm_api_key or "").strip()
     if not key:
         return None, "no_key"
@@ -2618,6 +2812,9 @@ def _call_llm(messages: list[dict[str, str]]) -> tuple[Optional[str], Optional[s
         return None, "bad_response"
 
     if response.status_code == 429:
+        # 30 minutos de respiro: cubre los limites por minuto y alivia el
+        # diario sin dejar el robot muerto el resto del dia si era un pico.
+        _LLM_QUOTA_UNTIL = time.time() + 30 * 60
         return None, "quota"
     if response.status_code in (401, 403):
         return None, "no_key"
@@ -2631,6 +2828,7 @@ def _call_llm(messages: list[dict[str, str]]) -> tuple[Optional[str], Optional[s
         return None, "bad_response"
     if not text:
         return None, "bad_response"
+    _LLM_QUOTA_UNTIL = 0.0   # llamada valida: la cuota vuelve a estar disponible
     return text, None
 
 
@@ -2824,6 +3022,9 @@ async def api_config() -> dict[str, Any]:
         },
         "ai": {
             "enabled": llm_enabled(),
+            # Cuota diaria agotada: el frontend pasa a modo mantenimiento
+            # sin gastar una sola consulta en averiguarlo.
+            "quota_exhausted": llm_quota_exhausted(),
             "provider": settings.llm_provider,
             # Nunca se devuelve el modelo interno completo de la clave, solo
             # el nombre del modelo de lenguaje usado (no es secreto).
@@ -2855,6 +3056,8 @@ async def ai_summary(payload: AISummaryRequest) -> AISummaryResponse:
     """
     if not llm_enabled():
         return AISummaryResponse(enabled=False, error=LLM_ERROR_MESSAGES["no_key"])
+    if llm_quota_exhausted():
+        return AISummaryResponse(enabled=False, error=LLM_ERROR_MESSAGES["quota"])
 
     messages = await asyncio.to_thread(build_summary_messages, payload.analysis)
     text, error = await asyncio.to_thread(_call_llm, messages)
@@ -2884,6 +3087,8 @@ async def ai_ask(payload: AIAskRequest) -> AIAskResponse:
     """
     if not llm_enabled():
         return AIAskResponse(enabled=False, error=LLM_ERROR_MESSAGES["no_key"])
+    if llm_quota_exhausted():
+        return AIAskResponse(enabled=False, error=LLM_ERROR_MESSAGES["quota"])
 
     messages = await asyncio.to_thread(build_ask_messages, payload)
     text, error = await asyncio.to_thread(_call_llm, messages)

@@ -241,6 +241,22 @@
         .ai-dots span:nth-child(3) { animation-delay: .36s }
         #ai-input { resize: none; max-height: 6rem; }
 
+        /* --- Estado de mantenimiento: sin clave o cuota diaria agotada --- */
+        /* El robot sigue presente en todas las paginas: cambia de animacion
+           en lugar de desaparecer. */
+        #ai-widget.ai-maintenance #ai-open {
+            border-color: rgba(245, 158, 11, .45);
+            color: #fcd34d;
+            animation: aiMaintBob 2.6s ease-in-out infinite;
+        }
+        #ai-widget.ai-maintenance #ai-panel { border-color: rgba(245, 158, 11, .3); }
+        .ai-spin { animation: aiSpin 3s linear infinite; transform-origin: 50% 50%; }
+        @keyframes aiSpin { to { transform: rotate(360deg); } }
+        @keyframes aiMaintBob {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+
         /* --- Respeto a la preferencia del sistema: sin movimiento, sin drift --- */
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
@@ -781,7 +797,7 @@
 <!-- ===================== ASISTENTE IA (robot de la esquina) =====================
      Oculto por defecto: JS lo muestra solo si /api/config dice ai.enabled.
      Burbuja con resumen automatico tras cada analisis + chat de preguntas. -->
-<div id="ai-widget" class="fixed bottom-5 right-5 z-40 hidden flex-col items-end gap-3">
+<div id="ai-widget" class="fixed bottom-5 right-5 z-40 flex-col items-end gap-3">
 
     <section id="ai-panel" class="hidden w-[22rem] flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink-900 shadow-2xl shadow-black/60 anim-pop">
         <header class="flex items-center justify-between gap-3 border-b border-white/5 bg-ink-800/70 px-4 py-3">
@@ -836,6 +852,12 @@
             <circle cx="20" cy="15" r="1.8" fill="currentColor" stroke="none"/>
             <path d="M12.5 19.5h7"/>
         </svg>
+        <span id="ai-gear" class="hidden absolute -left-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full border border-amber-400/50 bg-ink-900 text-amber-300 shadow-md shadow-black/50">
+            <svg class="ai-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                <circle cx="12" cy="12" r="3"/>
+            </svg>
+        </span>
         <span id="ai-unread" class="hidden absolute right-0.5 top-0.5 h-3.5 w-3.5 rounded-full border-2 border-ink-950 bg-indigo-500"></span>
     </button>
 </div>
@@ -897,6 +919,7 @@
     // servidor el widget sencillamente no se muestra.
     // ==================================================================
     let aiEnabled = false;
+    let aiState = 'ok';            // 'ok' | 'maintenance' (sin clave o cuota)
     let aiConfigLoaded = false;    // /api/config resuelto (o archivo sin servidor)
     let aiLastAnalysis = null;     // subconjunto compacto del ultimo analisis
     let aiHistory = [];            // historial corto {role, content}
@@ -911,6 +934,7 @@
         if (window.location.protocol === 'file:') {
             aiConfigLoaded = true;
             showOfflineBanner(true);
+            enterAiMaintenance();   // sin servidor no hay IA: robot en aviso
             return;
         }
         try {
@@ -924,10 +948,13 @@
                 || (cfg.youtube_api && cfg.youtube_api.configured));
             document.body.dataset.mode = real ? 'real' : 'simulated';
 
-            if (cfg && cfg.ai && cfg.ai.enabled) {
+            // El robot se muestra SIEMPRE: sin clave o con la cuota agotada
+            // pasa a modo mantenimiento en lugar de desaparecer.
+            const aiCfg = cfg && cfg.ai;
+            if (aiCfg && aiCfg.enabled && !aiCfg.quota_exhausted) {
                 aiEnabled = true;
-                const widget = $('ai-widget');
-                if (widget) widget.classList.remove('hidden');
+            } else {
+                enterAiMaintenance();
             }
 
             if (cfg && cfg.version) {
@@ -952,6 +979,7 @@
         } catch (e) {
             aiConfigLoaded = true;
             showOfflineBanner(false);
+            enterAiMaintenance();   // servidor inaccesible: robot en aviso
         }
     })();
 
@@ -2055,12 +2083,42 @@
         if (input) input.disabled = busy;
     }
 
-    /** Desactiva el widget si el servidor no tiene IA configurada. */
-    function disableAiWidget() {
+    /**
+     * Modo mantenimiento: el robot NUNCA desaparece. Se queda en su esquina
+     * con animacion de taller (engranaje girando + balanceo) y el chat queda
+     * en solo lectura hasta que vuelva la clave o la cuota diaria.
+     */
+    function enterAiMaintenance() {
+        aiState = 'maintenance';
         aiEnabled = false;
         stopTypewriter();
         const widget = $('ai-widget');
-        if (widget) widget.classList.add('hidden');
+        if (widget) widget.classList.add('ai-maintenance');
+        const gear = $('ai-gear');
+        if (gear) gear.classList.remove('hidden');
+        const input = $('ai-input');
+        if (input) {
+            input.disabled = true;
+            input.placeholder = 'Wardo está en mantenimiento...';
+        }
+        const send = $('ai-send');
+        if (send) send.disabled = true;
+        const suggestions = $('ai-suggestions');
+        if (suggestions) suggestions.classList.add('hidden');
+    }
+
+    /** Aviso de mantenimiento; solo una vez por conversacion. */
+    function showAiMaintenanceNotice() {
+        const box = $('ai-messages');
+        if (!box) return;
+        const last = box.lastElementChild;
+        if (last && last.dataset.maint === '1') return;
+        const message = addAiMessage('robot',
+            'Estoy en mantenimiento: se agotaron las consultas gratuitas de hoy '
+            + 'o aun no hay clave configurada en el servidor. Volvere en cuanto '
+            + 'se restablezca; el resto de BotWard sigue funcionando con normalidad.',
+            'ai-msg-error');
+        if (message) message.dataset.maint = '1';
     }
 
     /** Resumen automatico tras cada analisis (YouTube, archivo o demo). */
@@ -2070,7 +2128,8 @@
         if (!aiConfigLoaded) {
             try { await configReady; } catch (e) { /* sin servidor: sin IA */ }
         }
-        if (!aiEnabled) return;
+        // En mantenimiento no se autoabre el panel: solo avisa al pulsarle.
+        if (aiState === 'maintenance' || !aiEnabled) return;
         if (aiSummaryRunning) { aiSummaryPending = true; return; }
         aiSummaryRunning = true;
 
@@ -2091,8 +2150,9 @@
                 const message = addAiMessage('robot', '');
                 if (message) typewrite(message, text, () => pushAiHistory('assistant', text));
             } else {
-                if (payload && /configurado|configurada/i.test(payload.error || '')) {
-                    disableAiWidget();
+                if (payload && /configurado|configurada|limite gratuito|mantenimiento/i.test(payload.error || '')) {
+                    enterAiMaintenance();
+                    showAiMaintenanceNotice();
                     return;
                 }
                 addAiMessage('robot',
@@ -2113,6 +2173,11 @@
 
     /** Pregunta del chat: envia hilo corto + analisis si lo hay. */
     async function askAi(question) {
+        if (aiState === 'maintenance') {
+            openAiPanel();
+            showAiMaintenanceNotice();
+            return;
+        }
         if (!aiEnabled || aiBusy || !question) return;
 
         const history = aiHistory.slice(-6);
@@ -2143,8 +2208,9 @@
                         () => pushAiHistory('assistant', payload.answer));
                 }
             } else {
-                if (payload && /configurado|configurada/i.test(payload.error || '')) {
-                    disableAiWidget();
+                if (payload && /configurado|configurada|limite gratuito|mantenimiento/i.test(payload.error || '')) {
+                    enterAiMaintenance();
+                    showAiMaintenanceNotice();
                     return;
                 }
                 addAiMessage('robot',
@@ -2169,7 +2235,8 @@
     if (aiOpenBtn) {
         aiOpenBtn.addEventListener('click', () => {
             openAiPanel();
-            ensureAiGreeting();
+            if (aiState === 'maintenance') showAiMaintenanceNotice();
+            else ensureAiGreeting();
             const input = $('ai-input');
             if (input && !input.disabled) input.focus();
         });
@@ -2222,21 +2289,25 @@
 
     // Presentacion automatica: el robot se muestra solo al cargar, una vez
     // por sesion (sessionStorage evita que vuelva a abrirse en cada recarga
-    // de la misma pestana; el usuario siempre puede minimizarlo).
+    // de la misma pestana; el usuario siempre puede minimizarlo). En
+    // mantenimiento tambien se presenta, explicando el estado.
     (function scheduleAiGreeting() {
         let already = false;
         try { already = !!sessionStorage.getItem('bw_ai_greeted'); } catch (e) { already = false; }
         if (already) return;
         setTimeout(async () => {
             try { await configReady; } catch (e) { /* sin servidor */ }
-            if (!aiEnabled) return;
+            if (!aiEnabled && aiState !== 'maintenance') return;
             const box = $('ai-messages');
             // Si ya hay contenido (p.ej. el resumen de un analisis), no
             // duplicamos: el panel ya estaria abierto con su mensaje.
-            if (!box || box.childElementCount === 0) {
-                openAiPanel();
-                ensureAiGreeting();
+            if (box && box.childElementCount > 0) {
+                try { sessionStorage.setItem('bw_ai_greeted', '1'); } catch (e) {}
+                return;
             }
+            openAiPanel();
+            if (aiState === 'maintenance') showAiMaintenanceNotice();
+            else ensureAiGreeting();
             try { sessionStorage.setItem('bw_ai_greeted', '1'); } catch (e) {}
         }, 1600);
     })();
