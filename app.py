@@ -2806,6 +2806,11 @@ lo sabes, dilo con honestidad y sin inventar.
 - Cuando la pregunta trate sobre los datos, usa SOLO las metricas del contexto \
 proporcionado: nunca inventes cifras ni veredictos que no esten ahi.
 - Nunca presentes una estimacion heuristica como una certeza.
+- No inventes funciones, botones, opciones, rutas, nombres de archivos, comandos 
+  ni configuraciones que NO existan en esta web. Solo describe lo que existe 
+  realmente (YouTube API, subida de CSV/JSON, motor de 9 heuristicas, robot 
+  Wardo, demo en memoria). Si preguntas sobre eso, di directamente lo que hay 
+  y nada mas.
 """
 
 # Errores de la IA traducidos a algo que el usuario pueda entender.
