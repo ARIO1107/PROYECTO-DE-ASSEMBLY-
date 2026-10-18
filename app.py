@@ -342,6 +342,10 @@ class RawComment:
     author_channel_id: Optional[str] = None
     is_author: bool = False             # es el creador del video
     depth: int = 0                     # 0 = principal, 1 = respuesta
+    # False si la fecha vino sin zona horaria (CSV en hora local): la regla
+    # de "hora sospechosa 02:00-05:00 UTC" no se activa porque la hora UTC
+    # real seria una suposicion.
+    timestamp_reliable: bool = True
 
 
 @dataclass
@@ -691,10 +695,12 @@ def fetch_youtube_comments(video_id: str, limit: int) -> Dataset:
     available = _safe_int(meta.get("comment_count")) or stats.total_available
     if available and available > len(comments):
         warnings.append(
-            f"Se analizaron {len(comments):,} de {available:,} comentarios disponibles "
+            f"Se analizaron {len(comments):,} de {available:,} comentarios del video "
             f"({stats.pages} {'pagina' if stats.pages == 1 else 'paginas'}, "
             f"~{stats.quota_units} {'unidad' if stats.quota_units == 1 else 'unidades'} "
-            "de cuota). Los comentarios de menor relevancia quedan fuera."
+            "de cuota). El contador de YouTube incluye comentarios eliminados y "
+            "los retenidos por moderacion, que la API no devuelve; el resto se "
+            "recorta por relevancia."
         )
 
     coverage = (
@@ -1275,6 +1281,10 @@ COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
         "is_reply", "reply_to", "in_reply_to", "reply_to_id", "parent_id",
         "respuesta_a", "is_response",
     ),
+    "owner": (
+        "channel_owner_comment", "channel_owner", "owner_comment",
+        "is_owner", "is_author", "author_is_owner",
+    ),
 }
 
 # Deteccion de plataforma: por nombre de fichero, luego por valor de columna.
@@ -1420,6 +1430,28 @@ def _parse_date(value: Any) -> Optional[datetime]:
         except ValueError:
             continue
     return None
+
+
+def _date_had_timezone(value: Any) -> bool:
+    """True si el valor original traia zona horaria explicita.
+
+    Epoch, ISO con `Z` o con offset (`+01:00`) son UTC o convertibles a UTC
+    sin ambiguedad. En cambio `2025-01-01 03:00` (formato tipico del export
+    de YouTube Studio) es hora LOCAL del navegador: aplicarle la ventana
+    "02:00-05:00 UTC" seria adivinar.
+    """
+    if value is None or isinstance(value, bool):
+        return False
+    if isinstance(value, datetime):
+        return value.tzinfo is not None
+    if isinstance(value, (int, float)):
+        return True
+    text = str(value).strip().strip('"')
+    if not text:
+        return False
+    if re.fullmatch(r"\d{10}(\.\d+)?", text) or re.fullmatch(r"\d{13}", text):
+        return True
+    return text.endswith("Z") or bool(re.search(r"[+-]\d{2}:?\d{2}$", text))
 
 
 def _from_epoch(seconds: float) -> Optional[datetime]:
@@ -1663,11 +1695,13 @@ def parse_uploaded_comments(
             continue
         author_value = record.get(mapping.get("author")) if "author" in mapping else None
         author = str(author_value).strip() if author_value not in (None, "") else "anonimo"
-        published = _parse_date(record.get(mapping["date"])) if "date" in mapping else None
+        raw_date = record.get(mapping["date"]) if "date" in mapping else None
+        published = _parse_date(raw_date) if "date" in mapping else None
         likes = _parse_int(record.get(mapping["likes"])) if "likes" in mapping else None
         replies = _parse_int(record.get(mapping.get("replies"))) if "replies" in mapping else None
         comment_id_value = record.get(mapping.get("id")) if "id" in mapping else None
         is_reply_value = record.get(mapping.get("is_reply")) if "is_reply" in mapping else None
+        owner_value = record.get(mapping.get("owner")) if "owner" in mapping else None
 
         comments.append(RawComment(
             comment_id=str(comment_id_value) if comment_id_value not in (None, "") else f"file-{index:05d}",
@@ -1680,7 +1714,9 @@ def parse_uploaded_comments(
             # `has_channel` de YouTube y sin esto la regla de identidad
             # castigaria a todos los usuarios por no tener "canal".
             has_channel=True,
+            is_author=_truthy(owner_value),
             depth=1 if _truthy(is_reply_value) else 0,
+            timestamp_reliable=_date_had_timezone(raw_date),
         ))
 
     if not comments:
@@ -1842,6 +1878,7 @@ class CommentFeatures:
     reply_count: Optional[int] = None
 
     posting_hour_utc: Optional[int] = None
+    hour_reliable: bool = False        # False = fecha sin zona horaria (hora local)
     minutes_to_previous: Optional[float] = None
     seconds_to_next: Optional[float] = None
     author_duplicate_count: int = 0
@@ -1921,6 +1958,7 @@ def build_features(comment: RawComment) -> CommentFeatures:
         like_count=comment.like_count,
         reply_count=comment.reply_count,
         posting_hour_utc=comment.published_at.hour if comment.published_at else None,
+        hour_reliable=comment.published_at is not None and comment.timestamp_reliable,
     )
     return features
 
@@ -2116,8 +2154,14 @@ def _r_formatting(f: CommentFeatures) -> tuple[float, str]:
 def _r_timing(f: CommentFeatures) -> tuple[float, str]:
     value = 0.0
     signals: list[str] = []
-    # Ventana clasica de automatizacion: 02:00-05:00 UTC.
-    if f.posting_hour_utc is not None and 2 <= f.posting_hour_utc <= 5:
+    # Ventana clasica de automatizacion: 02:00-05:00 UTC. Solo si la fecha
+    # trae zona horaria fiable: una hora local (CSV de Studio) no dice nada
+    # sobre la hora UTC real y aplicarla inventaria una senal.
+    if (
+        f.hour_reliable
+        and f.posting_hour_utc is not None
+        and 2 <= f.posting_hour_utc <= 5
+    ):
         value += 0.4
         signals.append(f"publicado a las {f.posting_hour_utc:02d}:00 UTC")
     if f.minutes_to_previous is not None and 0 <= f.minutes_to_previous <= 2:
@@ -2744,6 +2788,14 @@ identidad ni una verdad absoluta. No hay certeza al 100% sobre ningun comentario
 muestras reales anonimas) con el mismo motor; no gastan cuota ni se refieren \
 a un video concreto.
 - Limites: hasta 10.000 comentarios por analisis, archivos CSV/JSON de maximo 16 MB.
+- Paridad enlace vs archivo: el mismo video puede dar un porcentaje distinto al \
+analizarlo por enlace o por CSV, porque el archivo no siempre trae los mismos \
+metadatos (me gusta, zona horaria de las fechas, comentarios eliminados o \
+retenidos que la API no devuelve). El motor de scoring es unico, fijo y \
+deterministico: mismos datos de entrada, mismo resultado.
+- NO existen opciones de configuracion de heuristicas, filtros ni ajustes en la \
+app; el motor no se puede cambiar. Nunca menciones, sugieras ni describas \
+botones, ajustes o configuraciones que no esten en esta ficha.
 
 Reglas de respuesta:
 - Responde SIEMPRE en espanol, en un tono amable y cercano, como un robot companero.
