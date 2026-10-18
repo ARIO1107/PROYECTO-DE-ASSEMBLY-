@@ -296,7 +296,6 @@
                 <span class="h-1.5 w-1.5 rounded-full bg-amber-400 breath"></span>
                 <span id="mode-badge-text">Modo simulacion</span>
             </span>
-            <span class="js-version text-[11px] tabular-nums text-slate-600"></span>
         </div>
     </div>
 </header>
@@ -423,6 +422,18 @@
                     </button>
                 </div>
             </form>
+
+            <!-- Vista previa del video: miniatura oficial de YouTube, que no
+                 necesita API key ni gasta cuota. Se actualiza al pegar el link. -->
+            <div id="yt-preview" class="hidden mt-4 flex items-center gap-3.5 rounded-xl border border-white/10 bg-white/[.03] p-3">
+                <img id="yt-thumb" alt="Miniatura del video de YouTube"
+                     class="h-[5.25rem] w-[9.3rem] shrink-0 rounded-lg bg-ink-800 object-cover">
+                <div class="min-w-0">
+                    <p class="text-[10px] uppercase tracking-widest text-slate-500">Vista previa del video</p>
+                    <p id="yt-preview-id" class="mt-0.5 truncate font-mono text-xs text-slate-300"></p>
+                    <p class="mt-0.5 text-[11px] text-slate-500">Miniatura oficial de YouTube</p>
+                </div>
+            </div>
         </section>
     </div>
 
@@ -443,35 +454,34 @@
                 </button>
             </div>
 
-            <div class="mt-6 rounded-xl border border-amber-500/25 bg-amber-500/[.06] p-4 text-xs leading-relaxed text-amber-200/90">
-                <p class="font-semibold text-amber-200">Por que aqui el procedimiento es distinto</p>
-                <p class="mt-1">
-                    YouTube expone sus comentarios por una API publica: por eso basta una URL. El
-                    resto de plataformas cierran esa via (o la condicionan a permisos con
-                    aprobacion manual de la propia red), asi que la via estable es usar una
-                    herramienta web de exportacion: copias el enlace de la publicacion publica,
-                    la herramienta extrae los comentarios y descargas el archivo CSV (o JSON).
-                    Ese archivo se sube aqui y el motor que
-                    analiza es identico al de YouTube: mismas 40 features y mismas
-                    9 heuristicas.
-                </p>
-            </div>
+            <!-- Dos cajas explicativas en horizontal (en movil se apilan):
+                 juntas ocupan la mitad de alto que una debajo de otra. -->
+            <div class="mt-6 grid items-start gap-4 md:grid-cols-2">
+                <div class="rounded-xl border border-amber-500/25 bg-amber-500/[.06] p-4 text-[11px] leading-relaxed text-amber-200/90">
+                    <p class="text-xs font-semibold text-amber-200">Por que aqui el procedimiento es distinto</p>
+                    <p class="mt-1">
+                        YouTube deja leer sus comentarios por API publica (basta una URL). Las demas
+                        redes cierran esa via: exporta los comentarios con una herramienta web
+                        (CSV/JSON) y sube el archivo aqui. El motor de analisis es el mismo.
+                    </p>
+                </div>
 
-            <div class="mt-6 rounded-xl border border-indigo-500/20 bg-indigo-500/[.06] p-4">
-                <p class="flex items-center gap-2 text-sm font-semibold text-white">
-                    <span class="grid h-7 w-7 place-items-center rounded-lg bg-indigo-500/20 text-indigo-300">
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/></svg>
-                    </span>
-                    Método universal (válido para cualquier red social)
-                </p>
-                <p class="mt-2 text-xs leading-relaxed text-slate-300">
-                    Esta opción sirve para cualquier app o red social. Es más limitada en el número de comentarios, por lo que sirve perfecto para cantidades pequeñas:
-                </p>
-                <a href="https://es.exportcomments.com/" target="_blank" rel="noopener"
-                   class="mt-2.5 inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-indigo-300 underline decoration-indigo-500/40 underline-offset-2 transition hover:text-indigo-100">
-                    <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                    es.exportcomments.com
-                </a>
+                <div class="rounded-xl border border-indigo-500/20 bg-indigo-500/[.06] p-4">
+                    <p class="flex items-center gap-2 text-sm font-semibold text-white">
+                        <span class="grid h-7 w-7 place-items-center rounded-lg bg-indigo-500/20 text-indigo-300">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/></svg>
+                        </span>
+                        Método universal (cualquier red social)
+                    </p>
+                    <p class="mt-2 text-xs leading-relaxed text-slate-300">
+                        Sirve para cualquier app o red social. Va limitado en el número de comentarios, ideal para cantidades pequeñas:
+                    </p>
+                    <a href="https://es.exportcomments.com/" target="_blank" rel="noopener"
+                       class="mt-2.5 inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-indigo-300 underline decoration-indigo-500/40 underline-offset-2 transition hover:text-indigo-100">
+                        <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        es.exportcomments.com
+                    </a>
+                </div>
             </div>
 
             <div class="mt-7">
@@ -489,6 +499,20 @@
                         </span>
                         <span id="file-name" class="max-w-full truncate font-mono text-[11px] text-slate-500">Ningun archivo seleccionado</span>
                         <span id="file-meta" class="text-[10px] text-slate-600">CSV o JSON · maximo 16 MB · hasta 10.000 comentarios</span>
+                    </div>
+
+                    <!-- Miniatura del archivo: card-documento con icono, tipo,
+                         nombre y peso. Aparece al elegir o arrastrar el CSV/JSON. -->
+                    <div id="file-preview" class="hidden mt-3 flex items-center gap-3.5 rounded-xl border border-white/10 bg-white/[.03] p-3">
+                        <span class="relative grid h-[5.25rem] w-[4.2rem] shrink-0 place-items-center rounded-lg border border-white/10 bg-ink-800 text-slate-400">
+                            <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <span id="file-preview-ext" class="absolute -bottom-1.5 -right-1.5 rounded-md bg-indigo-500 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white shadow">CSV</span>
+                        </span>
+                        <div class="min-w-0">
+                            <p class="text-[10px] uppercase tracking-widest text-slate-500">Archivo seleccionado</p>
+                            <p id="file-preview-name" class="mt-0.5 truncate text-xs font-medium text-slate-200"></p>
+                            <p id="file-preview-size" class="mt-0.5 text-[11px] text-slate-500"></p>
+                        </div>
                     </div>
 
                     <div class="mt-3 flex flex-col gap-3 sm:flex-row">
@@ -957,11 +981,6 @@
                 enterAiMaintenance();
             }
 
-            if (cfg && cfg.version) {
-                const label = 'v' + cfg.version;
-                document.querySelectorAll('.js-version').forEach((el) => { el.textContent = label; });
-            }
-
             const badge = $('mode-badge');
             const badgeText = $('mode-badge-text');
             if (badge && badgeText) {
@@ -1277,6 +1296,7 @@
 
     /** Valida y adopta el archivo. Devuelve false y deja el error en pantalla. */
     function acceptFile(file) {
+        clearFilePreview();
         if (!file) return false;
         const name = String(file.name || '').toLowerCase();
 
@@ -1298,6 +1318,7 @@
         setText('file-meta', (name.endsWith('.json') ? 'JSON' : 'CSV')
             + ' · ' + humanSize(file.size)
             + ' · se analizaran hasta 10.000 comentarios');
+        setFilePreview(file);
         $('drop-zone').classList.add('has-file');
         $('upload-btn').disabled = false;
         $('error-box').classList.add('hidden');
@@ -1346,6 +1367,71 @@
             && event.dataTransfer.files[0];
         if (file) acceptFile(file);
     });
+
+    // ==================================================================
+    // Vistas previas didacticas
+    //   - YouTube: miniatura oficial vía img.youtube.com (sin API key).
+    //   - Otras redes: card-documento del CSV/JSON seleccionado.
+    // ==================================================================
+    function parseYouTubeId(raw) {
+        const value = (raw || '').trim();
+        if (!value) return null;
+        const patterns = [
+            /(?:youtube\.com\/watch\?(?:.*&)?v=)([A-Za-z0-9_-]{11})/,
+            /(?:youtu\.be\/)([A-Za-z0-9_-]{11})/,
+            /(?:youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})/,
+            /(?:youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/,
+            /(?:youtube\.com\/live\/)([A-Za-z0-9_-]{11})/,
+            /^([A-Za-z0-9_-]{11})$/
+        ];
+        for (let i = 0; i < patterns.length; i++) {
+            const match = value.match(patterns[i]);
+            if (match) return match[1];
+        }
+        return null;
+    }
+
+    function updateYoutubePreview() {
+        const preview = $('yt-preview');
+        const img = $('yt-thumb');
+        if (!preview || !img) return;
+        const id = parseYouTubeId($('url') ? $('url').value : '');
+        if (!id) {
+            preview.classList.add('hidden');
+            return;
+        }
+        setText('yt-preview-id', 'ID del video: ' + id);
+        // Si el ID no tiene miniatura (borrado o inexistente), no insistir.
+        img.onerror = () => preview.classList.add('hidden');
+        img.src = 'https://img.youtube.com/vi/' + id + '/hqdefault.jpg';
+        preview.classList.remove('hidden');
+    }
+
+    (function bindYoutubePreview() {
+        const input = $('url');
+        if (!input) return;
+        let timer = null;
+        input.addEventListener('input', () => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(updateYoutubePreview, 300);
+        });
+        updateYoutubePreview();   // el campo ya trae un enlace de ejemplo
+    })();
+
+    function setFilePreview(file) {
+        const preview = $('file-preview');
+        if (!preview || !file) return;
+        const isJson = String(file.name || '').toLowerCase().endsWith('.json');
+        setText('file-preview-ext', isJson ? 'JSON' : 'CSV');
+        setText('file-preview-name', file.name || '');
+        setText('file-preview-size', humanSize(file.size) + ' listo para analizar');
+        preview.classList.remove('hidden');
+    }
+
+    function clearFilePreview() {
+        const preview = $('file-preview');
+        if (preview) preview.classList.add('hidden');
+    }
 
     /** Loader con fases rotativas y barra que se acerca al 100% sin saltos falsos. */
     function setLoading(active, mode) {
