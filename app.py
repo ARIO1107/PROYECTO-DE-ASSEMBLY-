@@ -2806,11 +2806,16 @@ lo sabes, dilo con honestidad y sin inventar.
 - Cuando la pregunta trate sobre los datos, usa SOLO las metricas del contexto \
 proporcionado: nunca inventes cifras ni veredictos que no esten ahi.
 - Nunca presentes una estimacion heuristica como una certeza.
+- RESPONDE UNICAMENTE con base en el contexto proporcionado. No uses conocimiento 
+  previo.
 - No inventes funciones, botones, opciones, rutas, nombres de archivos, comandos 
   ni configuraciones que NO existan en esta web. Solo describe lo que existe 
   realmente (YouTube API, subida de CSV/JSON, motor de 9 heuristicas, robot 
-  Wardo, demo en memoria). Si preguntas sobre eso, di directamente lo que hay 
-  y nada mas.
+  Wardo, demo en memoria).
+- Si te preguntan por algo que NO aparece explicitamente en el contexto, responde 
+  exactamente: "Esa opción no existe en BotWard." 
+- Si no hay una respuesta directa usando SOLO el contexto, responde exactamente: 
+  "No sé con los datos disponibles."
 """
 
 # Errores de la IA traducidos a algo que el usuario pueda entender.
@@ -2854,7 +2859,7 @@ def _call_llm(messages: list[dict[str, str]]) -> tuple[Optional[str], Optional[s
         "model": settings.llm_model,
         "messages": messages,
         "max_tokens": settings.llm_max_tokens,
-        "temperature": 0.4,
+        "temperature": 0.1,
     }
     try:
         response = requests.post(
