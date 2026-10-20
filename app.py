@@ -1,5 +1,5 @@
 """
-BotWard - MVP de deteccion de bots en comentarios de redes sociales
+BotMeter - MVP de deteccion de bots en comentarios de redes sociales
 =============================================================================
 
 Arquitectura
@@ -90,7 +90,7 @@ class Settings(BaseSettings):
         populate_by_name=True,
     )
 
-    app_name: str = Field(default="BotWard", validation_alias=AliasChoices("APP_NAME", "app_name"))
+    app_name: str = Field(default="BotMeter", validation_alias=AliasChoices("APP_NAME", "app_name"))
     app_version: str = Field(default="1.0.0", validation_alias=AliasChoices("APP_VERSION", "app_version"))
     environment: str = Field(
         default="development",
@@ -2768,10 +2768,10 @@ GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
 # funciona esto?", "¿que significa el riesgo medio?") aunque no haya ningun
 # analisis cargado. Mantenida corta para no quemar tokens del tier gratis.
 ASSISTANT_SYSTEM_PROMPT = """\
-Eres "Wardo", el asistente de BotWard, una web que estima que porcentaje de los \
+Eres "Wardo", el asistente de BotMeter, una web que estima que porcentaje de los \
 comentarios de un video o publicacion son bots (cuentas automatizadas).
 
-Como funciona BotWard (ficha tecnica):
+Como funciona BotMeter (ficha tecnica):
 - Analiza comentarios de YouTube (via YouTube Data API) y de otras redes sociales \
 subiendo un CSV/JSON exportado (TikTok, Instagram, X, Facebook, Threads, Reddit, LinkedIn).
 - De cada comentario extrae 40 features (texto, autor, tiempo, enlaces, emojis, \
@@ -2813,7 +2813,7 @@ proporcionado: nunca inventes cifras ni veredictos que no esten ahi.
   realmente (YouTube API, subida de CSV/JSON, motor de 9 heuristicas, robot 
   Wardo, demo en memoria).
 - Si te preguntan por algo que NO aparece explicitamente en el contexto, responde 
-  exactamente: "Esa opción no existe en BotWard." 
+  exactamente: "Esa opción no existe en BotMeter." 
 - Si no hay una respuesta directa usando SOLO el contexto, responde exactamente: 
   "No sé con los datos disponibles."
 """
