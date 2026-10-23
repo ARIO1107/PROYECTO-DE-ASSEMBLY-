@@ -5,40 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BotMeter · Detector de bots en comentarios</title>
     <meta name="description" content="Analisis heuristico de comentarios de YouTube, TikTok, Instagram, X, Facebook y mas redes para estimar la presencia de bots.">
-    <meta name="color-scheme" content="dark">
+    <meta name="color-scheme" content="light">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
 
-    <!-- Tipografia: Inter (interfaz) + Space Grotesk (titulares). Se cargan
-         desde Google Fonts; si falla la red, el navegador usa la pila del
-         sistema (el diseno no depende de la fuente para ser legible). -->
+    <!-- Tipografía: Outfit (titulares y números) + Plus Jakarta Sans (interfaz) + JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Tailwind CSS via CDN (Play CDN). Sin build step a proposito: el
-         despliegue en Render es un `pip install` + uvicorn, y un paso de
-         compilacion de Tailwind anadiria una cadena de herramientas (Node)
-         que el proyecto no tiene ni necesita. -->
+    <!-- Tailwind CSS via CDN (Play CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
-            darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                        display: ['Space Grotesk', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace']
+                        sans: ['"Plus Jakarta Sans"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        display: ['"Outfit"', '"Space Grotesk"', '"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace']
                     },
                     colors: {
-                        // Fondo corporativo cálido (estilo HubSpot dark): marron
-                        // grisaceo muy oscuro en vez del azul frio anterior.
-                        ink: { 950: '#1a1613', 900: '#221e1a', 800: '#2a2520', 700: '#352f28' },
-                        // Acento naranja corporativo (CTA, enlaces, foco).
+                        surface: { 50: '#fafaf9', 100: '#f5f5f4', 200: '#e7e5e4', 300: '#d6d3d1' },
                         brand: {
-                            100: '#ffe8de', 200: '#ffcdb8', 300: '#ffab85',
-                            400: '#ff7a4d', 500: '#ff5c35', 600: '#e64a19',
-                            700: '#b83a12', 900: '#5c1d0c', 950: '#3d1206'
+                            50: '#fff7ed', 100: '#ffedd5', 200: '#fed7aa', 300: '#fdba74',
+                            400: '#fb923c', 500: '#ff5c35', 600: '#ea580c', 700: '#c2410c',
+                            800: '#9a3412', 900: '#7c2d12', 950: '#431407'
                         }
                     }
                 }
@@ -55,27 +46,30 @@
            ------------------------------------------------------------------ */
         :root { --ease: cubic-bezier(.16, 1, .3, 1); }
 
-        /* --- Base tipografica: Inter con tracking suave y numeros tabulares
-           en datos. Los titulares suben a Space Grotesk. El idioma monta el
-           antialiasing y las ligaduras para un texto mas limpio. --- */
+        /* --- Base tipográfica y estilos limpios corporativos --- */
         html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         body {
+            font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
             font-feature-settings: "cv02", "cv03", "cv04", "ss01";
-            letter-spacing: -0.006em;
+            letter-spacing: -0.01em;
             text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
-        h1, h2, h3, .font-display { font-family: 'Space Grotesk', 'Inter', ui-sans-serif, system-ui, sans-serif; }
-        h2, h3 { letter-spacing: -0.02em; }
+        h1, h2, h3, .font-display {
+            font-family: 'Outfit', 'Space Grotesk', 'Plus Jakarta Sans', system-ui, sans-serif;
+            letter-spacing: -0.025em;
+        }
         .tabular, .stat-value, [data-to] { font-variant-numeric: tabular-nums; }
 
-        /* --- Tarjetas "bento": sombra suave, borde tenue, lift al hover --- */
+        /* --- Tarjetas modernas con sombra suave y borde limpio --- */
         .card {
             position: relative;
             border-radius: 1.25rem;
-            border: 1px solid rgba(255, 255, 255, .07);
-            background: linear-gradient(158deg, rgba(48, 42, 36, .92) 0%, rgba(26, 22, 19, .94) 62%);
+            border: 1px solid rgba(226, 232, 240, 0.95);
+            background: #ffffff;
             padding: 1.75rem;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 14px 34px -14px rgba(0, 0, 0, .8);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .03), 0 10px 25px -4px rgba(28, 25, 23, .04);
             transition: transform .4s var(--ease), box-shadow .4s var(--ease), border-color .4s var(--ease);
             overflow: hidden;
         }
@@ -83,30 +77,30 @@
         .card::before {
             content: "";
             position: absolute; inset: 0;
-            background: radial-gradient(760px 220px at 12% -12%, rgba(255, 255, 255, .055), transparent 62%);
+            background: radial-gradient(760px 220px at 12% -12%, rgba(255, 92, 53, .025), transparent 62%);
             pointer-events: none;
         }
         .card-hover:hover {
             transform: translateY(-4px);
-            border-color: rgba(255, 255, 255, .16);
-            box-shadow: 0 2px 6px rgba(0, 0, 0, .45), 0 30px 56px -18px rgba(0, 0, 0, .92);
+            border-color: rgba(255, 92, 53, .35);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, .04), 0 20px 35px -8px rgba(255, 92, 53, .12);
         }
         .card > * { position: relative; }
 
-        /* --- Temas de riesgo: verde / amarillo / rojo / morado critico --- */
-        [data-risk="low"]      { --r1: #34d399; --r2: #10b981; --rg: 52, 197, 153; }
-        [data-risk="medium"]   { --r1: #fbbf24; --r2: #f59e0b; --rg: 251, 191, 36; }
-        [data-risk="high"]     { --r1: #f87171; --r2: #ef4444; --rg: 248, 113, 113; }
-        [data-risk="critical"] { --r1: #c084fc; --r2: #a855f7; --rg: 192, 132, 252; }
+        /* --- Temas de riesgo: verde / amarillo / rojo / morado --- */
+        [data-risk="low"]      { --r1: #059669; --r2: #10b981; --rg: 16, 185, 129; }
+        [data-risk="medium"]   { --r1: #d97706; --r2: #f59e0b; --rg: 245, 158, 11; }
+        [data-risk="high"]     { --r1: #e11d48; --r2: #f43f5e; --rg: 225, 29, 72; }
+        [data-risk="critical"] { --r1: #9333ea; --r2: #a855f7; --rg: 147, 51, 234; }
 
-        .risk-wash  { background: radial-gradient(620px 300px at 78% -18%, rgba(var(--rg), .22), transparent 66%); }
-        .risk-ring  { box-shadow: 0 0 0 1px rgba(var(--rg), .34), 0 22px 60px -26px rgba(var(--rg), .8); }
-        .risk-chip  { background: rgba(var(--rg), .13); border-color: rgba(var(--rg), .38); color: var(--r1); }
+        .risk-wash  { background: radial-gradient(620px 300px at 78% -18%, rgba(var(--rg), .08), transparent 66%); }
+        .risk-ring  { box-shadow: 0 0 0 1px rgba(var(--rg), .34), 0 14px 40px -18px rgba(var(--rg), .35); }
+        .risk-chip  { background: rgba(var(--rg), .08); border-color: rgba(var(--rg), .28); color: var(--r1); }
         .risk-text  { color: var(--r1); }
         .grad-risk  { background-image: linear-gradient(100deg, var(--r1), var(--r2)); }
 
         /* --- Barras de progreso animadas --- */
-        .track { height: .5rem; border-radius: 999px; background: rgba(255, 255, 255, .07); overflow: hidden; }
+        .track { height: .5rem; border-radius: 999px; background: rgba(0, 0, 0, .06); overflow: hidden; }
         .fill {
             height: 100%; width: 0; border-radius: 999px;
             transition: width 1.05s var(--ease);
@@ -118,7 +112,7 @@
         .fill-stripe::after {
             content: "";
             position: absolute; inset: 0;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .38), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .6), transparent);
             transform: translateX(-100%);
             animation: sweep 2.4s var(--ease) infinite;
         }
@@ -140,7 +134,7 @@
         .halo     { animation: halobar 2s ease-out infinite; }
 
         .skeleton {
-            background: linear-gradient(90deg, rgba(255,255,255,.04) 25%, rgba(255,255,255,.10) 37%, rgba(255,255,255,.04) 63%);
+            background: linear-gradient(90deg, rgba(0,0,0,.04) 25%, rgba(0,0,0,.08) 37%, rgba(0,0,0,.04) 63%);
             background-size: 200% 100%;
             animation: shimmer 1.4s linear infinite;
         }
@@ -149,50 +143,47 @@
         .spinner {
             width: 1.15rem; height: 1.15rem;
             border-radius: 999px;
-            border: 2px solid rgba(255, 255, 255, .22);
-            border-top-color: #ff7a4d;
+            border: 2px solid rgba(0, 0, 0, .15);
+            border-top-color: #ff5c35;
             animation: spin .7s linear infinite;
         }
-
-        /* --- Selector de origen: la URL de YouTube vive en view-youtube y el
-           archivo subido en view-others; ya no hay pestañas que estilizar. --- */
 
         /* --- Zona de arrastre de archivos --- */
         .dropzone {
             display: flex; flex-direction: column; align-items: center;
             gap: .5rem; cursor: pointer;
-            border: 1.5px dashed rgba(255, 255, 255, .16);
+            border: 1.5px dashed rgba(203, 213, 225, 0.9);
             border-radius: 1rem;
-            background: rgba(255, 255, 255, .025);
+            background: #fafaf9;
             padding: 1.4rem 1rem;
             text-align: center;
             transition: border-color .3s var(--ease), background-color .3s var(--ease),
                         transform .3s var(--ease);
         }
-        .dropzone:hover { border-color: rgba(255, 122, 77, .55); background: rgba(255, 92, 53, .07); }
-        .dropzone:focus-visible { outline: 2px solid rgba(255, 122, 77, .8); outline-offset: 2px; }
+        .dropzone:hover { border-color: #ff5c35; background: #fff7ed; }
+        .dropzone:focus-visible { outline: 2px solid rgba(255, 92, 53, .8); outline-offset: 2px; }
         .dropzone.is-over {
-            border-color: #ff7a4d;
-            background: rgba(255, 92, 53, .14);
+            border-color: #ff5c35;
+            background: #ffedd5;
             transform: translateY(-2px);
         }
         .dropzone.has-file {
             border-style: solid;
-            border-color: rgba(52, 211, 153, .5);
-            background: rgba(16, 185, 129, .07);
+            border-color: rgba(16, 185, 129, .6);
+            background: rgba(16, 185, 129, .06);
         }
 
         .field {
             border-radius: .9rem;
-            border: 1px solid rgba(255, 255, 255, .10);
-            background: #1f1b17;
-            color: #d6d3d1;
-            font-size: .82rem;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: #1e293b;
+            font-size: .85rem;
             padding: .8rem .9rem;
             outline: none;
             transition: border-color .3s var(--ease), box-shadow .3s var(--ease);
         }
-        .field:focus { border-color: rgba(255, 92, 53, .6); box-shadow: 0 0 0 3px rgba(255, 92, 53, .18); }
+        .field:focus { border-color: rgba(255, 92, 53, .7); box-shadow: 0 0 0 3px rgba(255, 92, 53, .16); }
 
         /* --- Fila de la traza de la fuente (archivo subido vs API) --- */
         .source-trace { font-variant-numeric: tabular-nums; }
@@ -221,24 +212,25 @@
         }
         .ai-msg-robot {
             align-self: flex-start;
-            background: rgba(255, 255, 255, .045);
-            border: 1px solid rgba(255, 255, 255, .07);
-            color: #e2e8f0;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #1e293b;
             border-radius: .35rem 1rem 1rem 1rem;
-            padding: .6rem .8rem;
+            padding: .65rem .85rem;
         }
         .ai-msg-user {
             align-self: flex-end;
-            background: rgba(255, 92, 53, .16);
-            border: 1px solid rgba(255, 122, 77, .32);
-            color: #ffe8de;
+            background: #ff5c35;
+            border: 1px solid #ff5c35;
+            color: #ffffff;
+            font-weight: 500;
             border-radius: 1rem .35rem 1rem 1rem;
-            padding: .6rem .8rem;
+            padding: .65rem .85rem;
         }
         .ai-msg-error {
-            border-color: rgba(251, 146, 60, .35);
-            background: rgba(251, 146, 60, .1);
-            color: #fed7aa;
+            border-color: rgba(239, 68, 68, .3);
+            background: #fef2f2;
+            color: #b91c1c;
         }
         /* Cursor de maquina de escribir */
         .ai-typing-caret::after {
@@ -252,15 +244,15 @@
             animation: breathe 1s steps(2, start) infinite;
         }
         .ai-chip {
-            border: 1px solid rgba(255, 255, 255, .1);
-            background: rgba(255, 255, 255, .04);
-            color: #cbd5e1;
-            font-size: .7rem;
-            padding: .3rem .6rem;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #475569;
+            font-size: .72rem;
+            padding: .35rem .65rem;
             border-radius: 999px;
             transition: border-color .25s var(--ease), background-color .25s var(--ease), color .25s var(--ease);
         }
-        .ai-chip:hover { border-color: rgba(255, 122, 77, .5); background: rgba(255, 92, 53, .12); color: #ffe8de; }
+        .ai-chip:hover { border-color: rgba(255, 92, 53, .5); background: #fff7ed; color: #ea580c; }
         /* Indicador "escribiendo..." */
         .ai-dots { display: inline-flex; gap: 4px; padding: .35rem .1rem; }
         .ai-dots span {
@@ -272,11 +264,8 @@
         #ai-input { resize: none; max-height: 6rem; }
 
         /* --- Estado de mantenimiento: sin clave o cuota diaria agotada --- */
-        /* El robot sigue presente en todas las paginas: cambia de animacion
-           en lugar de desaparecer. */
         #ai-widget.ai-maintenance #ai-open {
-            border-color: rgba(245, 158, 11, .45);
-            color: #fcd34d;
+            border-color: rgba(245, 158, 11, .55);
             animation: aiMaintBob 2.6s ease-in-out infinite;
         }
         #ai-widget.ai-maintenance #ai-panel { border-color: rgba(245, 158, 11, .3); }
@@ -287,7 +276,7 @@
             50% { transform: translateY(-3px); }
         }
 
-        /* --- Respeto a la preferencia del sistema: sin movimiento, sin drift --- */
+        /* --- Respeto a la preferencia del sistema --- */
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: .001ms !important;
@@ -299,38 +288,39 @@
 
         ::-webkit-scrollbar { width: 10px; height: 10px }
         ::-webkit-scrollbar-track { background: transparent }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 999px }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.2) }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 999px }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.25) }
     </style>
 </head>
 
-<body class="bg-ink-950 text-stone-200 antialiased selection:bg-brand-500/30" data-mode="simulated">
+<body class="bg-[#fafaf9] text-stone-800 antialiased selection:bg-brand-500/20" data-mode="simulated">
 
-<!-- Fondo ambiental: un unico foco tenue en la parte superior. Sin coste de red. -->
+<!-- Fondo ambiental sutil con textura geométrica e iluminación clara -->
+<div aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10 bg-[url('/static/images/app-bg.jpg')] bg-top bg-no-repeat bg-cover opacity-60"></div>
 <div aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-    <div class="absolute left-1/2 -top-64 h-[42rem] w-[42rem] -translate-x-1/2 rounded-full bg-brand-500/[.06] blur-[130px]"></div>
+    <div class="absolute left-1/2 -top-40 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-brand-500/[.07] blur-[120px]"></div>
 </div>
 
 <!-- ===================== NAVBAR ===================== -->
-<header class="sticky top-0 z-30 border-b border-white/5 bg-ink-950/75 backdrop-blur-xl">
+<header class="sticky top-0 z-30 border-b border-stone-200/80 bg-white/85 backdrop-blur-xl shadow-xs">
     <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3.5">
         <div id="header-home" role="button" tabindex="0" class="flex items-center gap-3 cursor-pointer select-none rounded-lg pr-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50">
-            <div class="grid h-9 w-9 place-items-center rounded-lg bg-brand-500 text-sm font-bold text-white shadow-sm shadow-brand-950/50 ring-1 ring-inset ring-white/10">B</div>
+            <div class="grid h-9 w-9 place-items-center rounded-lg bg-brand-500 text-sm font-bold text-white shadow-sm shadow-brand-500/30 ring-1 ring-inset ring-brand-400/20">B</div>
             <div>
-                <h1 class="text-sm font-semibold tracking-tight text-white">BotMeter</h1>
-                <p class="text-[11px] leading-tight text-stone-500">Deteccion de bots en comentarios</p>
+                <h1 class="text-sm font-semibold tracking-tight text-stone-900 font-display">BotMeter</h1>
+                <p class="text-[11px] leading-tight text-stone-500">Detección de bots en comentarios</p>
             </div>
         </div>
         <nav class="hidden items-center gap-1 md:flex">
-            <button type="button" data-nav="youtube" class="nav-link rounded-lg px-3 py-1.5 text-[13px] font-medium text-stone-400 transition hover:bg-white/5 hover:text-white">YouTube</button>
-            <button type="button" data-nav="others" class="nav-link rounded-lg px-3 py-1.5 text-[13px] font-medium text-stone-400 transition hover:bg-white/5 hover:text-white">Otras redes</button>
+            <button type="button" data-nav="youtube" class="nav-link rounded-lg px-3 py-1.5 text-[13px] font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-900">YouTube</button>
+            <button type="button" data-nav="others" class="nav-link rounded-lg px-3 py-1.5 text-[13px] font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-900">Otras redes</button>
         </nav>
         <div class="flex items-center gap-3">
-            <span id="mode-badge" class="hidden items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-300">
-                <span class="h-1.5 w-1.5 rounded-full bg-amber-400 breath"></span>
-                <span id="mode-badge-text">Modo simulacion</span>
+            <span id="mode-badge" class="hidden items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">
+                <span class="h-1.5 w-1.5 rounded-full bg-amber-500 breath"></span>
+                <span id="mode-badge-text">Modo simulación</span>
             </span>
-            <button type="button" id="nav-cta" class="hidden items-center gap-1.5 rounded-lg bg-brand-500 px-4 py-2 text-[13px] font-semibold text-white shadow-sm shadow-brand-900/40 transition hover:bg-brand-400 active:scale-[.98] sm:inline-flex">
+            <button type="button" id="nav-cta" class="hidden items-center gap-1.5 rounded-lg bg-brand-500 px-4 py-2 text-[13px] font-semibold text-white shadow-sm shadow-brand-500/30 transition hover:bg-brand-600 active:scale-[.98] sm:inline-flex">
                 <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 Analizar
             </button>
@@ -340,16 +330,15 @@
 
 <main class="mx-auto max-w-7xl px-5 pb-20 pt-8">
 
-    <!-- Aviso de conexion: solo aparece si la pagina no puede hablar con el
-         servidor (abierta como archivo sin `python app.py`). -->
+    <!-- Aviso de conexion: solo aparece si la pagina no puede hablar con el servidor -->
     <div id="offline-banner" class="hidden mb-6">
-        <div class="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5 text-sm text-amber-100">
-            <p class="text-base font-semibold text-amber-200">La aplicacion no esta conectada al servidor</p>
-            <p id="offline-banner-text" class="mt-1.5 leading-relaxed text-amber-200/90">
-                Ejecuta <span class="rounded bg-black/30 px-1.5 py-0.5 font-mono text-amber-100">python app.py</span>
-                y abre <span class="rounded bg-black/30 px-1.5 py-0.5 font-mono text-amber-100">http://localhost:8000</span>
+        <div class="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-900">
+            <p class="text-base font-semibold text-amber-900">La aplicación no está conectada al servidor</p>
+            <p id="offline-banner-text" class="mt-1.5 leading-relaxed text-amber-800">
+                Ejecuta <span class="rounded bg-amber-200/60 px-1.5 py-0.5 font-mono text-amber-900">python app.py</span>
+                y abre <span class="rounded bg-amber-200/60 px-1.5 py-0.5 font-mono text-amber-900">http://localhost:8000</span>
                 en el navegador. No abras el archivo <span class="font-mono">index.html</span> directamente:
-                sin el servidor, el analisis no puede funcionar.
+                sin el servidor, el análisis no puede funcionar.
             </p>
         </div>
     </div>
@@ -358,64 +347,80 @@
          VISTAS DE LA SPA.
          view-welcome : selector de plataforma + demo en vivo.
          view-youtube : guia paso a paso + formulario de URL.
-         view-others  : redes soportadas, como conseguir el archivo (CSV/JSON)
-                        y como subirlo. Loader, error y resultados son
-                        compartidos (elementos mas abajo).
+         view-others  : redes soportadas, carga de CSV/JSON
          ================================================================== -->
 
     <!-- ---------------- VISTA 1 · BIENVENIDA ---------------- -->
     <div id="view-welcome" class="anim-up">
-        <section class="card anim-up p-8 sm:p-11">
-            <span class="inline-flex items-center gap-1.5 rounded-full border border-brand-500/25 bg-brand-500/10 px-3 py-1 text-[11px] font-medium text-brand-300">
-                <span class="h-1.5 w-1.5 rounded-full bg-brand-400"></span>
-                Detector heuristico de comentarios automatizados
-            </span>
-            <h2 class="mt-5 max-w-3xl font-display text-4xl font-bold leading-[1.08] tracking-tight text-white sm:text-5xl">
-                Que quieres analizar hoy?
-            </h2>
-            <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-stone-400">
-                Elige donde estan los comentarios que te preocupan. BotMeter extrae
-                <span class="text-stone-200">40 features</span> de cada mensaje y aplica
-                <span class="text-stone-200">9 heuristicas ponderadas</span> para estimar el porcentaje
-                de bots, con su distribucion por veredicto.
-            </p>
+        <section class="card anim-up p-7 sm:p-10 lg:p-12 overflow-hidden">
+            <div class="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-center">
+                <div class="lg:col-span-7">
+                    <span class="inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-500/[.08] px-3.5 py-1 text-xs font-semibold text-brand-600">
+                        <span class="h-2 w-2 rounded-full bg-brand-500 animate-pulse"></span>
+                        Detector heurístico de comentarios automatizados
+                    </span>
+                    <h2 class="mt-4 font-display text-3xl font-bold leading-[1.12] tracking-tight text-stone-900 sm:text-4xl lg:text-5xl">
+                        ¿Qué quieres analizar hoy?
+                    </h2>
+                    <p class="mt-3.5 text-[15px] leading-relaxed text-stone-600">
+                        Elige dónde están los comentarios que te preocupan. BotMeter extrae
+                        <strong class="font-semibold text-stone-800">40 features</strong> de cada mensaje y aplica
+                        <strong class="font-semibold text-stone-800">9 heurísticas ponderadas</strong> para estimar el porcentaje
+                        de bots con precisión y transparencia.
+                    </p>
 
-            <div id="platform-grid" class="mt-9 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <button type="button" id="pick-youtube" data-platform="" data-target="youtube"
-                        class="group flex flex-col items-start gap-3 rounded-2xl border border-white/10 bg-white/[.03] p-6 text-left transition hover:-translate-y-1 hover:border-red-500/45 hover:bg-red-500/[.07] hover:shadow-xl hover:shadow-black/40">
-                    <span class="grid h-12 w-12 place-items-center rounded-xl bg-red-500/15 text-lg font-bold text-red-400 ring-1 ring-inset ring-red-500/20">Y</span>
-                    <span class="font-display text-lg font-semibold text-white">YouTube</span>
-                    <span class="text-xs leading-relaxed text-stone-400">Pega la URL del video</span>
-                </button>
-                <button type="button" id="pick-others" data-platform="tiktok" data-target="others"
-                        class="group flex flex-col items-start gap-3 rounded-2xl border border-white/10 bg-white/[.03] p-6 text-left transition hover:-translate-y-1 hover:border-brand-500/45 hover:bg-brand-500/[.07] hover:shadow-xl hover:shadow-black/40">
-                    <span class="grid h-12 w-12 place-items-center rounded-xl bg-brand-500/15 text-lg font-bold text-brand-300 ring-1 ring-inset ring-brand-500/20">O</span>
-                    <span class="font-display text-lg font-semibold text-white">Otras redes sociales</span>
-                    <span class="text-xs leading-relaxed text-stone-400">Sube CSV o JSON (TikTok, Instagram, X, Facebook, Threads, Reddit, LinkedIn)</span>
-                </button>
+                    <div id="platform-grid" class="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <button type="button" id="pick-youtube" data-platform="" data-target="youtube"
+                                class="group flex flex-col items-start gap-3 rounded-2xl border border-stone-200 bg-stone-50/70 p-5 text-left transition hover:-translate-y-1 hover:border-red-300 hover:bg-red-50/40 hover:shadow-lg hover:shadow-red-500/5">
+                            <span class="grid h-11 w-11 place-items-center rounded-xl bg-red-500/10 text-lg font-bold text-red-600 ring-1 ring-inset ring-red-500/20">Y</span>
+                            <span class="font-display text-base font-semibold text-stone-900">YouTube</span>
+                            <span class="text-xs leading-relaxed text-stone-500">Pega la URL pública del video</span>
+                        </button>
+                        <button type="button" id="pick-others" data-platform="tiktok" data-target="others"
+                                class="group flex flex-col items-start gap-3 rounded-2xl border border-stone-200 bg-stone-50/70 p-5 text-left transition hover:-translate-y-1 hover:border-brand-300 hover:bg-brand-50/40 hover:shadow-lg hover:shadow-brand-500/5">
+                            <span class="grid h-11 w-11 place-items-center rounded-xl bg-brand-500/10 text-lg font-bold text-brand-600 ring-1 ring-inset ring-brand-500/20">O</span>
+                            <span class="font-display text-base font-semibold text-stone-900">Otras redes sociales</span>
+                            <span class="text-xs leading-relaxed text-stone-500">Sube CSV o JSON (TikTok, Instagram, X, Facebook, Reddit...)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-5 flex justify-center">
+                    <div class="relative w-full max-w-md overflow-hidden rounded-2xl border border-stone-200/90 bg-white p-2 shadow-xl shadow-stone-200/60">
+                        <img src="/static/images/hero-banner.jpg" alt="Agente de seguridad e IA analizando comentarios"
+                             class="h-auto w-full rounded-xl object-cover">
+                        <div class="absolute bottom-4 left-4 right-4 flex items-center justify-between rounded-xl bg-white/95 p-3 backdrop-blur-md border border-stone-200/80 shadow-sm">
+                            <div class="flex items-center gap-2.5">
+                                <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span class="text-xs font-semibold text-stone-800">IA en tiempo real</span>
+                            </div>
+                            <span class="text-[11px] font-semibold text-brand-600">9 Heurísticas activas</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
         <!-- --- Llamada a la demo en vivo (solo desde la bienvenida) --- -->
         <section class="card anim-up mt-5 p-0" style="animation-delay:.08s">
-            <div class="h-1 w-full rounded-none bg-gradient-to-r from-brand-500 to-brand-600"></div>
+            <div class="h-1.5 w-full bg-gradient-to-r from-brand-500 to-brand-600"></div>
             <div class="flex flex-col gap-5 p-7 sm:flex-row sm:items-center sm:justify-between lg:p-8">
                 <div class="max-w-xl">
-                    <p class="text-[10px] font-semibold uppercase tracking-widest text-brand-300">Demo interactiva</p>
-                    <h3 class="mt-2 font-display text-xl font-semibold text-white">Simular un ataque de bots en directo</h3>
-                    <p class="mt-2 text-[13px] leading-relaxed text-stone-400">
-                        Genera un ataque sintetico y lo emite comentario a comentario. Usa el mismo
-                        motor (las mismas 9 heuristicas) que el analisis real: no es un video grabado,
+                    <p class="text-[10px] font-semibold uppercase tracking-widest text-brand-600">Demo interactiva</p>
+                    <h3 class="mt-1 font-display text-xl font-bold text-stone-900">Simular un ataque de bots en directo</h3>
+                    <p class="mt-2 text-[13px] leading-relaxed text-stone-600">
+                        Genera un ataque sintético y lo emite comentario a comentario. Usa el mismo
+                        motor (las mismas 9 heurísticas) que el análisis real: no es un video grabado,
                         es el motor funcionando.
                     </p>
                 </div>
                 <div class="shrink-0">
                     <button type="button" id="demo-btn"
-                            class="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-900/40 ring-1 ring-inset ring-white/10 transition hover:bg-brand-400 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50">
-                        <span id="demo-btn-dot" class="h-2 w-2 rounded-full bg-white/80"></span>
+                            class="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:bg-brand-600 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50">
+                        <span id="demo-btn-dot" class="h-2 w-2 rounded-full bg-white"></span>
                         <span id="demo-btn-label">Lanzar demo en directo</span>
                     </button>
-                    <p class="mt-3 text-center text-[10px] text-stone-500">
+                    <p class="mt-2.5 text-center text-[10px] text-stone-400">
                         No requiere URL ni clave de API · no gasta cuota
                     </p>
                 </div>
@@ -428,62 +433,60 @@
         <section class="card anim-up p-6 sm:p-8 lg:p-10">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3.5">
-                    <span class="grid h-12 w-12 place-items-center rounded-xl bg-red-500/15 text-lg font-bold text-red-400 ring-1 ring-inset ring-red-500/20">Y</span>
+                    <span class="grid h-12 w-12 place-items-center rounded-xl bg-red-500/10 text-lg font-bold text-red-600 ring-1 ring-inset ring-red-500/20">Y</span>
                     <div>
-                        <h2 class="font-display text-2xl font-semibold tracking-tight text-white sm:text-[1.7rem]">Analizar un video de YouTube</h2>
-                        <p class="mt-0.5 text-xs text-stone-500">Comentarios publicos de cualquier video <span id="mode-note" class="hidden">· Modo API oficial</span></p>
+                        <h2 class="font-display text-2xl font-bold tracking-tight text-stone-900 sm:text-[1.7rem]">Analizar un video de YouTube</h2>
+                        <p class="mt-0.5 text-xs text-stone-500">Comentarios públicos de cualquier video <span id="mode-note" class="hidden">· Modo API oficial</span></p>
                     </div>
                 </div>
                 <button type="button" id="youtube-back"
-                        class="rounded-lg border border-white/10 px-3.5 py-2 text-xs text-stone-300 transition hover:border-brand-500/40 hover:text-brand-300">
+                        class="rounded-lg border border-stone-200 bg-stone-50 px-3.5 py-2 text-xs font-medium text-stone-600 transition hover:border-brand-500 hover:text-brand-600">
                     Volver al inicio
                 </button>
             </div>
 
-            <!-- Instrucciones de uso, arriba y visibles antes de nada. -->
-            <div class="mt-6 flex items-start gap-3 rounded-xl border border-brand-500/15 bg-brand-500/[.04] px-4 py-3.5 text-xs leading-relaxed text-stone-400">
-                <svg class="mt-0.5 h-4 w-4 shrink-0 text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            <!-- Instrucciones de uso -->
+            <div class="mt-6 flex items-start gap-3 rounded-xl border border-brand-500/20 bg-brand-500/[.04] px-4 py-3.5 text-xs leading-relaxed text-stone-600">
+                <svg class="mt-0.5 h-4 w-4 shrink-0 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                 <span>
-                    Pega la <span class="text-stone-200">URL del video</span> (basta con la barra del navegador)
-                    y pulsa <span class="text-stone-200">Analizar</span>. Se leen hasta
-                    <span class="text-stone-200">10.000 comentarios publicos</span> con la API oficial de YouTube.
-                    <span class="text-stone-300">Los videos deben ser publicos y tener los comentarios abiertos.</span>
+                    Pega la <strong class="font-semibold text-stone-800">URL del video</strong> (basta con la barra del navegador)
+                    y pulsa <strong class="font-semibold text-stone-800">Analizar</strong>. Se leen hasta
+                    <strong class="font-semibold text-stone-800">10.000 comentarios públicos</strong> con la API oficial de YouTube.
+                    <span class="text-stone-500">Los videos deben ser públicos y tener los comentarios abiertos.</span>
                 </span>
             </div>
 
             <form id="analyze-form" class="mt-6 flex flex-col gap-3 sm:flex-row">
                 <div class="relative flex-1">
-                    <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-stone-600">
+                    <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-stone-400">
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8zM9.5 15.5v-7l6.5 3.5-6.5 3.5z"/></svg>
                     </span>
                     <input id="url" name="url" type="text" required spellcheck="false"
                            value="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
                            placeholder="https://www.youtube.com/watch?v=..."
-                           class="w-full rounded-xl border border-white/10 bg-ink-900 py-3.5 pl-12 pr-4 text-sm text-white placeholder-stone-600 outline-none transition focus:border-brand-500/60 focus:ring-2 focus:ring-brand-500/20">
+                           class="w-full rounded-xl border border-stone-200 bg-white py-3.5 pl-12 pr-4 text-sm text-stone-900 placeholder-stone-400 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20">
                 </div>
 
                 <div class="flex flex-wrap gap-3">
                     <button type="submit" id="submit-btn"
-                            class="flex items-center gap-2 rounded-xl bg-brand-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-900/40 transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:opacity-50">
+                            class="flex items-center gap-2 rounded-xl bg-brand-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50">
                         <span id="btn-label">Analizar</span>
                         <span id="btn-spinner" class="hidden spinner"></span>
                     </button>
                     <button type="button" id="results-clear-btn"
-                            class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3.5 text-sm font-semibold text-stone-300 transition hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-95">
+                            class="flex items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-5 py-3.5 text-sm font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-100 active:scale-95">
                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                         <span>Limpiar resultados</span>
                     </button>
                 </div>
             </form>
 
-            <!-- Vista previa del video: miniatura oficial de YouTube, que no
-                 necesita API key ni gasta cuota. Se actualiza al pegar el link. -->
-            <div id="yt-preview" class="hidden mt-4 flex items-center gap-3.5 rounded-xl border border-white/10 bg-white/[.03] p-3">
+            <div id="yt-preview" class="hidden mt-4 flex items-center gap-3.5 rounded-xl border border-stone-200 bg-stone-50/70 p-3">
                 <img id="yt-thumb" alt="Miniatura del video de YouTube"
-                     class="h-[5.25rem] w-[9.3rem] shrink-0 rounded-lg bg-ink-800 object-cover">
+                     class="h-[5.25rem] w-[9.3rem] shrink-0 rounded-lg bg-stone-200 object-cover">
                 <div class="min-w-0">
                     <p class="text-[10px] uppercase tracking-widest text-stone-500">Vista previa del video</p>
-                    <p id="yt-preview-id" class="mt-0.5 truncate font-mono text-xs text-stone-300"></p>
+                    <p id="yt-preview-id" class="mt-0.5 truncate font-mono text-xs font-semibold text-stone-700"></p>
                     <p class="mt-0.5 text-[11px] text-stone-500">Miniatura oficial de YouTube</p>
                 </div>
             </div>
@@ -495,129 +498,132 @@
         <section class="card anim-up p-6 sm:p-8 lg:p-10">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3.5">
-                    <span class="grid h-12 w-12 place-items-center rounded-xl bg-brand-500/15 text-lg font-bold text-brand-300 ring-1 ring-inset ring-brand-500/20">O</span>
+                    <span class="grid h-12 w-12 place-items-center rounded-xl bg-brand-500/10 text-lg font-bold text-brand-600 ring-1 ring-inset ring-brand-500/20">O</span>
                     <div>
-                        <h2 class="font-display text-2xl font-semibold tracking-tight text-white sm:text-[1.7rem]">Analizar otra red social</h2>
+                        <h2 class="font-display text-2xl font-bold tracking-tight text-stone-900 sm:text-[1.7rem]">Analizar otra red social</h2>
                         <p class="mt-0.5 text-xs text-stone-500">Analiza comentarios en formato CSV o JSON de cualquier red social <span id="others-sub" class="hidden">TikTok</span></p>
                     </div>
                 </div>
                 <button type="button" id="others-back"
-                        class="rounded-lg border border-white/10 px-3.5 py-2 text-xs text-stone-300 transition hover:border-brand-500/40 hover:text-brand-300">
+                        class="rounded-lg border border-stone-200 bg-stone-50 px-3.5 py-2 text-xs font-medium text-stone-600 transition hover:border-brand-500 hover:text-brand-600">
                     Volver al inicio
                 </button>
             </div>
 
-            <!-- Instrucciones de uso, arriba y visibles antes de nada. -->
-            <div class="mt-6 flex items-start gap-3 rounded-xl border border-brand-500/15 bg-brand-500/[.04] px-4 py-3.5 text-xs leading-relaxed text-stone-400">
-                <svg class="mt-0.5 h-4 w-4 shrink-0 text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            <!-- Instrucciones de uso -->
+            <div class="mt-6 flex items-start gap-3 rounded-xl border border-brand-500/20 bg-brand-500/[.04] px-4 py-3.5 text-xs leading-relaxed text-stone-600">
+                <svg class="mt-0.5 h-4 w-4 shrink-0 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                 <span>
-                    Descarga los comentarios en <span class="text-stone-200">CSV o JSON</span> con la
+                    Descarga los comentarios en <strong class="font-semibold text-stone-800">CSV o JSON</strong> con la
                     herramienta de abajo, arrastra el archivo a la zona de carga y pulsa
-                    <span class="text-stone-200">Analizar archivo</span>. Se procesan hasta
-                    <span class="text-stone-200">10.000 comentarios</span> por archivo
-                    (<span class="text-stone-200">maximo 16 MB</span>).
+                    <strong class="font-semibold text-stone-800">Analizar archivo</strong>. Se procesan hasta
+                    <strong class="font-semibold text-stone-800">10.000 comentarios</strong> por archivo
+                    (<span class="text-stone-500">máximo 16 MB</span>).
                 </span>
             </div>
 
-            <!-- Metodo universal: como conseguir el archivo exportado. -->
-            <div class="mt-4 rounded-xl border border-brand-500/20 bg-brand-500/[.06] p-5">
-                <p class="flex items-center gap-2.5 font-display text-base font-semibold text-white">
-                    <span class="grid h-8 w-8 place-items-center rounded-lg bg-brand-500/20 text-brand-300">
+            <!-- Metodo universal -->
+            <div class="mt-4 rounded-xl border border-brand-500/20 bg-brand-500/[.05] p-5">
+                <p class="flex items-center gap-2.5 font-display text-base font-semibold text-stone-900">
+                    <span class="grid h-8 w-8 place-items-center rounded-lg bg-brand-500/15 text-brand-600">
                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/></svg>
                     </span>
                     Método universal (cualquier red social)
                 </p>
-                <p class="mt-2 text-xs leading-relaxed text-stone-300">
+                <p class="mt-2 text-xs leading-relaxed text-stone-600">
                     Consigue el archivo de comentarios con esta herramienta web. Sirve para cualquier app o red social; va limitada en el número de comentarios, ideal para cantidades pequeñas:
                 </p>
                 <a href="https://es.exportcomments.com/" target="_blank" rel="noopener"
-                   class="mt-2.5 inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-brand-300 underline decoration-brand-500/40 underline-offset-2 transition hover:text-brand-100">
+                   class="mt-2.5 inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-semibold text-brand-600 underline decoration-brand-500/40 underline-offset-2 transition hover:text-brand-700">
                     <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     es.exportcomments.com
                 </a>
             </div>
 
             <div class="mt-7">
-                <p class="text-[10px] uppercase tracking-widest text-stone-500">Como subir el archivo</p>
+                <p class="text-[10px] uppercase tracking-widest text-stone-500">Cómo subir el archivo</p>
                 <form id="upload-form" class="mt-4">
-                    <div id="drop-zone" class="dropzone" tabindex="0" role="button"
-                         aria-label="Arrastra aqui tu archivo CSV o JSON, o pulsa para seleccionarlo">
-                        <input id="file-input" type="file" accept=".csv,.json,text/csv,application/json"
-                               class="absolute h-0 w-0 opacity-0" aria-hidden="true" tabindex="-1">
-                        <span class="grid h-10 w-10 place-items-center rounded-xl bg-brand-500/12 text-brand-300">
-                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
-                        </span>
-                        <span class="text-sm font-medium text-stone-200">
-                            Arrastra aqui tu archivo o <span class="text-brand-300 underline decoration-brand-500/40 underline-offset-2">selecciona uno</span>
-                        </span>
-                        <span id="file-name" class="max-w-full truncate font-mono text-[11px] text-stone-500">Ningun archivo seleccionado</span>
-                        <span id="file-meta" class="text-[11px] text-stone-500">CSV o JSON · maximo 16 MB · hasta 10.000 comentarios</span>
+                    <div class="flex flex-col md:flex-row items-center gap-5">
+                        <div class="hidden sm:block w-32 shrink-0">
+                            <img src="/static/images/upload-art.jpg" alt="Ilustración de subida de archivos" class="w-full h-auto rounded-2xl border border-stone-200/90 shadow-sm">
+                        </div>
+                        <div id="drop-zone" class="dropzone flex-1 w-full" tabindex="0" role="button"
+                             aria-label="Arrastra aquí tu archivo CSV o JSON, o pulsa para seleccionarlo">
+                            <input id="file-input" type="file" accept=".csv,.json,text/csv,application/json"
+                                   class="absolute h-0 w-0 opacity-0" aria-hidden="true" tabindex="-1">
+                            <span class="grid h-10 w-10 place-items-center rounded-xl bg-brand-500/10 text-brand-600">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+                            </span>
+                            <span class="text-sm font-medium text-stone-800">
+                                Arrastra aquí tu archivo o <span class="text-brand-600 underline decoration-brand-500/40 underline-offset-2">selecciona uno</span>
+                            </span>
+                            <span id="file-name" class="max-w-full truncate font-mono text-[11px] text-stone-500">Ningún archivo seleccionado</span>
+                            <span id="file-meta" class="text-[11px] text-stone-400">CSV o JSON · máximo 16 MB · hasta 10.000 comentarios</span>
+                        </div>
                     </div>
 
-                    <!-- Miniatura del archivo: card-documento con icono, tipo,
-                         nombre y peso. Aparece al elegir o arrastrar el CSV/JSON. -->
-                    <div id="file-preview" class="hidden mt-3 flex items-center gap-3.5 rounded-xl border border-white/10 bg-white/[.03] p-3">
-                        <span class="relative grid h-[5.25rem] w-[4.2rem] shrink-0 place-items-center rounded-lg border border-white/10 bg-ink-800 text-stone-400">
+                    <div id="file-preview" class="hidden mt-3 flex items-center gap-3.5 rounded-xl border border-stone-200 bg-stone-50/70 p-3">
+                        <span class="relative grid h-[5.25rem] w-[4.2rem] shrink-0 place-items-center rounded-lg border border-stone-200 bg-white text-stone-500 shadow-sm">
                             <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
                             <span id="file-preview-ext" class="absolute -bottom-1.5 -right-1.5 rounded-md bg-brand-500 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white shadow">CSV</span>
                         </span>
                         <div class="min-w-0">
                             <p class="text-[10px] uppercase tracking-widest text-stone-500">Archivo seleccionado</p>
-                            <p id="file-preview-name" class="mt-0.5 truncate text-xs font-medium text-stone-200"></p>
+                            <p id="file-preview-name" class="mt-0.5 truncate text-xs font-semibold text-stone-800"></p>
                             <p id="file-preview-size" class="mt-0.5 text-[11px] text-stone-500"></p>
                         </div>
                     </div>
 
                     <div class="mt-3 flex flex-col gap-3 sm:flex-row">
                         <button type="submit" id="upload-btn" disabled
-                                class="flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-900/40 transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:opacity-50">
+                                class="flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50">
                             <span id="upload-label">Analizar archivo</span>
                             <span id="upload-spinner" class="hidden spinner"></span>
                         </button>
                         <button type="button" id="upload-clear-btn"
-                                class="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3.5 text-sm font-semibold text-stone-300 transition hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-95">
+                                class="flex items-center justify-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-5 py-3.5 text-sm font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-100 active:scale-95">
                             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                             <span>Limpiar resultados</span>
                         </button>
                     </div>
                 </form>
 
-                <p class="mt-3 text-[11px] text-stone-600">
-                    Reconoce las columnas por su nombre: <span class="font-mono text-stone-500">autor/usuario</span> ·
-                    <span class="font-mono text-stone-500">texto/comment</span> ·
-                    <span class="font-mono text-stone-500">fecha</span> ·
-                    <span class="font-mono text-stone-500">likes</span> ·
-                    <span class="font-mono text-stone-500">replies</span>.
-                    El analisis es identico al de YouTube: mismas 40 features y mismas 9 heuristicas.
+                <p class="mt-3 text-[11px] text-stone-500">
+                    Reconoce las columnas por su nombre: <span class="font-mono text-stone-700">autor/usuario</span> ·
+                    <span class="font-mono text-stone-700">texto/comment</span> ·
+                    <span class="font-mono text-stone-700">fecha</span> ·
+                    <span class="font-mono text-stone-700">likes</span> ·
+                    <span class="font-mono text-stone-700">replies</span>.
+                    El análisis es idéntico al de YouTube: mismas 40 features y mismas 9 heurísticas.
                 </p>
             </div>
         </section>
     </div>
 
     <!-- ===================== ERROR ===================== -->
-    <div id="error-box" class="mt-6 hidden rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200"></div>
+    <div id="error-box" class="mt-6 hidden rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-800"></div>
 
     <!-- ===================== AVISO ===================== -->
-    <div id="warning-box" class="mt-6 hidden rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200"></div>
+    <div id="warning-box" class="mt-6 hidden rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800"></div>
 
     <!-- ===================== LOADER ===================== -->
     <section id="loader" class="card anim-up mt-6 hidden" style="animation-delay:.04s">
         <div class="flex flex-col items-center gap-4 py-4 text-center sm:flex-row sm:text-left">
             <div class="relative grid h-14 w-14 shrink-0 place-items-center">
-                <div class="absolute inset-0 rounded-full bg-brand-500/20 halo" style="--rg: 255, 92, 53"></div>
-                <svg class="h-8 w-8 animate-spin text-brand-300" viewBox="0 0 24 24" fill="none">
+                <div class="absolute inset-0 rounded-full bg-brand-500/15 halo" style="--rg: 255, 92, 53"></div>
+                <svg class="h-8 w-8 animate-spin text-brand-500" viewBox="0 0 24 24" fill="none">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-opacity=".2" stroke-width="2.5"/>
                     <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
                 </svg>
             </div>
             <div class="min-w-0 flex-1">
                 <p class="text-[10px] uppercase tracking-widest text-stone-500">Procesando</p>
-                <p id="loader-phase" class="mt-1 truncate text-sm font-medium text-white">Conectando con YouTube API...</p>
-                <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-white/5">
+                <p id="loader-phase" class="mt-1 truncate text-sm font-medium text-stone-900 font-display">Conectando con YouTube API...</p>
+                <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-stone-100">
                     <div id="loader-bar" class="h-full w-0 rounded-full bg-gradient-to-r from-brand-500 to-brand-600 transition-all duration-700 ease-out"></div>
                 </div>
             </div>
-            <p id="loader-pct" class="text-2xl font-semibold tabular-nums text-white/80">0%</p>
+            <p id="loader-pct" class="text-2xl font-semibold tabular-nums text-stone-800 font-display">0%</p>
         </div>
     </section>
 
@@ -628,44 +634,44 @@
                 <div class="flex items-center gap-3">
                     <span class="h-2.5 w-2.5 rounded-full bg-rose-500 breath"></span>
                     <div>
-                        <p class="text-sm font-semibold text-white">Muro de moderacion en directo</p>
+                        <p class="text-sm font-bold text-stone-900 font-display">Muro de moderación en directo</p>
                         <p id="demo-status" class="text-[11px] text-stone-500">Conectando con el stream...</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <button type="button" id="demo-clear"
-                            class="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3.5 py-2 text-xs text-stone-300 transition hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-95"
+                            class="flex items-center gap-1.5 rounded-lg border border-stone-200 bg-stone-50 px-3.5 py-2 text-xs font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-100 active:scale-95"
                             title="Limpiar y reiniciar el simulador">
                         <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                         <span>Limpiar</span>
                     </button>
                     <button type="button" id="demo-stop"
-                            class="rounded-lg border border-white/10 px-3.5 py-2 text-xs text-stone-300 transition hover:border-rose-500/40 hover:text-rose-300">
+                            class="rounded-lg border border-stone-200 bg-stone-50 px-3.5 py-2 text-xs font-semibold text-stone-700 transition hover:border-rose-300 hover:text-rose-700">
                         Detener
                     </button>
                 </div>
             </div>
 
             <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
+                <div class="rounded-xl border border-stone-200/90 bg-stone-50/80 p-3.5">
                     <p class="text-[10px] uppercase tracking-wider text-stone-500">Recibidos</p>
-                    <p id="demo-stat-total" class="mt-1 text-xl font-semibold tabular-nums text-white">0</p>
+                    <p id="demo-stat-total" class="mt-1 text-xl font-bold tabular-nums text-stone-900 font-display">0</p>
                 </div>
-                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
+                <div class="rounded-xl border border-stone-200/90 bg-stone-50/80 p-3.5">
                     <p class="text-[10px] uppercase tracking-wider text-stone-500">Sospechosos</p>
-                    <p id="demo-stat-bots" class="mt-1 text-xl font-semibold tabular-nums text-amber-300">0</p>
+                    <p id="demo-stat-bots" class="mt-1 text-xl font-bold tabular-nums text-amber-700 font-display">0</p>
                 </div>
-                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
+                <div class="rounded-xl border border-stone-200/90 bg-stone-50/80 p-3.5">
                     <p class="text-[10px] uppercase tracking-wider text-stone-500">Score medio</p>
-                    <p id="demo-stat-avg" class="mt-1 text-xl font-semibold tabular-nums text-white">0</p>
+                    <p id="demo-stat-avg" class="mt-1 text-xl font-bold tabular-nums text-stone-900 font-display">0</p>
                 </div>
-                <div class="rounded-xl border border-white/5 bg-black/25 p-3.5">
+                <div class="rounded-xl border border-stone-200/90 bg-stone-50/80 p-3.5">
                     <p class="text-[10px] uppercase tracking-wider text-stone-500">Veredictos altos</p>
-                    <p id="demo-stat-high" class="mt-1 text-xl font-semibold tabular-nums text-rose-300">0</p>
+                    <p id="demo-stat-high" class="mt-1 text-xl font-bold tabular-nums text-rose-700 font-display">0</p>
                 </div>
             </div>
 
-            <div class="mt-4 h-1 overflow-hidden rounded-full bg-white/5">
+            <div class="mt-4 h-1 overflow-hidden rounded-full bg-stone-100">
                 <div id="demo-progress" class="h-full w-0 rounded-full bg-gradient-to-r from-rose-500 to-rose-400 transition-all duration-300 ease-out"></div>
             </div>
 
@@ -680,30 +686,33 @@
         <article id="verdict-card" class="card risk-wash anim-up" data-risk="low">
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Estimado de bots</p>
-                    <p id="results-source-summary" class="text-xs text-stone-400 mt-1 leading-snug">Resumen claro para comprender la autenticidad de los comentarios</p>
+                    <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-500">Estimado de bots</p>
+                    <p id="results-source-summary" class="text-xs text-stone-600 mt-1 leading-snug">Resumen claro para comprender la autenticidad de los comentarios</p>
                 </div>
-                <span id="verdict-risk-pill" class="shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border">Riesgo Bajo</span>
+                <div class="flex items-center gap-2">
+                    <img src="/static/images/shield-art.jpg" alt="Escudo de seguridad" class="h-7 w-7 rounded-lg object-cover shadow-sm">
+                    <span id="verdict-risk-pill" class="shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border">Riesgo Bajo</span>
+                </div>
             </div>
 
             <div class="relative mx-auto mt-4 h-40 w-40">
                 <svg viewBox="0 0 120 120" class="h-full w-full -rotate-90">
                     <defs>
                         <linearGradient id="gauge-grad" x1="0" y1="0" x2="1" y2="1">
-                            <stop id="gauge-stop-a" offset="0%" stop-color="#34d399"/>
+                            <stop id="gauge-stop-a" offset="0%" stop-color="#059669"/>
                             <stop id="gauge-stop-b" offset="100%" stop-color="#10b981"/>
                         </linearGradient>
                     </defs>
-                    <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="10"/>
+                    <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(0,0,0,.06)" stroke-width="10"/>
                     <circle id="gauge-arc" cx="60" cy="60" r="52" fill="none" stroke="url(#gauge-grad)" stroke-width="10"
                             stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"
                             style="transition: stroke-dashoffset 1.15s cubic-bezier(.16,1,.3,1)"/>
                 </svg>
                 <div class="absolute inset-0 grid place-items-center">
                     <div class="text-center">
-                        <span id="bot-percent" class="block text-4xl font-bold tabular-nums text-white">0%</span>
-                        <span class="text-[10px] uppercase tracking-wider text-stone-500">probabilidad</span>
-                        <span id="confidence" class="mt-0.5 block text-[11px] font-medium text-stone-400">0% precisión</span>
+                        <span id="bot-percent" class="block text-4xl font-bold tabular-nums text-stone-900 font-display">0%</span>
+                        <span class="text-[10px] uppercase tracking-wider text-stone-400">probabilidad</span>
+                        <span id="confidence" class="mt-0.5 block text-[11px] font-medium text-stone-500">0% precisión</span>
                     </div>
                 </div>
             </div>
@@ -711,52 +720,52 @@
             <div id="risk-badge" class="risk-chip mt-5 rounded-xl border px-3 py-2 text-center" data-risk="low">
                 <span id="risk-label" class="text-xs font-semibold uppercase tracking-wider">—</span>
             </div>
-            <p id="risk-action" class="mt-3 text-center text-xs leading-relaxed text-stone-300"></p>
+            <p id="risk-action" class="mt-3 text-center text-xs leading-relaxed text-stone-600"></p>
         </article>
 
-        <!-- --- Metricas clave --- -->
+        <!-- --- Métricas clave --- -->
         <article class="card card-hover anim-up lg:col-span-2" style="animation-delay:.06s">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Métricas clave</p>
-                    <p class="text-xs text-stone-500">Indicadores esenciales explicados de forma sencilla</p>
+                    <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-500">Métricas clave</p>
+                    <p class="text-xs text-stone-600 font-display font-medium">Indicadores esenciales explicados de forma sencilla</p>
                 </div>
             </div>
             <div id="kpi-grid" class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3.5"></div>
         </article>
 
-        <!-- --- Distribucion --- -->
+        <!-- --- Distribución --- -->
         <article class="card card-hover anim-up lg:col-span-1" style="animation-delay:.12s">
-            <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Clasificación de comentarios</p>
-            <p class="text-xs text-stone-500 mt-0.5">Cómo se dividen según su nivel de sospecha</p>
+            <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-500">Clasificación de comentarios</p>
+            <p class="text-xs text-stone-600 mt-0.5 font-display font-medium">Cómo se dividen según su nivel de sospecha</p>
             <div class="mt-5 space-y-4">
                 <div>
                     <div class="mb-1.5 flex justify-between text-xs">
-                        <span class="flex items-center gap-1.5 text-rose-300 font-medium">
+                        <span class="flex items-center gap-1.5 text-rose-700 font-medium">
                             <span class="h-2 w-2 rounded-full bg-rose-500"></span>
                             Sospecha Alta (Bots casi seguros)
                         </span>
-                        <span id="bar-high-label" class="tabular-nums font-semibold text-stone-300">0</span>
+                        <span id="bar-high-label" class="tabular-nums font-semibold text-stone-700">0</span>
                     </div>
                     <div class="track"><div id="bar-high" class="fill" style="background-image:linear-gradient(90deg,#f87171,#ef4444)"></div></div>
                 </div>
                 <div>
                     <div class="mb-1.5 flex justify-between text-xs">
-                        <span class="flex items-center gap-1.5 text-amber-300 font-medium">
-                            <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+                        <span class="flex items-center gap-1.5 text-amber-700 font-medium">
+                            <span class="h-2 w-2 rounded-full bg-amber-500"></span>
                             Sospecha Media (Dudosos)
                         </span>
-                        <span id="bar-medium-label" class="tabular-nums font-semibold text-stone-300">0</span>
+                        <span id="bar-medium-label" class="tabular-nums font-semibold text-stone-700">0</span>
                     </div>
                     <div class="track"><div id="bar-medium" class="fill" style="background-image:linear-gradient(90deg,#fbbf24,#f59e0b)"></div></div>
                 </div>
                 <div>
                     <div class="mb-1.5 flex justify-between text-xs">
-                        <span class="flex items-center gap-1.5 text-emerald-300 font-medium">
-                            <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+                        <span class="flex items-center gap-1.5 text-emerald-700 font-medium">
+                            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
                             Comentarios Seguros (Reales)
                         </span>
-                        <span id="bar-low-label" class="tabular-nums font-semibold text-stone-300">0</span>
+                        <span id="bar-low-label" class="tabular-nums font-semibold text-stone-700">0</span>
                     </div>
                     <div class="track"><div id="bar-low" class="fill" style="background-image:linear-gradient(90deg,#34d399,#10b981)"></div></div>
                 </div>
@@ -767,30 +776,30 @@
         <details class="card group anim-up lg:col-span-2" style="animation-delay:.18s">
             <summary class="flex cursor-pointer items-center justify-between select-none">
                 <div class="flex items-center gap-3">
-                    <span class="grid h-8 w-8 place-items-center rounded-lg bg-brand-500/12 text-brand-400">
+                    <span class="grid h-8 w-8 place-items-center rounded-lg bg-brand-500/10 text-brand-600">
                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
                     </span>
                     <div>
-                        <p class="text-sm font-semibold text-white">Hallazgos del análisis</p>
+                        <p class="text-sm font-bold text-stone-900 font-display">Hallazgos del análisis</p>
                         <p class="text-xs text-stone-500">Lo más importante que se descubrió en la conversación</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
-                    <span class="hidden rounded-full border border-brand-500/20 bg-brand-500/10 px-2.5 py-1 text-[11px] text-brand-300 sm:inline">Resumen</span>
-                    <svg class="h-4 w-4 text-stone-500 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    <span class="hidden rounded-full border border-brand-500/20 bg-brand-500/10 px-2.5 py-1 text-[11px] font-semibold text-brand-600 sm:inline">Resumen</span>
+                    <svg class="h-4 w-4 text-stone-400 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                 </div>
             </summary>
-            <div class="mt-4 pt-4 border-t border-white/5">
-                <ul id="findings-list" class="space-y-2.5 text-xs sm:text-sm leading-relaxed text-stone-300"></ul>
+            <div class="mt-4 pt-4 border-t border-stone-100">
+                <ul id="findings-list" class="space-y-2.5 text-xs sm:text-sm leading-relaxed text-stone-700"></ul>
 
                 <!-- Fuente de datos simplificada -->
-                <div class="mt-5 pt-3.5 border-t border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs text-stone-400">
+                <div class="mt-5 pt-3.5 border-t border-stone-100 flex flex-wrap items-center justify-between gap-2 text-xs text-stone-500">
                     <div>
-                        <span class="text-stone-500">Origen: </span>
-                        <span id="video-title" class="font-medium text-stone-200">—</span>
+                        <span class="text-stone-400">Origen: </span>
+                        <span id="video-title" class="font-medium text-stone-800">—</span>
                         <span id="video-id" class="ml-1 text-[11px] font-mono text-stone-500"></span>
                     </div>
-                    <div id="video-meta" class="text-stone-400"></div>
+                    <div id="video-meta" class="text-stone-500"></div>
                     <div id="api-meta" class="hidden"></div>
                 </div>
             </div>
@@ -800,50 +809,50 @@
         <details class="card group anim-up p-0 lg:col-span-3" style="animation-delay:.22s">
             <summary class="flex cursor-pointer flex-wrap items-center justify-between gap-3 px-6 py-4 select-none">
                 <div class="flex items-center gap-3">
-                    <span class="grid h-8 w-8 place-items-center rounded-lg bg-amber-500/12 text-amber-400">
+                    <span class="grid h-8 w-8 place-items-center rounded-lg bg-amber-500/10 text-amber-600">
                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                     </span>
                     <div>
-                        <p class="text-sm font-semibold text-white">Comentarios más sospechosos</p>
+                        <p class="text-sm font-bold text-stone-900 font-display">Comentarios más sospechosos</p>
                         <p class="text-xs text-stone-500">Comentarios detectados con mayor probabilidad de ser automatizados y por qué</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
-                    <button id="toggle-all" type="button" onclick="event.stopPropagation()" class="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-brand-300 transition hover:border-brand-500/40 hover:text-white">
+                    <button id="toggle-all" type="button" onclick="event.stopPropagation()" class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-semibold text-brand-600 transition hover:border-brand-500 hover:bg-white">
                         Ver todos
                     </button>
-                    <svg class="h-4 w-4 text-stone-500 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    <svg class="h-4 w-4 text-stone-400 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                 </div>
             </summary>
-            <div class="border-t border-white/5">
-                <div id="comments-list" class="divide-y divide-white/5"></div>
+            <div class="border-t border-stone-100">
+                <div id="comments-list" class="divide-y divide-stone-100"></div>
             </div>
         </details>
 
-        <!-- --- Detalles tecnicos avanzados (colapsados por defecto para personas comunes) --- -->
-        <details class="card group anim-up lg:col-span-3 p-4 border border-white/5 bg-black/20" style="animation-delay:.26s">
-            <summary class="flex cursor-pointer items-center justify-between text-xs font-medium text-stone-400 transition hover:text-stone-200">
+        <!-- --- Detalles técnicos avanzados --- -->
+        <details class="card group anim-up lg:col-span-3 p-4 border border-stone-200/80 bg-stone-50/50" style="animation-delay:.26s">
+            <summary class="flex cursor-pointer items-center justify-between text-xs font-semibold text-stone-600 transition hover:text-stone-900">
                 <span class="flex items-center gap-2">
                     <svg class="h-4 w-4 text-stone-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
                     Ver detalles técnicos avanzados (algoritmo, 9 heurísticas e histograma)
                 </span>
-                <svg class="h-4 w-4 text-stone-500 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                <svg class="h-4 w-4 text-stone-400 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
             </summary>
-            <div class="mt-5 space-y-6 pt-4 border-t border-white/5">
+            <div class="mt-5 space-y-6 pt-4 border-t border-stone-200/80">
                 <div>
                     <div class="flex items-baseline justify-between">
                         <p class="text-[10px] uppercase tracking-widest text-stone-500">Histograma estadístico de scores</p>
-                        <p class="text-[10px] text-stone-600">10 rangos de 10 puntos (0-100)</p>
+                        <p class="text-[10px] text-stone-400">10 rangos de 10 puntos (0-100)</p>
                     </div>
                     <div id="histogram" class="mt-3 flex h-32 items-end gap-1.5"></div>
-                    <div class="mt-2 flex justify-between text-[10px] text-stone-600">
+                    <div class="mt-2 flex justify-between text-[10px] text-stone-400">
                         <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
                     </div>
                 </div>
                 <div>
                     <div class="flex flex-wrap items-baseline justify-between gap-2">
                         <p class="text-[10px] uppercase tracking-widest text-stone-500">Desglose de las 9 heurísticas ponderadas</p>
-                        <p class="text-[10px] text-stone-600">Pesos ponderados del motor heurístico</p>
+                        <p class="text-[10px] text-stone-400">Pesos ponderados del motor heurístico</p>
                     </div>
                     <div id="signals-list" class="mt-3 grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2 lg:grid-cols-3"></div>
                 </div>
@@ -851,18 +860,18 @@
         </details>
     </section>
 
-    <p id="analysis-id" class="mt-5 text-center text-[11px] text-stone-600"></p>
+    <p id="analysis-id" class="mt-5 text-center text-[11px] text-stone-500"></p>
 
     <section id="placeholder" class="hidden"></section>
 </main>
 
-<footer class="border-t border-white/5 py-10">
+<footer class="border-t border-stone-200 bg-white/70 py-10 mt-12 backdrop-blur-sm">
     <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-5 text-[11px] text-stone-500 sm:flex-row">
         <span class="flex items-center gap-2">
             <span class="grid h-5 w-5 place-items-center rounded-md bg-brand-500 text-[10px] font-bold text-white">B</span>
-            <span class="font-medium text-stone-400">BotMeter</span>
+            <span class="font-semibold text-stone-700">BotMeter</span>
         </span>
-        <span>Estimacion heuristica orientativa. No es una verificacion de identidad.</span>
+        <span>Estimación heurística orientativa. No es una verificación de identidad.</span>
     </div>
 </footer>
 
@@ -871,32 +880,31 @@
      Burbuja con resumen automatico tras cada analisis + chat de preguntas. -->
 <div id="ai-widget" class="fixed bottom-5 right-5 z-40 flex-col items-end gap-3">
 
-    <section id="ai-panel" class="hidden w-[22rem] flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink-900 shadow-2xl shadow-black/60 anim-pop">
-        <header class="flex items-center justify-between gap-3 border-b border-white/5 bg-ink-800/70 px-4 py-3">
+    <section id="ai-panel" class="hidden w-[22.5rem] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl shadow-stone-900/10 anim-pop">
+        <header class="flex items-center justify-between gap-3 border-b border-stone-100 bg-stone-50/90 px-4 py-3">
             <div class="flex items-center gap-2.5">
-                <span class="grid h-8 w-8 place-items-center rounded-lg bg-brand-500/15 text-brand-300">
-                    <svg class="h-4.5 w-4.5" width="18" height="18" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M16 4v3.5"/><circle cx="16" cy="3.2" r="1.6" fill="currentColor" stroke="none"/>
-                        <rect x="5.5" y="8" width="21" height="15.5" rx="5"/>
-                        <path d="M16 23.5V27"/><path d="M11 27h10"/>
-                        <circle cx="12" cy="15" r="1.8" fill="currentColor" stroke="none"/>
-                        <circle cx="20" cy="15" r="1.8" fill="currentColor" stroke="none"/>
-                        <path d="M12.5 19.5h7"/>
-                    </svg>
-                </span>
+                <img src="/static/images/wardo-avatar.jpg" alt="Avatar de Wardo"
+                     class="h-9 w-9 rounded-xl border border-brand-500/20 object-cover shadow-sm">
                 <div>
-                    <p class="text-sm font-semibold leading-tight text-white">Wardo</p>
-                    <p class="text-[10px] leading-tight text-stone-500">Asistente de BotMeter</p>
+                    <p class="text-sm font-bold leading-tight text-stone-900 font-display">Wardo</p>
+                    <p class="text-[10px] leading-tight text-stone-500 flex items-center gap-1">
+                        <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                        Voz amigable en español
+                    </p>
                 </div>
             </div>
             <div class="flex items-center gap-1.5">
+                <button type="button" id="ai-voice-test" aria-label="Probar voz en español" title="Probar voz en español"
+                        class="grid h-7 w-7 place-items-center rounded-lg border border-stone-200 bg-white text-stone-500 shadow-sm transition hover:border-brand-500 hover:text-brand-600">
+                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                </button>
                 <button type="button" id="ai-voice" aria-label="Silenciar la voz del asistente" title="Voz activada"
-                        class="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-stone-400 transition hover:border-white/20 hover:text-white">
+                        class="grid h-7 w-7 place-items-center rounded-lg border border-stone-200 bg-white text-stone-500 shadow-sm transition hover:border-brand-500 hover:text-brand-600">
                     <svg id="ai-voice-on" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
                     <svg id="ai-voice-off" class="hidden h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
                 </button>
                 <button type="button" id="ai-minimize" aria-label="Minimizar asistente"
-                        class="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-stone-400 transition hover:border-white/20 hover:text-white">
+                        class="grid h-7 w-7 place-items-center rounded-lg border border-stone-200 bg-white text-stone-500 shadow-sm transition hover:border-stone-300 hover:text-stone-800">
                     <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg>
                 </button>
             </div>
@@ -910,34 +918,27 @@
             <button type="button" class="ai-chip" data-q="¿Qué debería hacer como moderador?">Soy moderador</button>
         </div>
 
-        <form id="ai-form" class="flex items-end gap-2 border-t border-white/5 px-3 py-3">
+        <form id="ai-form" class="flex items-end gap-2 border-t border-stone-100 bg-stone-50/50 px-3 py-3">
             <textarea id="ai-input" rows="1" maxlength="500" placeholder="Pregúntale lo que quieras: la app, los resultados..."
                       aria-label="Escribe tu pregunta para el asistente"
-                      class="field flex-1 !text-xs"></textarea>
+                      class="field flex-1 !text-xs !bg-white"></textarea>
             <button type="submit" id="ai-send" aria-label="Enviar pregunta"
-                    class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-600 text-white shadow-sm shadow-brand-950/50 transition hover:bg-brand-500 disabled:cursor-not-allowed disabled:opacity-50">
+                    class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-500 text-white shadow-sm shadow-brand-500/30 transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50">
                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/></svg>
             </button>
         </form>
     </section>
 
     <button type="button" id="ai-open" aria-label="Abrir asistente Wardo"
-            class="relative grid h-14 w-14 place-items-center rounded-full border border-white/10 bg-ink-800 text-brand-300 shadow-xl shadow-black/50 transition hover:border-brand-500/40 hover:text-brand-200 active:scale-95">
-        <svg class="h-7 w-7" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M16 4v3.5"/><circle cx="16" cy="3.2" r="1.6" fill="currentColor" stroke="none"/>
-            <rect x="5.5" y="8" width="21" height="15.5" rx="5"/>
-            <path d="M16 23.5V27"/><path d="M11 27h10"/>
-            <circle cx="12" cy="15" r="1.8" fill="currentColor" stroke="none"/>
-            <circle cx="20" cy="15" r="1.8" fill="currentColor" stroke="none"/>
-            <path d="M12.5 19.5h7"/>
-        </svg>
-        <span id="ai-gear" class="hidden absolute -left-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full border border-amber-400/50 bg-ink-900 text-amber-300 shadow-md shadow-black/50">
+            class="relative grid h-14 w-14 place-items-center rounded-full border-2 border-white bg-brand-500 shadow-xl shadow-brand-500/30 ring-2 ring-brand-500/30 transition hover:scale-105 active:scale-95">
+        <img src="/static/images/wardo-avatar.jpg" alt="Abrir asistente Wardo" class="h-12 w-12 rounded-full object-cover">
+        <span id="ai-gear" class="hidden absolute -left-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full border border-amber-300 bg-white text-amber-600 shadow-md">
             <svg class="ai-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
                 <circle cx="12" cy="12" r="3"/>
             </svg>
         </span>
-        <span id="ai-unread" class="hidden absolute right-0.5 top-0.5 h-3.5 w-3.5 rounded-full border-2 border-ink-950 bg-brand-500"></span>
+        <span id="ai-unread" class="hidden absolute right-0.5 top-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-brand-500"></span>
     </button>
 </div>
 
@@ -1631,10 +1632,10 @@
         if (pill) {
             pill.textContent = 'Riesgo ' + data.risk.label;
             pill.className = 'text-[11px] font-semibold px-2.5 py-0.5 rounded-full border '
-                + (level === 'critical' ? 'border-purple-500/40 bg-purple-500/15 text-purple-300'
-                   : level === 'high' ? 'border-rose-500/40 bg-rose-500/15 text-rose-300'
-                   : level === 'medium' ? 'border-amber-500/40 bg-amber-500/15 text-amber-300'
-                   : 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300');
+                + (level === 'critical' ? 'border-purple-200 bg-purple-50 text-purple-700'
+                   : level === 'high' ? 'border-rose-200 bg-rose-50 text-rose-700'
+                   : level === 'medium' ? 'border-amber-200 bg-amber-50 text-amber-800'
+                   : 'border-emerald-200 bg-emerald-50 text-emerald-700');
         }
     }
 
@@ -1657,7 +1658,7 @@
                 value: total,
                 dec: 0,
                 hint: plural(metrics.unique_authors || 0, 'cuenta o autor único', 'cuentas o autores únicos'),
-                tone: 'text-white',
+                tone: 'text-stone-900',
                 desc: 'Muestra total examinada'
             },
             {
@@ -1666,7 +1667,7 @@
                 dec: 1,
                 suffix: '%',
                 hint: plural(suspectedCount, 'comentario sospechoso', 'comentarios sospechosos'),
-                tone: metrics.bot_percentage >= 40 ? 'text-rose-400' : (metrics.bot_percentage >= 25 ? 'text-amber-400' : 'text-emerald-400'),
+                tone: metrics.bot_percentage >= 40 ? 'text-rose-600' : (metrics.bot_percentage >= 25 ? 'text-amber-600' : 'text-emerald-600'),
                 desc: 'Nivel global de sospecha'
             },
             {
@@ -1675,7 +1676,7 @@
                 dec: 1,
                 suffix: '%',
                 hint: metrics.burst_detected ? 'Ráfagas coordinadas detectadas' : 'Comentarios idénticos detectados',
-                tone: metrics.burst_detected || metrics.duplicate_ratio >= 10 ? 'text-amber-300' : 'text-white',
+                tone: metrics.burst_detected || metrics.duplicate_ratio >= 10 ? 'text-amber-600' : 'text-stone-900',
                 desc: 'Patrón típico de bots masivos'
             },
             {
@@ -1684,20 +1685,20 @@
                 dec: 1,
                 suffix: '%',
                 hint: plural(metrics.comments_with_links || 0, 'comentario con links', 'comentarios con links'),
-                tone: metrics.link_ratio >= 15 ? 'text-rose-300' : 'text-white',
+                tone: metrics.link_ratio >= 15 ? 'text-rose-600' : 'text-stone-900',
                 desc: 'Promociones o links externos'
             }
         ];
 
         $('kpi-grid').innerHTML = cards.map((card) => `
-            <div class="rounded-xl border border-white/5 bg-black/25 p-4 transition hover:border-white/15 hover:bg-black/40">
+            <div class="rounded-xl border border-stone-200/90 bg-stone-50/70 p-4 transition hover:border-brand-300 hover:bg-white hover:shadow-sm">
                 <div class="flex items-center justify-between gap-2">
-                    <p class="text-[10px] font-semibold uppercase tracking-wider text-stone-400">${escapeHtml(card.label)}</p>
-                    <span class="text-[10px] text-stone-500">${escapeHtml(card.desc)}</span>
+                    <p class="text-[10px] font-semibold uppercase tracking-wider text-stone-500">${escapeHtml(card.label)}</p>
+                    <span class="text-[10px] text-stone-400">${escapeHtml(card.desc)}</span>
                 </div>
-                <p class="stat-value mt-2 text-2xl font-bold tabular-nums ${card.tone}"
+                <p class="stat-value mt-2 text-2xl font-bold font-display tabular-nums ${card.tone}"
                    data-to="${card.value}" data-dec="${card.dec}" data-suffix="${escapeHtml(card.suffix || '')}">0</p>
-                <p class="mt-1 text-xs text-stone-400 font-medium">${escapeHtml(String(card.hint))}</p>
+                <p class="mt-1 text-xs text-stone-500 font-medium">${escapeHtml(String(card.hint))}</p>
             </div>`).join('');
 
         // Los contadores arrancan en 0 y suben: el dato "aparece" en pantalla.
@@ -1723,7 +1724,7 @@
                 <div class="group relative flex h-full flex-1 flex-col justify-end" title="Scores ${i * 10}-${i * 10 + 9}: ${n} comentarios">
                     <div class="hist-bar w-full rounded-t-md"
                          style="height:${height}%;background-image:linear-gradient(180deg,${color},${color}55)"></div>
-                    <span class="absolute -top-5 left-1/2 hidden -translate-x-1/2 text-[10px] text-stone-300 group-hover:block">${n}</span>
+                    <span class="absolute -top-6 left-1/2 hidden -translate-x-1/2 text-[10px] font-semibold bg-white border border-stone-200 px-1.5 py-0.5 rounded shadow-xs text-stone-700 group-hover:block">${n}</span>
                 </div>`;
         }).join('');
 
@@ -1809,13 +1810,13 @@
             return `
                 <div class="anim-up" style="animation-delay:${i * 70}ms">
                     <div class="mb-1.5 flex flex-wrap items-baseline justify-between gap-2">
-                        <span class="text-sm text-stone-200">${escapeHtml(signal.label)}</span>
+                        <span class="text-sm font-medium text-stone-800">${escapeHtml(signal.label)}</span>
                         <span class="font-mono text-[10px] text-stone-500">${signal.average_contribution} pts · peso ${signal.weight} · ${signal.flagged} afectados</span>
                     </div>
-                    <div class="track">
+                    <div class="track bg-stone-200/80">
                         <div class="fill fill-stripe" style="background-image:${gradient}" data-width="${width}"></div>
                     </div>
-                    <p class="mt-1.5 text-[11px] leading-relaxed text-stone-600">${escapeHtml(signal.description)}</p>
+                    <p class="mt-1.5 text-[11px] leading-relaxed text-stone-500">${escapeHtml(signal.description)}</p>
                 </div>`;
         }).join('');
 
@@ -1834,9 +1835,9 @@
             return;
         }
         list.innerHTML = findings.map(f =>
-            `<li class="flex items-start gap-3 rounded-xl border border-white/5 bg-black/25 p-3">
-                <span class="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand-500/20 text-xs font-bold text-brand-300">✓</span>
-                <span class="text-xs sm:text-sm text-stone-200 leading-relaxed">${escapeHtml(f)}</span>
+            `<li class="flex items-start gap-3 rounded-xl border border-stone-200/90 bg-stone-50/70 p-3 shadow-xs">
+                <span class="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand-50 border border-brand-200 text-xs font-bold text-brand-600">✓</span>
+                <span class="text-xs sm:text-sm text-stone-700 leading-relaxed">${escapeHtml(f)}</span>
             </li>`
         ).join('');
     }
@@ -1862,37 +1863,37 @@
         }
 
         const scoreColor = (score) => score >= 60
-            ? 'border-rose-500/30 bg-rose-500/10 text-rose-300'
+            ? 'border-rose-200 bg-rose-50 text-rose-700'
             : score >= 30
-                ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
-                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+                ? 'border-amber-200 bg-amber-50 text-amber-800'
+                : 'border-emerald-200 bg-emerald-50 text-emerald-700';
 
         const scoreLabel = (score) => score >= 60 ? 'Sospecha Alta' : score >= 30 ? 'Sospecha Media' : 'Sospecha Baja';
 
         list.innerHTML = subset.map((comment, i) => `
-            <div class="px-5 py-4 transition hover:bg-white/[.02] anim-up" style="animation-delay:${Math.min(i, 8) * 45}ms">
+            <div class="px-5 py-4 transition hover:bg-stone-50/80 anim-up" style="animation-delay:${Math.min(i, 8) * 45}ms">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <div class="flex items-center gap-2">
                         <span class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold tabular-nums ${scoreColor(comment.bot_score)}">
                             <span>${comment.bot_score}%</span>
                             <span class="text-[10px] font-normal opacity-90 hidden sm:inline">· ${scoreLabel(comment.bot_score)}</span>
                         </span>
-                        <span class="text-xs font-semibold text-stone-200">@${escapeHtml(comment.author)}</span>
-                        ${comment.is_reply ? '<span class="rounded bg-white/5 border border-white/10 px-1.5 py-0.5 text-[10px] text-stone-400">Respuesta</span>' : ''}
+                        <span class="text-xs font-semibold text-stone-800">@${escapeHtml(comment.author)}</span>
+                        ${comment.is_reply ? '<span class="rounded bg-stone-100 border border-stone-200 px-1.5 py-0.5 text-[10px] text-stone-600">Respuesta</span>' : ''}
                     </div>
-                    <span class="text-[11px] text-stone-500">${comment.published_at ? formatDate(comment.published_at) : ''}</span>
+                    <span class="text-[11px] text-stone-400">${comment.published_at ? formatDate(comment.published_at) : ''}</span>
                 </div>
 
-                <div class="mt-2.5 rounded-xl border border-white/5 bg-black/30 p-3">
-                    <p class="text-sm leading-relaxed text-stone-200">${escapeHtml(comment.text_preview)}</p>
+                <div class="mt-2.5 rounded-xl border border-stone-200/80 bg-stone-50/70 p-3">
+                    <p class="text-sm leading-relaxed text-stone-800">${escapeHtml(comment.text_preview)}</p>
                 </div>
 
                 <div class="mt-2.5 space-y-1.5">
                     <div class="flex flex-wrap items-center gap-1.5">
-                        <span class="text-[11px] font-medium text-stone-400">Por qué parece bot:</span>
+                        <span class="text-[11px] font-medium text-stone-500">Por qué parece bot:</span>
                         ${(comment.reasons || []).map(r => `
-                            <span class="inline-flex items-center gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-200">
-                                <span class="h-1 w-1 rounded-full bg-amber-400"></span>
+                            <span class="inline-flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] text-amber-800 font-medium">
+                                <span class="h-1 w-1 rounded-full bg-amber-500"></span>
                                 <span>${escapeHtml(r)}</span>
                             </span>
                         `).join('')}
@@ -1900,8 +1901,8 @@
 
                     ${(comment.features && comment.features.spam_terms && comment.features.spam_terms.length) ? `
                         <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
-                            <span class="text-[11px] font-medium text-rose-400">Palabras sospechosas:</span>
-                            ${comment.features.spam_terms.map(t => `<span class="rounded border border-rose-500/30 bg-rose-500/15 px-2 py-0.5 font-mono text-[10px] text-rose-300">${escapeHtml(t)}</span>`).join('')}
+                            <span class="text-[11px] font-medium text-rose-600">Palabras sospechosas:</span>
+                            ${comment.features.spam_terms.map(t => `<span class="rounded border border-rose-200 bg-rose-50 px-2 py-0.5 font-mono text-[10px] text-rose-700">${escapeHtml(t)}</span>`).join('')}
                         </div>
                     ` : ''}
                 </div>
@@ -1996,26 +1997,26 @@
         if (!wall) return;
         const isBot = comment.bot_score >= 30;
         const tone = isBot
-            ? 'border-rose-500/25 bg-rose-500/[.06]'
-            : 'border-emerald-500/20 bg-emerald-500/[.04]';
-        const chip = isBot ? 'text-rose-300' : 'text-emerald-300';
+            ? 'border-rose-200 bg-rose-50/70'
+            : 'border-emerald-200 bg-emerald-50/70';
+        const chip = isBot ? 'text-rose-700' : 'text-emerald-700';
 
         const card = document.createElement('div');
-        card.className = 'anim-pop rounded-xl border px-4 py-3 transition ' + tone;
+        card.className = 'anim-pop rounded-xl border px-4 py-3 transition shadow-xs ' + tone;
         card.innerHTML = `
             <div class="flex items-start gap-3">
-                <span class="mt-0.5 min-w-[2.9rem] rounded-md bg-black/40 px-2 py-0.5 text-center font-mono text-xs font-semibold tabular-nums ${chip}">
+                <span class="mt-0.5 min-w-[2.9rem] rounded-md bg-white border border-stone-200 px-2 py-0.5 text-center font-mono text-xs font-semibold tabular-nums ${chip}">
                     ${comment.bot_score}
                 </span>
                 <div class="min-w-0 flex-1">
                     <p class="truncate text-[11px] text-stone-500">
-                        <span class="text-stone-300">@${escapeHtml(comment.author)}</span>
+                        <span class="text-stone-800 font-medium">@${escapeHtml(comment.author)}</span>
                         ${comment.is_reply ? ' · respuesta' : ''}
                     </p>
-                    <p class="mt-0.5 truncate text-sm text-stone-200">${escapeHtml(comment.text_preview)}</p>
-                    <p class="mt-1 text-[10px] ${chip}">${escapeHtml((comment.reasons || [])[0] || '')}</p>
+                    <p class="mt-0.5 truncate text-sm text-stone-800">${escapeHtml(comment.text_preview)}</p>
+                    <p class="mt-1 text-[10px] font-medium ${chip}">${escapeHtml((comment.reasons || [])[0] || '')}</p>
                 </div>
-                <span class="shrink-0 text-[10px] tabular-nums text-stone-600">${running.analyzed}</span>
+                <span class="shrink-0 text-[10px] tabular-nums text-stone-400">${running.analyzed}</span>
             </div>`;
 
         wall.insertBefore(card, wall.firstChild);
@@ -2163,53 +2164,66 @@
     }
 
     // ==================================================================
-    // Voz del asistente (Web Speech API, nativa del navegador).
-    // Por defecto HABLA. El usuario puede silenciarla; la preferencia se
-    // recuerda por sesion. Se elige una voz en espanol, femenina y neutra,
-    // con tono algo mas grave para sonar "mona pero seria".
+    // Voz del asistente Wardo: amigable, cálida y en ESPAÑOL.
+    // Solución híbrida:
+    // 1) Si el navegador/SO dispone de una voz femenina o natural en español
+    //    (Google, Dalia, Helena, Sabina, Paulina...), se usa con pitch cálido.
+    // 2) Si en Windows el SO solo tiene voces en inglés (Microsoft David/Mark/Zira),
+    //    NUNCA se llama a David. En su lugar, reproduce audio fluido en streaming
+    //    desde /api/tts?text= con voz humana amigable en español.
     // ==================================================================
     let aiVoiceEnabled = true;
     try {
         aiVoiceEnabled = sessionStorage.getItem('bw_ai_voice') !== 'off';
     } catch (e) { aiVoiceEnabled = true; }
     let aiPreferredVoice = null;
+    let aiAudioPlayer = null;
 
-    // Voces femeninas conocidas en espanol (claras, suaves y serias).
-    // Orden = preferencia: Google/Microsoft nativas primero, luego nombres
-    // de voz femeninos de iOS/macOS/Android/Windows.
+    // Voces femeninas y naturales conocidas en español
     const AI_FEMALE_VOICE_HINTS = [
-        'google español', 'google spanish', 'microsoft helena', 'microsoft sabina',
-        'microsoft laura', 'microsoft elvira', 'microsoft dalia', 'microsoft marina',
-        'helena', 'sabina', 'laura', 'elvira', 'dalia', 'marina', 'monica', 'mónica',
-        'paulina', 'lucia', 'lucía', 'carmen', 'marisol', 'esperanza', 'female'
+        'salma', 'dalia', 'sabina', 'helena', 'elena', 'monica', 'mónica',
+        'paulina', 'lucia', 'lucía', 'paloma', 'laura', 'elvira', 'carmen',
+        'marisol', 'esperanza', 'google español', 'google spanish', 'natural', 'neural'
+    ];
+
+    // Nombres de voces expresamente masculinas o en inglés para descartar
+    const MALE_VOICE_BLOCKLIST = [
+        'david', 'mark', 'george', 'alvaro', 'álvaro', 'jorge', 'raul', 'raúl',
+        'carlos', 'diego', 'pablo', 'mateo', 'male', 'hombre'
     ];
 
     /**
-     * Elige una voz ESPANOLA, femenina y neutra. Nunca devuelve una voz en
-     * otro idioma: si el sistema no tiene ninguna en espanol, devuelve null y
-     * el navegador usara la sintesis por defecto con `lang=es-ES`.
+     * Elige una voz ESPAÑOLA, estrictamente femenina o natural y NUNCA robótica/varonil/inglesa.
      */
     function pickAiVoice() {
         if (!('speechSynthesis' in window)) return null;
         const voices = window.speechSynthesis.getVoices();
-        if (!voices.length) return null;
+        if (!voices || !voices.length) return null;
 
-        // Solo voces declaradas en espanol (es, es-ES, es-MX, es-US, es-419...).
-        const esVoices = voices.filter(v => /^es([-_]|$)/i.test(v.lang || ''));
+        // Solo voces declaradas en español (es, es-ES, es-MX, es-US, es-419...)
+        const esVoices = voices.filter(v => {
+            const lang = (v.lang || '').toLowerCase();
+            const name = (v.name || '').toLowerCase();
+            const isEs = lang.startsWith('es') || lang.includes('es-') || lang.includes('es_');
+            if (!isEs) return false;
+            // Descartar si el nombre es expresamente masculino o en inglés
+            return !MALE_VOICE_BLOCKLIST.some(m => name.includes(m));
+        });
+
         if (!esVoices.length) return null;
 
-        // 1) Precargar por nombre femenino conocido.
+        // 1) Voces femeninas preferidas conocidas
         for (const hint of AI_FEMALE_VOICE_HINTS) {
-            const hit = esVoices.find(v =>
-                (v.name || '').toLowerCase().includes(hint));
+            const hit = esVoices.find(v => (v.name || '').toLowerCase().includes(hint));
             if (hit) return hit;
         }
-        // 2) Voces "Google"/"Microsoft"/"Natural" en espanol son las mas
-        //    suaves y naturales; se prefieren a las roboticas antiguas.
-        return esVoices.find(v => /(google|natural|neural)/i.test(v.name || ''))
-            || esVoices.find(v => /microsoft/i.test(v.name || ''))
-            || esVoices.find(v => /^es-ES/i.test(v.lang || ''))
-            || esVoices[0];
+
+        // 2) Voces Google / Neural / Natural en español
+        const naturalVoice = esVoices.find(v => /(google|natural|neural)/i.test(v.name || ''));
+        if (naturalVoice) return naturalVoice;
+
+        // 3) Primera voz disponible en español (después de filtrar varoniles)
+        return esVoices[0] || null;
     }
 
     function refreshAiVoices() {
@@ -2222,31 +2236,71 @@
 
     function stopAiSpeech() {
         if ('speechSynthesis' in window) {
-            try { window.speechSynthesis.cancel(); } catch (e) { /* sin voces */ }
+            try { window.speechSynthesis.cancel(); } catch (e) { /* sin soporte */ }
+        }
+        if (aiAudioPlayer) {
+            try {
+                aiAudioPlayer.pause();
+                aiAudioPlayer.currentTime = 0;
+            } catch (e) {}
+            aiAudioPlayer = null;
         }
     }
 
-    /** El robot "habla" en alto. Sin soporte o silenciado, no hace nada. */
+    /**
+     * Limpia el texto de markdown, enlaces y signos antes de la locución.
+     */
+    function cleanTextForSpeech(raw) {
+        if (!raw) return '';
+        return String(raw)
+            .replace(/https?:\/\/\S+/gi, '')
+            .replace(/[*_#`~>\[\]\(\)]/g, ' ')
+            .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    /**
+     * Habla en voz alta en español amigable.
+     * Si no hay voz nativa española en el sistema, recurre al endpoint /api/tts.
+     */
     function speakAi(text) {
-        if (!aiVoiceEnabled || !text || !('speechSynthesis' in window)) return;
-        try {
-            window.speechSynthesis.cancel();
-            // Las voces pueden tardar en cargar: reintenta elegir en el momento.
+        if (!aiVoiceEnabled || !text) return;
+        const spoken = cleanTextForSpeech(text);
+        if (!spoken) return;
+
+        stopAiSpeech();
+
+        // 1. Si el navegador dispone de una voz genuinamente española y femenina/natural:
+        if ('speechSynthesis' in window) {
             if (!aiPreferredVoice) aiPreferredVoice = pickAiVoice();
-            const u = new SpeechSynthesisUtterance(String(text));
-            // Solo asignamos `voice` si es de verdad espanola; si no, dejamos
-            // que el sistema sintetice con `lang=es-ES` (evita voces en ingles).
             if (aiPreferredVoice && /^es([-_]|$)/i.test(aiPreferredVoice.lang || '')) {
-                u.voice = aiPreferredVoice;
-                u.lang = aiPreferredVoice.lang;
-            } else {
-                u.lang = 'es-ES';
+                try {
+                    const u = new SpeechSynthesisUtterance(spoken);
+                    u.voice = aiPreferredVoice;
+                    u.lang = aiPreferredVoice.lang;
+                    u.rate = 0.98;   // ritmo pausado y natural
+                    u.pitch = 1.10;  // tono cálido, amigable
+                    u.volume = 1.0;
+                    window.speechSynthesis.speak(u);
+                    return;
+                } catch (e) {
+                    /* fallback al streaming del servidor */
+                }
             }
-            u.rate = 0.94;    // suave y pausado, sin sonar lento
-            u.pitch = 1.06;   // ligeramente agudo: amigable, claro, "lindo"
-            u.volume = 0.95;
-            window.speechSynthesis.speak(u);
-        } catch (e) { /* nunca romper el chat por la voz */ }
+        }
+
+        // 2. Fallback streaming del backend: voz humana femenina en español
+        try {
+            const streamUrl = '/api/tts?text=' + encodeURIComponent(spoken.slice(0, 480));
+            aiAudioPlayer = new Audio(streamUrl);
+            aiAudioPlayer.volume = 1.0;
+            aiAudioPlayer.play().catch(() => {
+                // Autoplay puede requerir interacción previa del usuario
+            });
+        } catch (e) {
+            /* no romper el chat */
+        }
     }
 
     function syncAiVoiceButton() {
@@ -2515,6 +2569,13 @@
     if (aiVoiceBtn) {
         syncAiVoiceButton();
         aiVoiceBtn.addEventListener('click', () => setAiVoice(!aiVoiceEnabled));
+    }
+    // Boton de prueba de voz amigable en español
+    const aiVoiceTestBtn = $('ai-voice-test');
+    if (aiVoiceTestBtn) {
+        aiVoiceTestBtn.addEventListener('click', () => {
+            speakAi('¡Hola! Soy Wardo, tu asistente de BotMeter. Mi voz en español está activa, cálida y optimizada.');
+        });
     }
     // Al minimizar, cortamos la locucion en curso (no molesta al navegar).
     if (aiMinimizeBtn) aiMinimizeBtn.addEventListener('click', stopAiSpeech);

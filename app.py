@@ -60,14 +60,16 @@ from urllib.parse import parse_qs, urlparse
 
 import pandas as pd
 import requests
-from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import AliasChoices, BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = BASE_DIR / "templates"
+STATIC_DIR = BASE_DIR / "static"
 
 
 # ===========================================================================
@@ -3007,6 +3009,9 @@ app = FastAPI(
     default_response_class=Utf8JSONResponse,
 )
 
+if STATIC_DIR.is_dir():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
@@ -3167,6 +3172,38 @@ async def ai_ask(payload: AIAskRequest) -> AIAskResponse:
         provider=settings.llm_provider,
         model=settings.llm_model,
     )
+
+
+@app.get("/api/tts", include_in_schema=False)
+async def text_to_speech(text: str = Query(..., max_length=1000)) -> Response:
+    """Devuelve audio sintetizado en espanol con voz natural, amigable y femenina."""
+    clean_text = re.sub(r"[*_#`~>\[\]\(\)]", " ", text)
+    clean_text = re.sub(r"https?://\S+", "", clean_text)
+    clean_text = re.sub(r"\s+", " ", clean_text).strip()
+    if not clean_text:
+        raise HTTPException(status_code=400, detail="Texto vacio")
+    # Mantener una longitud optima para sintesis rapida y fluida
+    clean_text = clean_text[:280]
+
+    url = "https://translate.google.com/translate_tts"
+    params = {"ie": "UTF-8", "tl": "es", "client": "tw-ob", "q": clean_text}
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    try:
+        resp = await asyncio.to_thread(
+            requests.get, url, params=params, headers=headers, timeout=6
+        )
+        if resp.status_code == 200 and resp.content:
+            return Response(
+                content=resp.content,
+                media_type="audio/mpeg",
+                headers={
+                    "Cache-Control": "public, max-age=86400",
+                    "Content-Disposition": "inline",
+                },
+            )
+    except Exception:
+        pass
+    raise HTTPException(status_code=502, detail="Voz no disponible")
 
 
 @app.post("/api/analyze", response_model=AnalyzeResponse, tags=["analisis"])
