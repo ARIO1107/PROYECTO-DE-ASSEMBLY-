@@ -2770,7 +2770,7 @@ GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
 # funciona esto?", "¿que significa el riesgo medio?") aunque no haya ningun
 # analisis cargado. Mantenida corta para no quemar tokens del tier gratis.
 ASSISTANT_SYSTEM_PROMPT = """\
-Eres "Wardo", el asistente de BotMeter, una web que estima que porcentaje de los \
+Eres "boti", el asistente de BotMeter, una web que estima que porcentaje de los \
 comentarios de un video o publicacion son bots (cuentas automatizadas).
 
 Como funciona BotMeter (ficha tecnica):
@@ -2813,7 +2813,7 @@ proporcionado: nunca inventes cifras ni veredictos que no esten ahi.
 - No inventes funciones, botones, opciones, rutas, nombres de archivos, comandos 
   ni configuraciones que NO existan en esta web. Solo describe lo que existe 
   realmente (YouTube API, subida de CSV/JSON, motor de 9 heuristicas, robot 
-  Wardo, demo en memoria).
+  boti, demo en memoria).
 - Si te preguntan por algo que NO aparece explicitamente en el contexto, responde 
   exactamente: "Esa opción no existe en BotMeter." 
 - Si no hay una respuesta directa usando SOLO el contexto, responde exactamente: 
