@@ -1,0 +1,17 @@
+/* ------------------------------------------------------------------
+   BotMeter · punto de entrada de Tailwind (v3)
+
+   Se compila con `npm run build` a static/tailwind.css, que es el
+   stylesheet que sirve la app. Ese fichero se commitea porque Render
+   solo ejecuta pip en el deploy (ver render.yaml): sin el build local
+   la web perdería todos los estilos.
+
+   Orden en <head> de templates/index.html:
+     1. styless.css    (sistema visual propio: tarjetas, riesgo, anims)
+     2. tailwind.css   (utilidades, DESPUÉS, como con el Play CDN)
+   Ese orden importa: las utilidades de Tailwind deben ganar a las
+   clases de styless.css (p. ej. `.card p-0` o `.track bg-stone-200/80`).
+   ------------------------------------------------------------------ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

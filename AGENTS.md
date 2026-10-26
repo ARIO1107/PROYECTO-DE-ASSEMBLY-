@@ -11,10 +11,12 @@
 
 ## Proyecto
 - Backend: `app.py` (FastAPI + uvicorn, Jinja2). Frontend: `templates/index.html`
-  (SPA, Tailwind Play CDN, sin build step).
+  (SPA, Tailwind v3 compilado con CLI: `npm run build` regenera
+  `static/tailwind.css`, que va **commiteado** porque Render solo ejecuta pip).
+  Si se cambian clases en el HTML, recompilar antes del commit.
 - Estética: dark corporativo, fondo `#1a1613`, acento naranja `#ff5c35` (paleta
   `brand`), textos secundarios `stone`. Sin emojis como iconos.
-- IA "Wardo" (Groq, `openai/gpt-oss-20b`): clave solo en `.env` local o secret de
+- IA "boti" (Groq, `openai/gpt-oss-20b`): clave solo en `.env` local o secret de
   Render; degradación obligatoria a modo mantenimiento (nunca 500).
 
 ## Verificación

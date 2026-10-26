@@ -1,8 +1,8 @@
 /* ------------------------------------------------------------------
    BotMeter · Sistema visual y estilos principales
    Las tarjetas, animaciones y temas de riesgo viven en CSS plano
-   (no en clases de Tailwind generadas al vuelo) porque los colores
-   de riesgo se aplican dinámicamente desde JavaScript.
+   (no en utilidades de Tailwind) porque los colores de riesgo se
+   aplican dinámicamente desde JavaScript.
    ------------------------------------------------------------------ */
 :root { --ease: cubic-bezier(.16, 1, .3, 1); }
 

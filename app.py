@@ -5,7 +5,9 @@ BotMeter - MVP de deteccion de bots en comentarios de redes sociales
 Arquitectura
 ------------
     app.py            Single-module service (facil de auditar y desplegar)
-    templates/        Interfaz web minima (Jinja2 + Tailwind por CDN)
+    templates/        Interfaz web minima (Jinja2 + Tailwind v3 compilado)
+    package.json      Build local de Tailwind (npm run build -> static/tailwind.css,
+                      commiteado: Render solo ejecuta pip, ver render.yaml)
     requirements.txt  Dependencias fijadas
     Dockerfile        Imagen multi-stage, usuario no root
     docker-compose.yml Entorno de desarrollo local
@@ -3022,7 +3024,7 @@ async def value_error_handler(_: Request, exc: ValueError) -> Utf8JSONResponse:
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def index(request: Request) -> HTMLResponse:
-    """Interfaz web minima (Tailwind por CDN, sin build step)."""
+    """Interfaz web minima (Tailwind v3 compilado con CLI; build local)."""
     response = templates.TemplateResponse(
         request=request,
         name="index.html",
