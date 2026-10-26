@@ -695,15 +695,15 @@
     const DEMO_WALL_MAX = 40;            // nodos retenidos en el muro en vivo
 
     const RISK_HEX = {
-        critical: '#c084fc',
-        high: '#f87171',
+        critical: '#f87171',
+        high: '#fb923c',
         medium: '#fbbf24',
         low: '#34d399'
     };
 
     const SIGNAL_GRADIENT = {
         spam_lexicon: 'linear-gradient(90deg,#f43f5e,#fb7185)',
-        identity_pattern: 'linear-gradient(90deg,#8b5cf6,#c084fc)',
+        identity_pattern: 'linear-gradient(90deg,#1d4ed8,#3b82f6)',
         generic_content: 'linear-gradient(90deg,#0ea5e9,#38bdf8)',
         text_noise: 'linear-gradient(90deg,#64748b,#94a3b8)',
         temporal: 'linear-gradient(90deg,#f59e0b,#fbbf24)',
@@ -1371,8 +1371,8 @@
         if (pill) {
             pill.textContent = 'Riesgo ' + data.risk.label;
             pill.className = 'text-[11px] font-semibold px-2.5 py-0.5 rounded-full border '
-                + (level === 'critical' ? 'border-purple-200 bg-purple-50 text-purple-700'
-                   : level === 'high' ? 'border-rose-200 bg-rose-50 text-rose-700'
+                + (level === 'critical' ? 'border-rose-200 bg-rose-50 text-rose-700'
+                   : level === 'high' ? 'border-brand-200 bg-brand-50 text-brand-700'
                    : level === 'medium' ? 'border-amber-200 bg-amber-50 text-amber-800'
                    : 'border-emerald-200 bg-emerald-50 text-emerald-700');
         }

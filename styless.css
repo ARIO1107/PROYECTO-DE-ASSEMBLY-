@@ -50,8 +50,8 @@ h1, h2, h3, .font-display {
 /* --- Temas de riesgo: verde / amarillo / rojo / morado --- */
 [data-risk="low"]      { --r1: #059669; --r2: #10b981; --rg: 16, 185, 129; }
 [data-risk="medium"]   { --r1: #d97706; --r2: #f59e0b; --rg: 245, 158, 11; }
-[data-risk="high"]     { --r1: #e11d48; --r2: #f43f5e; --rg: 225, 29, 72; }
-[data-risk="critical"] { --r1: #9333ea; --r2: #a855f7; --rg: 147, 51, 234; }
+[data-risk="high"]     { --r1: #c2410c; --r2: #ff5c35; --rg: 255, 92, 53; }
+[data-risk="critical"] { --r1: #e11d48; --r2: #f43f5e; --rg: 225, 29, 72; }
 
 .risk-wash  { background: radial-gradient(620px 300px at 78% -18%, rgba(var(--rg), .08), transparent 66%); }
 .risk-ring  { box-shadow: 0 0 0 1px rgba(var(--rg), .34), 0 14px 40px -18px rgba(var(--rg), .35); }
