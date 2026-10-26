@@ -42,6 +42,9 @@
 
 <body class="bg-[#fafaf9] text-stone-800 antialiased selection:bg-brand-500/20" data-mode="simulated">
 
+<!-- Skip link: navegacion por teclado al contenido principal (WCAG 2.4.1) -->
+<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-brand-700 focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg">Saltar al contenido principal</a>
+
 <div aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
     <div class="absolute left-1/2 -top-40 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-brand-500/[.07] blur-[120px]"></div>
 </div>
@@ -65,7 +68,7 @@
                 <span class="h-1.5 w-1.5 rounded-full bg-amber-500 breath"></span>
                 <span id="mode-badge-text">Modo simulación</span>
             </span>
-            <button type="button" id="nav-cta" class="hidden items-center gap-1.5 rounded-lg bg-brand-500 px-4 py-2 text-[13px] font-semibold text-white shadow-sm shadow-brand-500/30 transition hover:bg-brand-600 active:scale-[.98] sm:inline-flex">
+            <button type="button" id="nav-cta" class="hidden items-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2 text-[13px] font-semibold text-white shadow-sm shadow-brand-700/30 transition hover:bg-brand-800 active:scale-[.98] sm:inline-flex">
                 <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 Analizar
             </button>
@@ -73,7 +76,7 @@
     </div>
 </header>
 
-<main class="mx-auto max-w-7xl px-5 pb-20 pt-8">
+<main id="main" class="mx-auto max-w-7xl px-5 pb-20 pt-8">
 
     <!-- Aviso de conexion: solo aparece si la pagina no puede hablar con el servidor -->
     <div id="offline-banner" class="hidden mb-6">
@@ -143,7 +146,7 @@
                 </div>
                 <div class="shrink-0">
                     <button type="button" id="demo-btn"
-                            class="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:bg-brand-600 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50">
+                            class="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-700 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-700/25 transition hover:bg-brand-800 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50">
                         <span id="demo-btn-dot" class="h-2 w-2 rounded-full bg-white"></span>
                         <span id="demo-btn-label">Lanzar demo en directo</span>
                     </button>
@@ -188,6 +191,7 @@
                     <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-stone-400">
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8zM9.5 15.5v-7l6.5 3.5-6.5 3.5z"/></svg>
                     </span>
+                    <label for="url" class="sr-only">URL del video a analizar</label>
                     <input id="url" name="url" type="text" required spellcheck="false"
                            value="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
                            placeholder="https://www.youtube.com/watch?v=..."
@@ -196,7 +200,7 @@
 
                 <div class="flex flex-wrap gap-3">
                     <button type="submit" id="submit-btn"
-                            class="flex items-center gap-2 rounded-xl bg-brand-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50">
+                            class="flex items-center gap-2 rounded-xl bg-brand-700 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-700/25 transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50">
                         <span id="btn-label">Analizar</span>
                         <span id="btn-spinner" class="hidden spinner"></span>
                     </button>
@@ -209,7 +213,8 @@
             </form>
 
             <div id="yt-preview" class="hidden mt-4 flex items-center gap-3.5 rounded-xl border border-stone-200 bg-stone-50/70 p-3">
-                <img id="yt-thumb" alt="Miniatura del video de YouTube"
+                <img id="yt-thumb" alt="Miniatura del video de YouTube" width="149" height="84"
+                     loading="lazy" decoding="async"
                      class="h-[5.25rem] w-[9.3rem] shrink-0 rounded-lg bg-stone-200 object-cover">
                 <div class="min-w-0">
                     <p class="text-[10px] uppercase tracking-widest text-stone-500">Vista previa del video</p>
@@ -298,7 +303,7 @@
 
                     <div class="mt-3 flex flex-col gap-3 sm:flex-row">
                         <button type="submit" id="upload-btn" disabled
-                                class="flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50">
+                                class="flex items-center justify-center gap-2 rounded-xl bg-brand-700 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-700/25 transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50">
                             <span id="upload-label">Analizar archivo</span>
                             <span id="upload-spinner" class="hidden spinner"></span>
                         </button>
@@ -650,7 +655,7 @@
                       aria-label="Escribe tu pregunta para el asistente"
                       class="field flex-1 !text-xs !bg-white"></textarea>
             <button type="submit" id="ai-send" aria-label="Enviar pregunta"
-                    class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-500 text-white shadow-sm shadow-brand-500/30 transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50">
+                    class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-700 text-white shadow-sm shadow-brand-700/30 transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50">
                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/></svg>
             </button>
         </form>
