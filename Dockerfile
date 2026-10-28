@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# Project Assembly - imagen de produccion para FastAPI
+# BotMeter - imagen de produccion para FastAPI
 # ---------------------------------------------------------------------------
 # Multi-stage: la etapa `builder` compila/instala dependencias y la etapa final
 # copia solo lo necesario. Reduce el tamano final y minimiza superficie de ataque.

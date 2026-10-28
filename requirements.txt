@@ -21,3 +21,4 @@ pydantic-settings>=2.7.0,<3.0         # settings por variables de entorno / .env
 # --- Datos / red -----------------------------------------------------------
 requests>=2.32.3,<3.0                 # cliente HTTP para la YouTube Data API v3
 pandas>=2.2.3,<3.0                    # agregacion estadistica de metricas
+

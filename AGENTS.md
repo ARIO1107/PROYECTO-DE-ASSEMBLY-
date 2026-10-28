@@ -14,8 +14,8 @@
   (SPA, Tailwind v3 compilado con CLI: `npm run build` regenera
   `static/tailwind.css`, que va **commiteado** porque Render solo ejecuta pip).
   Si se cambian clases en el HTML, recompilar antes del commit.
-- Estética: dark corporativo, fondo `#1a1613`, acento naranja `#ff5c35` (paleta
-  `brand`), textos secundarios `stone`. Sin emojis como iconos.
+- Estética: claro corporativo, fondo `#fafaf9`, acento naranja `#ff5c35` (paleta
+  `brand`), textos primarios `stone-800/900`, textos secundarios `stone-500/600`. Sin emojis como iconos.
 - IA "boti" (Groq, `openai/gpt-oss-20b`): clave solo en `.env` local o secret de
   Render; degradación obligatoria a modo mantenimiento (nunca 500).
 

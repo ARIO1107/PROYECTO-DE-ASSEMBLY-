@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# Project Assembly - blueprint de despliegue en Render
+# BotMeter - blueprint de despliegue en Render
 # ---------------------------------------------------------------------------
 # Uso:  push a GitHub -> New -> Blueprint -> apuntar a este repositorio.
 # Render lee este fichero y crea el web service sin configuracion manual.
@@ -12,7 +12,7 @@
 # ---------------------------------------------------------------------------
 services:
   - type: web
-    name: project-assembly
+    name: botmeter
     runtime: python
     plan: free
     region: oregon
@@ -29,7 +29,7 @@ services:
       - key: APP_ENV
         value: production
       - key: APP_NAME
-        value: BotWard
+        value: BotMeter
       - key: APP_VERSION
         value: "1.0.0"
       - key: MAX_COMMENTS
