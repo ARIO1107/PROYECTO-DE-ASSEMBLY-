@@ -43,6 +43,7 @@ RUN groupadd --system --gid 10001 appgroup \
 # Codigo de la aplicacion (respeta .dockerignore)
 COPY --chown=appuser:appuser app.py ./
 COPY --chown=appuser:appuser templates ./templates
+COPY --chown=appuser:appuser static ./static
 
 USER appuser
 
