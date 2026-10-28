@@ -17,7 +17,7 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 h1, h2, h3, .font-display {
-    font-family: 'Outfit', 'Space Grotesk', 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif;
     letter-spacing: -0.025em;
 }
 .tabular, .stat-value, [data-to] { font-variant-numeric: tabular-nums; }

@@ -16,7 +16,7 @@ module.exports = {
     extend: {
       fontFamily: {
         sans: ['"Plus Jakarta Sans"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        display: ['"Outfit"', '"Space Grotesk"', '"Plus Jakarta Sans"', 'sans-serif'],
+        display: ['"Outfit"', '"Plus Jakarta Sans"', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace']
       },
       colors: {
