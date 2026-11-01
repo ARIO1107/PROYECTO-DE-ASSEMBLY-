@@ -81,49 +81,89 @@
 
     <!-- ---------------- VISTA 1 · BIENVENIDA ---------------- -->
     <div id="view-welcome" class="space-y-6">
-        <section class="card anim-slide p-8 sm:p-10 lg:p-12">
-            <div class="flex flex-col gap-6">
-                <div>
-                    <span class="inline-flex items-center gap-2 rounded-full border border-stone-200/80 bg-white/80 px-2.5 py-0.5 text-xs font-medium text-stone-700 shadow-sm shadow-stone-900/2">
-                        <span class="h-1.5 w-1.5 rounded-full bg-brand-500"></span>
-                        Detector heurístico de comentarios automatizados
-                    </span>
-                    <h2 class="mt-6 max-w-4xl font-display text-4xl font-bold leading-[1.02] tracking-tight text-stone-900 sm:text-5xl lg:text-6xl">
-                        Descubre bots en comentarios con <span class="text-brand-700">BotMeter</span>
-                    </h2>
-                    <p class="mt-5 max-w-2xl text-lg leading-relaxed text-stone-600">
-                        Elige dónde están los comentarios que te preocupan. BotMeter extrae
-                        <strong class="font-semibold text-stone-800">40 features</strong> de cada mensaje y aplica
-                        <strong class="font-semibold text-stone-800">9 heurísticas ponderadas</strong> para estimar el porcentaje
-                        de bots con precisión y transparencia.
-                    </p>
-                </div>
+        <section class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_40px_80px_-60px_rgba(28,25,23,0.4)] anim-slide">
+            <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+                <div class="absolute -top-40 right-[-20%] h-[28rem] w-[28rem] rounded-full bg-brand-500/[.05] blur-[140px]"></div>
+                <div class="absolute -bottom-52 left-[-10%] h-[26rem] w-[26rem] rounded-full bg-stone-200/[.25] blur-[160px]"></div>
+            </div>
+            <div class="relative grid gap-10 p-8 sm:p-10 lg:grid-cols-[1.1fr_.9fr] lg:items-center lg:p-12 xl:p-14">
+                <div class="flex flex-col gap-6">
+                    <div>
+                        <span class="inline-flex items-center gap-2 rounded-full border border-stone-200/80 bg-white/90 px-2.5 py-0.5 text-xs font-medium text-stone-700 shadow-sm shadow-stone-900/2">
+                            <span class="h-1.5 w-1.5 rounded-full bg-brand-500"></span>
+                            Detector heurístico de comentarios automatizados
+                        </span>
+                        <h2 class="mt-6 max-w-3xl font-display text-4xl font-bold leading-[1.01] tracking-tight text-stone-900 sm:text-5xl lg:text-6xl xl:text-7xl">
+                            Descubre bots en comentarios con <span class="text-brand-700">BotMeter</span>
+                        </h2>
+                        <p class="mt-5 max-w-xl text-lg leading-relaxed text-stone-600">
+                            Analiza comentarios públicos con un motor heurístico transparente. Identifica patrones automatizados sin complejidad innecesaria.
+                        </p>
+                    </div>
 
-                <div id="platform-grid" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-3xl">
+                <div id="platform-grid" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <button type="button" id="pick-youtube" data-platform="" data-target="youtube"
-                            class="group relative flex items-center gap-4 rounded-xl border border-stone-200 bg-white/90 p-5 text-left transition duration-500 ease-out hover:-translate-y-1 hover:border-stone-300 hover:shadow-lg hover:shadow-stone-900/5 active:scale-[.99]">
-                        <span class="grid h-11 w-11 place-items-center rounded-lg bg-red-500/10 text-lg font-bold text-red-600 ring-1 ring-inset ring-red-500/15 transition group-hover:scale-105">Y</span>
+                            class="group relative flex items-center gap-4 rounded-xl border border-stone-200 bg-white/95 p-4 text-left shadow-sm shadow-stone-900/2 transition duration-500 ease-out hover:-translate-y-1 hover:border-stone-300 hover:shadow-lg hover:shadow-stone-900/5 active:scale-[.99]">
+                        <span class="grid h-10 w-10 place-items-center rounded-lg bg-red-500/10 text-base font-bold text-red-600 ring-1 ring-inset ring-red-500/15 transition group-hover:scale-105">Y</span>
                         <div>
-                            <span class="font-display text-base font-semibold text-stone-900">YouTube</span>
+                            <span class="font-display text-sm font-semibold text-stone-900">YouTube</span>
                             <p class="mt-0.5 text-xs text-stone-500">Pega la URL pública del video</p>
                         </div>
                         <svg class="ml-auto h-4 w-4 text-stone-400 transition group-hover:translate-x-1 group-hover:text-stone-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                     </button>
                     <button type="button" id="pick-others" data-platform="tiktok" data-target="others"
-                            class="group relative flex items-center gap-4 rounded-xl border border-stone-200 bg-white/90 p-5 text-left transition duration-500 ease-out hover:-translate-y-1 hover:border-stone-300 hover:shadow-lg hover:shadow-stone-900/5 active:scale-[.99]">
-                        <span class="grid h-11 w-11 place-items-center rounded-lg bg-brand-500/10 text-lg font-bold text-brand-700 ring-1 ring-inset ring-brand-500/15 transition group-hover:scale-105">O</span>
+                            class="group relative flex items-center gap-4 rounded-xl border border-stone-200 bg-white/95 p-4 text-left shadow-sm shadow-stone-900/2 transition duration-500 ease-out hover:-translate-y-1 hover:border-stone-300 hover:shadow-lg hover:shadow-stone-900/5 active:scale-[.99]">
+                        <span class="grid h-10 w-10 place-items-center rounded-lg bg-brand-500/10 text-base font-bold text-brand-700 ring-1 ring-inset ring-brand-500/15 transition group-hover:scale-105">O</span>
                         <div>
-                            <span class="font-display text-base font-semibold text-stone-900">Otras redes sociales</span>
-                            <p class="mt-0.5 text-xs text-stone-500">Sube CSV o JSON (TikTok, Instagram, X, Facebook, Reddit...)</p>
+                            <span class="font-display text-sm font-semibold text-stone-900">Otras redes sociales</span>
+                            <p class="mt-0.5 text-xs text-stone-500">Sube CSV o JSON</p>
                         </div>
                         <svg class="ml-auto h-4 w-4 text-stone-400 transition group-hover:translate-x-1 group-hover:text-stone-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                     </button>
                 </div>
             </div>
+            <div class="relative hidden lg:flex lg:items-center lg:justify-center">
+                <div class="relative w-full max-w-md">
+                    <div class="absolute -inset-6 rounded-[2rem] bg-gradient-to-br from-white/80 to-stone-50/60 blur-2xl"></div>
+                    <div class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_40px_80px_-60px_rgba(28,25,23,0.5)]">
+                        <div class="flex items-center justify-between border-b border-stone-100 px-5 py-3">
+                            <div class="flex items-center gap-2">
+                                <span class="h-2 w-2 rounded-full bg-rose-400"></span>
+                                <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+                                <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+                            </div>
+                            <p class="text-[11px] text-stone-400">BotMeter · Vista previa</p>
+                        </div>
+                        <div class="space-y-3 p-5">
+                            <div class="flex items-center justify-between rounded-lg border border-stone-100 bg-stone-50/60 px-3 py-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="h-2 w-2 rounded-full bg-rose-500"></span>
+                                    <span class="text-xs font-medium text-stone-700">Sospecha alta</span>
+                                </div>
+                                <span class="text-xs tabular-nums text-stone-500">92%</span>
+                            </div>
+                            <div class="flex items-center justify-between rounded-lg border border-stone-100 bg-white px-3 py-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="h-2 w-2 rounded-full bg-amber-500"></span>
+                                    <span class="text-xs font-medium text-stone-700">Dudoso</span>
+                                </div>
+                                <span class="text-xs tabular-nums text-stone-500">64%</span>
+                            </div>
+                            <div class="flex items-center justify-between rounded-lg border border-stone-100 bg-white px-3 py-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                                    <span class="text-xs font-medium text-stone-700">Seguro</span>
+                                </div>
+                                <span class="text-xs tabular-nums text-stone-500">18%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- --- Llamada a la demo en vivo (solo desde la bienvenida) --- -->
-        <section class="card anim-scale overflow-hidden" style="animation-delay:.12s">
+        <section class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_30px_60px_-50px_rgba(28,25,23,0.4)] anim-scale" style="animation-delay:.16s">
             <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
                 <div class="max-w-xl">
                     <p class="text-[10px] font-semibold uppercase tracking-widest text-brand-700">Demo interactiva</p>
