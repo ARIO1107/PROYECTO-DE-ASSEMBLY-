@@ -4,10 +4,15 @@
    (no en utilidades de Tailwind) porque los colores de riesgo se
    aplican dinámicamente desde JavaScript.
    ------------------------------------------------------------------ */
-:root { --ease: cubic-bezier(.16, 1, .3, 1); }
+:root {
+    --ease: cubic-bezier(.16, 1, .3, 1);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-spring: cubic-bezier(0.25, 0.8, 0.25, 1);
+}
 
 /* --- Base tipográfica y estilos limpios corporativos --- */
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-behavior: smooth; }
 body {
     font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "ss01";
@@ -16,34 +21,38 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
-h1, h2, h3, .font-display {
+h1, h2, h3, h4, .font-display {
     font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
 }
+p { text-wrap: pretty; }
 .tabular, .stat-value, [data-to] { font-variant-numeric: tabular-nums; }
 
-/* --- Tarjetas limpias, premium y con mayor jerarquía --- */
+/* --- Tarjetas con más presencia, movimiento sutil --- */
 .card {
     position: relative;
     border-radius: 1rem;
     border: 1px solid rgba(231, 229, 228, 0.9);
-    background: #ffffff;
+    background: radial-gradient(1200px 400px at 50% -20%, rgba(255, 255, 255, 1), #ffffff);
     padding: 1.75rem;
-    box-shadow: 0 1px 1px rgba(0, 0, 0, .01), 0 1px 2px rgba(28, 25, 23, .02), 0 8px 40px -12px rgba(28, 25, 23, .08);
-    transition: transform .4s var(--ease), box-shadow .4s var(--ease), border-color .4s var(--ease);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, .01), 0 1px 2px rgba(28, 25, 23, .015), 0 30px 60px -40px rgba(28, 25, 23, .25);
+    transition: transform .5s var(--ease-out), box-shadow .5s var(--ease-out), border-color .5s var(--ease-out);
     overflow: hidden;
+    will-change: transform;
 }
-@media (min-width: 640px) { .card { padding: 2rem; } }
+@media (min-width: 640px) { .card { padding: 2.25rem; } }
+@media (min-width: 1024px) { .card { padding: 2.5rem; } }
 .card::before {
     content: "";
     position: absolute; inset: 0;
-    background: radial-gradient(680px 200px at 10% -10%, rgba(255, 92, 53, .02), transparent 65%);
+    background: radial-gradient(800px 240px at 12% -12%, rgba(255, 92, 53, .018), transparent 68%);
     pointer-events: none;
 }
 .card-hover:hover {
-    transform: translateY(-3px);
-    border-color: rgba(255, 92, 53, .25);
-    box-shadow: 0 1px 1px rgba(0, 0, 0, .01), 0 4px 10px -2px rgba(28, 25, 23, .04), 0 24px 60px -16px rgba(255, 92, 53, .1);
+    transform: translateY(-4px);
+    border-color: rgba(194, 65, 12, .22);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, .01), 0 4px 12px -4px rgba(28, 25, 23, .06), 0 40px 80px -50px rgba(255, 92, 53, .18);
 }
 .card > * { position: relative; }
 
@@ -78,18 +87,22 @@ h1, h2, h3, .font-display {
 }
 
 /* --- Animaciones de entrada --- */
-@keyframes fadeUp  { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: none } }
+@keyframes fadeUp  { from { opacity: 0; transform: translateY(18px) } to { opacity: 1; transform: translateY(0) } }
 @keyframes fadeIn  { from { opacity: 0 } to { opacity: 1 } }
-@keyframes popIn   { from { opacity: 0; transform: translateY(10px) scale(.975) } to { opacity: 1; transform: none } }
+@keyframes popIn   { from { opacity: 0; transform: translateY(12px) scale(.98) } to { opacity: 1; transform: translateY(0) scale(1) } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(24px) } to { opacity: 1; transform: translateY(0) } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(.98) } to { opacity: 1; transform: scale(1) } }
 @keyframes shimmer { from { background-position: 200% 0 } to { background-position: -200% 0 } }
 @keyframes sweep   { to { transform: translateX(220%) } }
 @keyframes breathe { 0%, 100% { opacity: 1; transform: scale(1) } 50% { opacity: .45; transform: scale(.82) } }
 @keyframes halobar { 0%, 100% { box-shadow: 0 0 0 0 rgba(var(--rg), .5) } 70% { box-shadow: 0 0 0 14px rgba(var(--rg), 0) } }
 @keyframes spin    { to { transform: rotate(360deg) } }
 
-.anim-up  { animation: fadeUp .55s var(--ease) both; }
-.anim-in  { animation: fadeIn .5s ease both; }
-.anim-pop { animation: popIn .45s var(--ease) both; }
+.anim-up    { animation: fadeUp .6s var(--ease-out) both; }
+.anim-slide { animation: slideUp .7s var(--ease-out) both; }
+.anim-scale { animation: scaleIn .55s var(--ease-out) both; }
+.anim-in    { animation: fadeIn .5s ease both; }
+.anim-pop   { animation: popIn .5s var(--ease-out) both; }
 .breath   { animation: breathe 1.5s ease-in-out infinite; }
 .halo     { animation: halobar 2s ease-out infinite; }
 
