@@ -22,14 +22,14 @@ h1, h2, h3, .font-display {
 }
 .tabular, .stat-value, [data-to] { font-variant-numeric: tabular-nums; }
 
-/* --- Tarjetas modernas con sombra suave y borde limpio --- */
+/* --- Tarjetas limpias, premium y con mayor jerarquía --- */
 .card {
     position: relative;
-    border-radius: 1.25rem;
-    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 1rem;
+    border: 1px solid rgba(231, 229, 228, 0.9);
     background: #ffffff;
     padding: 1.75rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, .03), 0 10px 25px -4px rgba(28, 25, 23, .04);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, .01), 0 1px 2px rgba(28, 25, 23, .02), 0 8px 40px -12px rgba(28, 25, 23, .08);
     transition: transform .4s var(--ease), box-shadow .4s var(--ease), border-color .4s var(--ease);
     overflow: hidden;
 }
@@ -37,13 +37,13 @@ h1, h2, h3, .font-display {
 .card::before {
     content: "";
     position: absolute; inset: 0;
-    background: radial-gradient(760px 220px at 12% -12%, rgba(255, 92, 53, .025), transparent 62%);
+    background: radial-gradient(680px 200px at 10% -10%, rgba(255, 92, 53, .02), transparent 65%);
     pointer-events: none;
 }
 .card-hover:hover {
-    transform: translateY(-4px);
-    border-color: rgba(255, 92, 53, .35);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, .04), 0 20px 35px -8px rgba(255, 92, 53, .12);
+    transform: translateY(-3px);
+    border-color: rgba(255, 92, 53, .25);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, .01), 0 4px 10px -2px rgba(28, 25, 23, .04), 0 24px 60px -16px rgba(255, 92, 53, .1);
 }
 .card > * { position: relative; }
 
@@ -111,26 +111,27 @@ h1, h2, h3, .font-display {
 /* --- Zona de arrastre de archivos --- */
 .dropzone {
     display: flex; flex-direction: column; align-items: center;
-    gap: .5rem; cursor: pointer;
-    border: 1.5px dashed rgba(203, 213, 225, 0.9);
-    border-radius: 1rem;
-    background: #fafaf9;
-    padding: 1.4rem 1rem;
+    gap: .6rem; cursor: pointer;
+    border: 1px dashed rgba(214, 211, 209, 0.9);
+    border-radius: 0.9rem;
+    background: linear-gradient(180deg, #ffffff 0%, #fafaf9 100%);
+    padding: 1.6rem 1rem;
     text-align: center;
-    transition: border-color .3s var(--ease), background-color .3s var(--ease),
-                transform .3s var(--ease);
+    transition: border-color .25s var(--ease), background-color .25s var(--ease),
+                transform .25s var(--ease), box-shadow .25s var(--ease);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
-.dropzone:hover { border-color: #ff5c35; background: #fff7ed; }
-.dropzone:focus-visible { outline: 2px solid rgba(255, 92, 53, .8); outline-offset: 2px; }
+.dropzone:hover { border-color: rgba(194, 65, 12, .6); background: linear-gradient(180deg, #fff7ed 0%, #fff7ed 100%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 2px rgba(28, 25, 23, .01); }
+.dropzone:focus-visible { outline: 2px solid rgba(194, 65, 12, .8); outline-offset: 2px; }
 .dropzone.is-over {
-    border-color: #ff5c35;
-    background: #ffedd5;
-    transform: translateY(-2px);
+    border-color: #c2410c;
+    background: linear-gradient(180deg, #ffedd5 0%, #fff7ed 100%);
+    transform: translateY(-1px);
 }
 .dropzone.has-file {
     border-style: solid;
-    border-color: rgba(16, 185, 129, .6);
-    background: rgba(16, 185, 129, .06);
+    border-color: rgba(16, 185, 129, .5);
+    background: linear-gradient(180deg, #ecfdf5 0%, #f8fffb 100%);
 }
 
 .field {
