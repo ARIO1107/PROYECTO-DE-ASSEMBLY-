@@ -21,15 +21,18 @@
     <link rel="stylesheet" href="/static/tailwind.css">
 </head>
 
-<body class="bg-[#f7f5f3] text-stone-800 antialiased selection:bg-brand-500/20" data-mode="simulated">
+<body class="bg-[#f7f5f3] text-stone-800 antialiased selection:bg-brand-500/25" data-mode="simulated">
 
 <!-- Skip link: navegacion por teclado al contenido principal (WCAG 2.4.1) -->
 <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-brand-700 focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg">Saltar al contenido principal</a>
 
 <div aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-    <div class="absolute left-1/2 -top-48 h-[38rem] w-[38rem] -translate-x-1/2 rounded-full bg-brand-500/[.09] blur-[140px]"></div>
-    <div class="absolute right-[-10%] top-[20%] h-[28rem] w-[28rem] rounded-full bg-amber-400/[.08] blur-[160px]"></div>
-    <div class="absolute left-[-12%] bottom-[-20%] h-[32rem] w-[32rem] rounded-full bg-violet-400/[.06] blur-[180px]"></div>
+    <div class="mesh-gradient absolute inset-0 opacity-80"></div>
+    <div class="noise-overlay absolute inset-0"></div>
+    <div class="absolute left-1/2 -top-48 h-[38rem] w-[38rem] -translate-x-1/2 rounded-full bg-brand-500/[.12] blur-[140px] animate-float"></div>
+    <div class="absolute right-[-10%] top-[15%] h-[28rem] w-[28rem] rounded-full bg-amber-400/[.1] blur-[160px] animate-float-delayed"></div>
+    <div class="absolute left-[-12%] bottom-[-20%] h-[32rem] w-[32rem] rounded-full bg-violet-400/[.08] blur-[180px] animate-float-slow"></div>
+    <div class="absolute right-[20%] bottom-[10%] h-[22rem] w-[22rem] rounded-full bg-cyan-400/[.07] blur-[150px] animate-float"></div>
 </div>
 
 <!-- ===================== NAVBAR ===================== -->
@@ -81,11 +84,11 @@
 
     <!-- ---------------- VISTA 1 · BIENVENIDA ---------------- -->
     <div id="view-welcome" class="space-y-6">
-        <section class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-gradient-to-br from-white via-white to-orange-50/40 shadow-[0_1px_1px_rgba(0,0,0,0.01),0_40px_80px_-60px_rgba(28,25,23,0.4)] anim-slide">
+        <section class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-gradient-to-br from-white via-white to-orange-50/50 shadow-[0_1px_1px_rgba(0,0,0,0.01),0_40px_80px_-60px_rgba(28,25,23,0.4)] anim-slide before:absolute before:inset-0 before:rounded-[inherit] before:p-[1px] before:bg-gradient-to-br before:from-brand-500/30 before:via-amber-400/20 before:to-violet-400/15 before:-z-10 before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude]">
             <div aria-hidden="true" class="pointer-events-none absolute inset-0">
-                <div class="absolute -top-40 right-[-20%] h-[28rem] w-[28rem] rounded-full bg-brand-500/[.08] blur-[140px]"></div>
-                <div class="absolute -bottom-52 left-[-10%] h-[26rem] w-[26rem] rounded-full bg-amber-400/[.12] blur-[160px]"></div>
-                <div class="absolute top-[30%] left-[40%] h-[18rem] w-[18rem] rounded-full bg-violet-400/[.08] blur-[140px]"></div>
+                <div class="absolute -top-40 right-[-20%] h-[28rem] w-[28rem] rounded-full bg-brand-500/[.12] blur-[140px] animate-float"></div>
+                <div class="absolute -bottom-52 left-[-10%] h-[26rem] w-[26rem] rounded-full bg-amber-400/[.16] blur-[160px] animate-float-delayed"></div>
+                <div class="absolute top-[30%] left-[40%] h-[18rem] w-[18rem] rounded-full bg-violet-400/[.12] blur-[140px] animate-float-slow"></div>
             </div>
             <div class="relative grid gap-10 p-8 sm:p-10 lg:grid-cols-[1.1fr_.9fr] lg:items-center lg:p-12 xl:p-14">
                 <div class="flex flex-col gap-6">
@@ -104,7 +107,7 @@
 
                 <div id="platform-grid" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <button type="button" id="pick-youtube" data-platform="" data-target="youtube"
-                            class="group relative flex items-center gap-4 rounded-xl border border-stone-200 bg-white/95 p-4 text-left shadow-sm shadow-stone-900/2 transition duration-500 ease-out hover:-translate-y-1 hover:border-stone-300 hover:shadow-lg hover:shadow-stone-900/5 active:scale-[.99]">
+                            class="group relative overflow-hidden flex items-center gap-4 rounded-xl border border-stone-200 bg-white/95 p-4 text-left shadow-sm shadow-stone-900/2 transition duration-500 ease-out hover:-translate-y-1 hover:border-red-300 hover:shadow-lg hover:shadow-red-500/10 active:scale-[.99] before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/40 before:to-transparent before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700">
                         <span class="grid h-10 w-10 place-items-center rounded-lg bg-red-500/10 ring-1 ring-inset ring-red-500/15 transition group-hover:scale-105">
                             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="#FF0000"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
                         </span>
@@ -115,7 +118,7 @@
                         <svg class="ml-auto h-4 w-4 text-stone-400 transition group-hover:translate-x-1 group-hover:text-stone-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                     </button>
                     <button type="button" id="pick-others" data-platform="tiktok" data-target="others"
-                            class="group relative flex items-center gap-4 rounded-xl border border-stone-200 bg-white/95 p-4 text-left shadow-sm shadow-stone-900/2 transition duration-500 ease-out hover:-translate-y-1 hover:border-stone-300 hover:shadow-lg hover:shadow-stone-900/5 active:scale-[.99]">
+                            class="group relative overflow-hidden flex items-center gap-4 rounded-xl border border-stone-200 bg-white/95 p-4 text-left shadow-sm shadow-stone-900/2 transition duration-500 ease-out hover:-translate-y-1 hover:border-brand-300 hover:shadow-lg hover:shadow-brand-500/10 active:scale-[.99] before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/40 before:to-transparent before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700">
                         <span class="grid h-10 w-10 place-items-center rounded-lg bg-stone-900/5 ring-1 ring-inset ring-stone-900/10 transition group-hover:scale-105">
                             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                         </span>
@@ -182,7 +185,7 @@
                 </div>
                 <div class="shrink-0 w-full sm:w-auto">
                     <button type="button" id="demo-btn"
-                            class="group flex w-full items-center justify-center gap-2 rounded-md bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-brand-700/15 transition duration-300 hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-brand-800/20 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50">
+                            class="group relative overflow-hidden flex w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r from-brand-700 to-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-brand-700/20 transition duration-300 hover:-translate-y-0.5 hover:shadow-brand-700/40 hover:shadow-lg active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50 before:absolute before:inset-0 before:bg-gradient-to-r before:from-white/0 before:via-white/20 before:to-white/0 before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700">
                         <span id="demo-btn-dot" class="h-1.5 w-1.5 rounded-full bg-white"></span>
                         <span id="demo-btn-label">Lanzar demo en directo</span>
                         <svg class="h-3.5 w-3.5 transition group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
@@ -467,8 +470,8 @@
 
         <div class="grid grid-cols-1 gap-5 lg:grid-cols-12">
         <!-- --- Veredicto principal (Estimado de bots) --- -->
-        <article id="verdict-card" class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_30px_60px_-50px_rgba(28,25,23,0.4)] anim-up lg:col-span-12" data-risk="low">
-            <div aria-hidden="true" class="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_260px_at_80%_-10%,rgba(255,92,53,0.02),transparent_70%)]"></div>
+        <article id="verdict-card" class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_30px_60px_-50px_rgba(28,25,23,0.4)] anim-up lg:col-span-12 before:absolute before:inset-0 before:rounded-[inherit] before:p-[1px] before:bg-gradient-to-br before:from-brand-500/25 before:via-amber-400/18 before:to-violet-400/12 before:-z-10 before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude]" data-risk="low">
+            <div aria-hidden="true" class="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_260px_at_80%_-10%,rgba(255,92,53,0.04),transparent_70%)]"></div>
             <div class="relative grid gap-8 p-6 sm:p-8 lg:grid-cols-[1.1fr_1fr] lg:items-center">
                 <div class="flex flex-col gap-6">
                     <div class="flex items-start justify-between gap-3">
@@ -481,7 +484,8 @@
 
                     <div class="flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:gap-10">
                         <div class="relative h-44 w-44 shrink-0">
-                            <svg viewBox="0 0 120 120" class="h-full w-full -rotate-90">
+                            <div class="absolute -inset-4 rounded-full bg-gradient-to-br from-brand-500/10 to-amber-400/10 blur-xl"></div>
+                            <svg viewBox="0 0 120 120" class="relative h-full w-full -rotate-90">
                                 <defs>
                                     <linearGradient id="gauge-grad" x1="0" y1="0" x2="1" y2="1">
                                         <stop id="gauge-stop-a" offset="0%" stop-color="#059669"/>
@@ -491,7 +495,7 @@
                                 <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(0,0,0,.04)" stroke-width="10"/>
                                 <circle id="gauge-arc" cx="60" cy="60" r="52" fill="none" stroke="url(#gauge-grad)" stroke-width="10"
                                         stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"
-                                        style="transition: stroke-dashoffset 1.15s cubic-bezier(.16,1,.3,1)"/>
+                                        style="transition: stroke-dashoffset 1.15s cubic-bezier(.16,1,.3,1); filter: drop-shadow(0 0 18px rgba(16, 185, 129, 0.22));"/>
                             </svg>
                             <div class="absolute inset-0 grid place-items-center">
                                 <div class="text-center">
@@ -552,7 +556,7 @@
         </article>
 
         <!-- --- Métricas clave --- -->
-        <article class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_30px_60px_-50px_rgba(28,25,23,0.4)] anim-up lg:col-span-12" style="animation-delay:.06s">
+        <article class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_30px_60px_-50px_rgba(28,25,23,0.4)] anim-up lg:col-span-12 before:absolute before:inset-0 before:rounded-[inherit] before:p-[1px] before:bg-gradient-to-br before:from-brand-500/22 before:via-amber-400/16 before:to-violet-400/10 before:-z-10 before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude]" style="animation-delay:.06s">
             <div aria-hidden="true" class="pointer-events-none absolute inset-0 bg-[radial-gradient(700px_200px_at_50%_-10%,rgba(255,92,53,0.02),transparent_70%)]"></div>
             <div class="relative p-6 sm:p-8">
                 <div class="flex items-center justify-between">
