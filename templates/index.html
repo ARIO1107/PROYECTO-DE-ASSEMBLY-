@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" class="scroll-smooth">
+<html lang="es" class="scroll-smooth h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -60,7 +60,7 @@
     </div>
 </header>
 
-<main id="main" class="mx-auto max-w-7xl px-5 pb-16 pt-10 flex-1 w-full">
+<main id="main" class="mx-auto max-w-7xl px-5 pb-16 pt-10 flex-1 w-full min-h-0">
 
     <!-- Aviso de conexion: solo aparece si la pagina no puede hablar con el servidor -->
     <div id="offline-banner" class="hidden mb-6">
@@ -2107,7 +2107,7 @@
 
         // 2. Fallback streaming del backend: voz humana femenina en español
         try {
-            const streamUrl = '/api/tts?text=' + encodeURIComponent(spoken.slice(0, 480));
+            const streamUrl = '/api/tts?text=' + encodeURIComponent(spoken);
             aiAudioPlayer = new Audio(streamUrl);
             aiAudioPlayer.volume = 1.0;
             aiAudioPlayer.play().catch(() => {
@@ -2393,7 +2393,16 @@
     const aiVoiceTestBtn = $('ai-voice-test');
     if (aiVoiceTestBtn) {
         aiVoiceTestBtn.addEventListener('click', () => {
-            speakAi(BOTI_GREETING);
+            // Speak the last bot message if available, else greeting
+            const box = $('ai-messages');
+            let textToSpeak = BOTI_GREETING;
+            if (box) {
+                const msgs = box.querySelectorAll('.ai-msg-robot');
+                if (msgs.length > 0) {
+                    textToSpeak = msgs[msgs.length - 1].textContent || BOTI_GREETING;
+                }
+            }
+            speakAi(textToSpeak);
         });
     }
     // Al minimizar, cortamos la locucion en curso (no molesta al navegar).
