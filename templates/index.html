@@ -160,17 +160,18 @@
 
         <!-- --- Llamada a la demo en vivo (solo desde la bienvenida) --- -->
         <section class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_30px_60px_-50px_rgba(28,25,23,0.4)] anim-scale" style="animation-delay:.16s">
-            <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div aria-hidden="true" class="pointer-events-none absolute inset-0 bg-[radial-gradient(700px_200px_at_80%_-10%,rgba(255,92,53,0.04),transparent_70%)]"></div>
+            <div class="relative flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8 lg:p-9">
                 <div class="max-w-xl">
                     <p class="text-[10px] font-semibold uppercase tracking-widest text-brand-700">Demo interactiva</p>
-                    <h3 class="mt-1 font-display text-xl font-bold text-stone-900">Simular un ataque de bots en directo</h3>
-                    <p class="mt-2 text-[13px] leading-relaxed text-stone-600">
+                    <h3 class="mt-1 font-display text-xl font-bold text-stone-900 sm:text-2xl">Simular un ataque de bots en directo</h3>
+                    <p class="mt-2 text-sm leading-relaxed text-stone-600">
                         Genera un ataque sintético y lo emite comentario a comentario. Usa el mismo
                         motor (las mismas 9 heurísticas) que el análisis real: no es un video grabado,
                         es el motor funcionando.
                     </p>
                 </div>
-                <div class="shrink-0">
+                <div class="shrink-0 w-full sm:w-auto">
                     <button type="button" id="demo-btn"
                             class="group flex w-full items-center justify-center gap-2 rounded-md bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-brand-700/15 transition duration-300 hover:-translate-y-0.5 hover:bg-brand-800 hover:shadow-brand-800/20 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50">
                         <span id="demo-btn-dot" class="h-1.5 w-1.5 rounded-full bg-white"></span>
@@ -458,7 +459,7 @@
         <!-- --- Veredicto principal (Estimado de bots) --- -->
         <article id="verdict-card" class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_30px_60px_-50px_rgba(28,25,23,0.4)] anim-up lg:col-span-4" data-risk="low">
             <div aria-hidden="true" class="pointer-events-none absolute inset-0 bg-[radial-gradient(600px_200px_at_50%_-10%,rgba(255,92,53,0.02),transparent_70%)]"></div>
-            <div class="relative p-6">
+            <div class="relative flex h-full flex-col p-6 sm:p-7">
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-500">Estimado de bots</p>
@@ -487,10 +488,12 @@
                     </div>
                 </div>
 
-                <div id="risk-badge" class="risk-chip mt-6 rounded-xl border px-3 py-2 text-center" data-risk="low">
-                    <span id="risk-label" class="text-xs font-semibold uppercase tracking-wider">—</span>
+                <div class="mt-auto pt-6">
+                    <div id="risk-badge" class="risk-chip rounded-xl border px-3 py-2 text-center" data-risk="low">
+                        <span id="risk-label" class="text-xs font-semibold uppercase tracking-wider">—</span>
+                    </div>
+                    <p id="risk-action" class="mt-3 text-center text-xs leading-relaxed text-stone-600"></p>
                 </div>
-                <p id="risk-action" class="mt-3 text-center text-xs leading-relaxed text-stone-600"></p>
             </div>
         </article>
 
@@ -511,10 +514,10 @@
         <!-- --- Distribución --- -->
         <article class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_30px_60px_-50px_rgba(28,25,23,0.4)] anim-up lg:col-span-4" style="animation-delay:.12s">
             <div aria-hidden="true" class="pointer-events-none absolute inset-0 bg-[radial-gradient(600px_200px_at_50%_-10%,rgba(255,92,53,0.02),transparent_70%)]"></div>
-            <div class="relative p-6">
+            <div class="relative flex h-full flex-col p-6 sm:p-7">
                 <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-500">Clasificación de comentarios</p>
                 <p class="mt-1 text-sm text-stone-600">Cómo se dividen según su nivel de sospecha</p>
-                <div class="mt-6 space-y-4">
+                <div class="mt-6 space-y-4 flex-1">
                     <div>
                         <div class="mb-1.5 flex justify-between text-xs">
                             <span class="flex items-center gap-1.5 text-rose-700 font-medium">
