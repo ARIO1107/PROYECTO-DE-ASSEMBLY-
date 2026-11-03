@@ -6,7 +6,7 @@
     <title>BotMeter · Detector de bots en comentarios</title>
     <meta name="description" content="Analisis heuristico de comentarios de YouTube, TikTok, Instagram, X, Facebook y mas redes para estimar la presencia de bots.">
     <meta name="color-scheme" content="light">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23ff5c35'/%3E%3Cpath d='M21 19h22l-9 26h-7l-6-19h-3v-5h9l2 8 2-8z' fill='white'/%3E%3C/svg%3E">
 
     <!-- Tipografías: Outfit (titulares) + Plus Jakarta Sans (interfaz) + JetBrains Mono (monoespaciado) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,7 +34,9 @@
 <header class="sticky top-0 z-30 border-b border-stone-200/60 bg-white/70 backdrop-blur-2xl supports-[backdrop-filter]:bg-white/60">
     <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-2.5">
         <div id="header-home" role="button" tabindex="0" class="flex items-center gap-2.5 cursor-pointer select-none rounded-lg pr-2 transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-700/40">
-            <div class="grid h-8 w-8 place-items-center rounded-md bg-brand-500 text-sm font-bold text-white shadow-sm shadow-brand-500/20 ring-1 ring-inset ring-brand-400/25">B</div>
+            <div class="grid h-8 w-8 place-items-center rounded-md bg-brand-500 shadow-sm shadow-brand-500/20 ring-1 ring-inset ring-brand-400/25">
+                <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none"><path d="M7 7h10v4H7zM7 13h7v4H7z" stroke="white" stroke-width="2" stroke-linejoin="round"/></svg>
+            </div>
             <div>
                 <h1 class="text-sm font-semibold tracking-tight text-stone-900 font-display">BotMeter</h1>
                 <p class="text-[11px] leading-tight text-stone-500">Detección de bots en comentarios</p>
@@ -100,7 +102,9 @@
                 <div id="platform-grid" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <button type="button" id="pick-youtube" data-platform="" data-target="youtube"
                             class="group relative flex items-center gap-4 rounded-xl border border-stone-200 bg-white/95 p-4 text-left shadow-sm shadow-stone-900/2 transition duration-500 ease-out hover:-translate-y-1 hover:border-stone-300 hover:shadow-lg hover:shadow-stone-900/5 active:scale-[.99]">
-                        <span class="grid h-10 w-10 place-items-center rounded-lg bg-red-500/10 text-base font-bold text-red-600 ring-1 ring-inset ring-red-500/15 transition group-hover:scale-105">Y</span>
+                        <span class="grid h-10 w-10 place-items-center rounded-lg bg-red-500/10 ring-1 ring-inset ring-red-500/15 transition group-hover:scale-105">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="#FF0000"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                        </span>
                         <div>
                             <span class="font-display text-sm font-semibold text-stone-900">YouTube</span>
                             <p class="mt-0.5 text-xs text-stone-500">Pega la URL pública del video</p>
@@ -109,7 +113,9 @@
                     </button>
                     <button type="button" id="pick-others" data-platform="tiktok" data-target="others"
                             class="group relative flex items-center gap-4 rounded-xl border border-stone-200 bg-white/95 p-4 text-left shadow-sm shadow-stone-900/2 transition duration-500 ease-out hover:-translate-y-1 hover:border-stone-300 hover:shadow-lg hover:shadow-stone-900/5 active:scale-[.99]">
-                        <span class="grid h-10 w-10 place-items-center rounded-lg bg-brand-500/10 text-base font-bold text-brand-700 ring-1 ring-inset ring-brand-500/15 transition group-hover:scale-105">O</span>
+                        <span class="grid h-10 w-10 place-items-center rounded-lg bg-stone-900/5 ring-1 ring-inset ring-stone-900/10 transition group-hover:scale-105">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        </span>
                         <div>
                             <span class="font-display text-sm font-semibold text-stone-900">Otras redes sociales</span>
                             <p class="mt-0.5 text-xs text-stone-500">Sube CSV o JSON</p>
@@ -191,7 +197,9 @@
         <section class="card anim-up p-6 sm:p-8 lg:p-10">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
-                    <span class="grid h-10 w-10 place-items-center rounded-lg bg-red-500/10 text-base font-bold text-red-600 ring-1 ring-inset ring-red-500/20">Y</span>
+                    <span class="grid h-10 w-10 place-items-center rounded-lg bg-red-500/10 ring-1 ring-inset ring-red-500/20">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="#FF0000"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                    </span>
                     <div>
                         <h2 class="font-display text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl">Analizar un video de YouTube</h2>
                         <p class="mt-0.5 text-xs text-stone-500">Comentarios públicos de cualquier video <span id="mode-note" class="hidden">· Modo API oficial</span></p>
@@ -258,7 +266,9 @@
         <section class="card anim-up p-6 sm:p-8 lg:p-9">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
-                    <span class="grid h-10 w-10 place-items-center rounded-lg bg-brand-500/10 text-base font-bold text-brand-700 ring-1 ring-inset ring-brand-500/20">O</span>
+                    <span class="grid h-10 w-10 place-items-center rounded-lg bg-stone-900/5 ring-1 ring-inset ring-stone-900/10">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    </span>
                     <div>
                         <h2 class="font-display text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl">Analizar otra red social</h2>
                         <p class="mt-0.5 text-xs text-stone-500">Analiza comentarios en formato CSV o JSON de cualquier red social <span id="others-sub" class="hidden">TikTok</span></p>
