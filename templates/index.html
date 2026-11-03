@@ -21,13 +21,15 @@
     <link rel="stylesheet" href="/static/tailwind.css">
 </head>
 
-<body class="bg-[#fafaf9] text-stone-800 antialiased selection:bg-brand-500/20" data-mode="simulated">
+<body class="bg-[#f7f5f3] text-stone-800 antialiased selection:bg-brand-500/20" data-mode="simulated">
 
 <!-- Skip link: navegacion por teclado al contenido principal (WCAG 2.4.1) -->
 <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-brand-700 focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg">Saltar al contenido principal</a>
 
 <div aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-    <div class="absolute left-1/2 -top-40 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-brand-500/[.07] blur-[120px]"></div>
+    <div class="absolute left-1/2 -top-48 h-[38rem] w-[38rem] -translate-x-1/2 rounded-full bg-brand-500/[.09] blur-[140px]"></div>
+    <div class="absolute right-[-10%] top-[20%] h-[28rem] w-[28rem] rounded-full bg-amber-400/[.08] blur-[160px]"></div>
+    <div class="absolute left-[-12%] bottom-[-20%] h-[32rem] w-[32rem] rounded-full bg-violet-400/[.06] blur-[180px]"></div>
 </div>
 
 <!-- ===================== NAVBAR ===================== -->
@@ -79,10 +81,11 @@
 
     <!-- ---------------- VISTA 1 · BIENVENIDA ---------------- -->
     <div id="view-welcome" class="space-y-6">
-        <section class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_40px_80px_-60px_rgba(28,25,23,0.4)] anim-slide">
+        <section class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-gradient-to-br from-white via-white to-orange-50/40 shadow-[0_1px_1px_rgba(0,0,0,0.01),0_40px_80px_-60px_rgba(28,25,23,0.4)] anim-slide">
             <div aria-hidden="true" class="pointer-events-none absolute inset-0">
-                <div class="absolute -top-40 right-[-20%] h-[28rem] w-[28rem] rounded-full bg-brand-500/[.05] blur-[140px]"></div>
-                <div class="absolute -bottom-52 left-[-10%] h-[26rem] w-[26rem] rounded-full bg-stone-200/[.25] blur-[160px]"></div>
+                <div class="absolute -top-40 right-[-20%] h-[28rem] w-[28rem] rounded-full bg-brand-500/[.08] blur-[140px]"></div>
+                <div class="absolute -bottom-52 left-[-10%] h-[26rem] w-[26rem] rounded-full bg-amber-400/[.12] blur-[160px]"></div>
+                <div class="absolute top-[30%] left-[40%] h-[18rem] w-[18rem] rounded-full bg-violet-400/[.08] blur-[140px]"></div>
             </div>
             <div class="relative grid gap-10 p-8 sm:p-10 lg:grid-cols-[1.1fr_.9fr] lg:items-center lg:p-12 xl:p-14">
                 <div class="flex flex-col gap-6">
