@@ -459,56 +459,97 @@
                     <h3 class="mt-1 font-display text-xl font-semibold text-stone-900 sm:text-2xl">Veredicto de autenticidad</h3>
                     <p id="results-source-summary" class="mt-1 text-sm text-stone-600">Resumen claro para comprender la autenticidad de los comentarios</p>
                 </div>
-                <div class="flex items-center gap-2">
-                    <span id="verdict-risk-pill" class="shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full border">Riesgo Bajo</span>
-                </div>
             </div>
         </header>
 
         <div class="grid grid-cols-1 gap-5 lg:grid-cols-12">
         <!-- --- Veredicto principal (Estimado de bots) --- -->
-        <article id="verdict-card" class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_30px_60px_-50px_rgba(28,25,23,0.4)] anim-up lg:col-span-4" data-risk="low">
-            <div aria-hidden="true" class="pointer-events-none absolute inset-0 bg-[radial-gradient(600px_200px_at_50%_-10%,rgba(255,92,53,0.02),transparent_70%)]"></div>
-            <div class="relative flex h-full flex-col p-6 sm:p-7">
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-500">Estimado de bots</p>
+        <article id="verdict-card" class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_30px_60px_-50px_rgba(28,25,23,0.4)] anim-up lg:col-span-12" data-risk="low">
+            <div aria-hidden="true" class="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_260px_at_80%_-10%,rgba(255,92,53,0.02),transparent_70%)]"></div>
+            <div class="relative grid gap-8 p-6 sm:p-8 lg:grid-cols-[1.1fr_1fr] lg:items-center">
+                <div class="flex flex-col gap-6">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-500">Estimado de bots</p>
+                            <h4 class="mt-1 font-display text-lg font-semibold text-stone-900">Análisis de autenticidad</h4>
+                        </div>
+                        <span id="verdict-risk-pill" class="shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full border">Riesgo Bajo</span>
                     </div>
-                </div>
 
-                <div class="relative mx-auto mt-6 h-44 w-44">
-                    <svg viewBox="0 0 120 120" class="h-full w-full -rotate-90">
-                        <defs>
-                            <linearGradient id="gauge-grad" x1="0" y1="0" x2="1" y2="1">
-                                <stop id="gauge-stop-a" offset="0%" stop-color="#059669"/>
-                                <stop id="gauge-stop-b" offset="100%" stop-color="#10b981"/>
-                            </linearGradient>
-                        </defs>
-                        <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(0,0,0,.04)" stroke-width="10"/>
-                        <circle id="gauge-arc" cx="60" cy="60" r="52" fill="none" stroke="url(#gauge-grad)" stroke-width="10"
-                                stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"
-                                style="transition: stroke-dashoffset 1.15s cubic-bezier(.16,1,.3,1)"/>
-                    </svg>
-                    <div class="absolute inset-0 grid place-items-center">
-                        <div class="text-center">
-                            <span id="bot-percent" class="block text-5xl font-bold tabular-nums text-stone-900 font-display">0%</span>
-                            <span class="text-[10px] uppercase tracking-wider text-stone-400">probabilidad</span>
-                            <span id="confidence" class="mt-0.5 block text-[11px] font-medium text-stone-500">0% precisión</span>
+                    <div class="flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:gap-10">
+                        <div class="relative h-44 w-44 shrink-0">
+                            <svg viewBox="0 0 120 120" class="h-full w-full -rotate-90">
+                                <defs>
+                                    <linearGradient id="gauge-grad" x1="0" y1="0" x2="1" y2="1">
+                                        <stop id="gauge-stop-a" offset="0%" stop-color="#059669"/>
+                                        <stop id="gauge-stop-b" offset="100%" stop-color="#10b981"/>
+                                    </linearGradient>
+                                </defs>
+                                <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(0,0,0,.04)" stroke-width="10"/>
+                                <circle id="gauge-arc" cx="60" cy="60" r="52" fill="none" stroke="url(#gauge-grad)" stroke-width="10"
+                                        stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"
+                                        style="transition: stroke-dashoffset 1.15s cubic-bezier(.16,1,.3,1)"/>
+                            </svg>
+                            <div class="absolute inset-0 grid place-items-center">
+                                <div class="text-center">
+                                    <span id="bot-percent" class="block text-5xl font-bold tabular-nums text-stone-900 font-display">0%</span>
+                                    <span class="text-[10px] uppercase tracking-wider text-stone-400">probabilidad</span>
+                                    <span id="confidence" class="mt-0.5 block text-[11px] font-medium text-stone-500">0% precisión</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-1 space-y-4 text-center sm:text-left">
+                            <div id="risk-badge" class="risk-chip inline-flex rounded-xl border px-4 py-2" data-risk="low">
+                                <span id="risk-label" class="text-xs font-semibold uppercase tracking-wider">—</span>
+                            </div>
+                            <p id="risk-action" class="max-w-xl text-sm leading-relaxed text-stone-600"></p>
                         </div>
                     </div>
                 </div>
 
-                <div class="mt-auto pt-6">
-                    <div id="risk-badge" class="risk-chip rounded-xl border px-3 py-2 text-center" data-risk="low">
-                        <span id="risk-label" class="text-xs font-semibold uppercase tracking-wider">—</span>
+                <div class="flex h-full flex-col gap-4 rounded-2xl border border-stone-100 bg-stone-50/60 p-6">
+                    <div>
+                        <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-500">Clasificación de comentarios</p>
+                        <p class="mt-1 text-sm text-stone-600">Cómo se dividen según su nivel de sospecha</p>
                     </div>
-                    <p id="risk-action" class="mt-3 text-center text-xs leading-relaxed text-stone-600"></p>
+                    <div class="space-y-4 flex-1">
+                        <div>
+                            <div class="mb-1.5 flex justify-between text-xs">
+                                <span class="flex items-center gap-1.5 text-rose-700 font-medium">
+                                    <span class="h-2 w-2 rounded-full bg-rose-500"></span>
+                                    Sospecha Alta (Bots casi seguros)
+                                </span>
+                                <span id="bar-high-label" class="tabular-nums font-semibold text-stone-700">0</span>
+                            </div>
+                            <div class="track"><div id="bar-high" class="fill" style="background-image:linear-gradient(90deg,#f87171,#ef4444)"></div></div>
+                        </div>
+                        <div>
+                            <div class="mb-1.5 flex justify-between text-xs">
+                                <span class="flex items-center gap-1.5 text-amber-700 font-medium">
+                                    <span class="h-2 w-2 rounded-full bg-amber-500"></span>
+                                    Sospecha Media (Dudosos)
+                                </span>
+                                <span id="bar-medium-label" class="tabular-nums font-semibold text-stone-700">0</span>
+                            </div>
+                            <div class="track"><div id="bar-medium" class="fill" style="background-image:linear-gradient(90deg,#fbbf24,#f59e0b)"></div></div>
+                        </div>
+                        <div>
+                            <div class="mb-1.5 flex justify-between text-xs">
+                                <span class="flex items-center gap-1.5 text-emerald-700 font-medium">
+                                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                                    Comentarios Seguros (Reales)
+                                </span>
+                                <span id="bar-low-label" class="tabular-nums font-semibold text-stone-700">0</span>
+                            </div>
+                            <div class="track"><div id="bar-low" class="fill" style="background-image:linear-gradient(90deg,#34d399,#10b981)"></div></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </article>
 
         <!-- --- Métricas clave --- -->
-        <article class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_30px_60px_-50px_rgba(28,25,23,0.4)] anim-up lg:col-span-8" style="animation-delay:.06s">
+        <article class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_30px_60px_-50px_rgba(28,25,23,0.4)] anim-up lg:col-span-12" style="animation-delay:.06s">
             <div aria-hidden="true" class="pointer-events-none absolute inset-0 bg-[radial-gradient(700px_200px_at_50%_-10%,rgba(255,92,53,0.02),transparent_70%)]"></div>
             <div class="relative p-6 sm:p-8">
                 <div class="flex items-center justify-between">
@@ -517,48 +558,7 @@
                         <p class="mt-1 text-sm text-stone-600">Indicadores esenciales explicados de forma sencilla</p>
                     </div>
                 </div>
-                <div id="kpi-grid" class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3.5"></div>
-            </div>
-        </article>
-
-        <!-- --- Distribución --- -->
-        <article class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_30px_60px_-50px_rgba(28,25,23,0.4)] anim-up lg:col-span-4" style="animation-delay:.12s">
-            <div aria-hidden="true" class="pointer-events-none absolute inset-0 bg-[radial-gradient(600px_200px_at_50%_-10%,rgba(255,92,53,0.02),transparent_70%)]"></div>
-            <div class="relative flex h-full flex-col p-6 sm:p-7">
-                <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-500">Clasificación de comentarios</p>
-                <p class="mt-1 text-sm text-stone-600">Cómo se dividen según su nivel de sospecha</p>
-                <div class="mt-6 space-y-4 flex-1">
-                    <div>
-                        <div class="mb-1.5 flex justify-between text-xs">
-                            <span class="flex items-center gap-1.5 text-rose-700 font-medium">
-                                <span class="h-2 w-2 rounded-full bg-rose-500"></span>
-                                Sospecha Alta (Bots casi seguros)
-                            </span>
-                            <span id="bar-high-label" class="tabular-nums font-semibold text-stone-700">0</span>
-                        </div>
-                        <div class="track"><div id="bar-high" class="fill" style="background-image:linear-gradient(90deg,#f87171,#ef4444)"></div></div>
-                    </div>
-                    <div>
-                        <div class="mb-1.5 flex justify-between text-xs">
-                            <span class="flex items-center gap-1.5 text-amber-700 font-medium">
-                                <span class="h-2 w-2 rounded-full bg-amber-500"></span>
-                                Sospecha Media (Dudosos)
-                            </span>
-                            <span id="bar-medium-label" class="tabular-nums font-semibold text-stone-700">0</span>
-                        </div>
-                        <div class="track"><div id="bar-medium" class="fill" style="background-image:linear-gradient(90deg,#fbbf24,#f59e0b)"></div></div>
-                    </div>
-                    <div>
-                        <div class="mb-1.5 flex justify-between text-xs">
-                            <span class="flex items-center gap-1.5 text-emerald-700 font-medium">
-                                <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-                                Comentarios Seguros (Reales)
-                            </span>
-                            <span id="bar-low-label" class="tabular-nums font-semibold text-stone-700">0</span>
-                        </div>
-                        <div class="track"><div id="bar-low" class="fill" style="background-image:linear-gradient(90deg,#34d399,#10b981)"></div></div>
-                    </div>
-                </div>
+                <div id="kpi-grid" class="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5"></div>
             </div>
         </article>
         </div>
@@ -659,7 +659,9 @@
 <footer class="border-t border-stone-200 bg-white/70 py-10 mt-12 backdrop-blur-sm">
     <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-5 text-[11px] text-stone-500 sm:flex-row">
         <span class="flex items-center gap-2">
-            <span class="grid h-5 w-5 place-items-center rounded-md bg-brand-500 text-[10px] font-bold text-white">B</span>
+            <span class="grid h-5 w-5 place-items-center rounded-md bg-brand-500 shadow-sm shadow-brand-500/20">
+                <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none"><path d="M7 7h10v4H7zM7 13h7v4H7z" stroke="white" stroke-width="2" stroke-linejoin="round"/></svg>
+            </span>
             <span class="font-semibold text-stone-700">BotMeter</span>
         </span>
         <span>Estimación heurística orientativa. No es una verificación de identidad.</span>
