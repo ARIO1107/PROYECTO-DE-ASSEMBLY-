@@ -3013,6 +3013,8 @@ app = FastAPI(
 
 if STATIC_DIR.is_dir():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+elif (BASE_DIR / "public" / "static").is_dir():
+    app.mount("/static", StaticFiles(directory=str(BASE_DIR / "public" / "static")), name="static")
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 

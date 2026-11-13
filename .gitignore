@@ -139,3 +139,6 @@ docker-data/
 # ===========================================================================
 docs/_build/
 site/
+
+# Herramientas de agente / editor
+.opencode/

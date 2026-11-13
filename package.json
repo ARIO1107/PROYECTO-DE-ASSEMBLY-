@@ -3,7 +3,7 @@
   "private": true,
   "description": "Build local de Tailwind CSS para BotMeter. El CSS compilado (static/tailwind.css) se commitea: Render solo ejecuta pip.",
   "scripts": {
-    "build": "tailwindcss -i ./src/input.css -o ./static/tailwind.css --minify",
+    "build": "tailwindcss -i ./src/input.css -o ./static/tailwind.css --minify && node scripts/sync-public.js",
     "watch": "tailwindcss -i ./src/input.css -o ./static/tailwind.css --watch"
   },
   "devDependencies": {
