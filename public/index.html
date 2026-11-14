@@ -17,8 +17,11 @@
          Orden importa: styless.css (sistema visual propio) PRIMERO y tailwind.css
          DESPUES, igual que con el Play CDN, porque las utilidades deben ganar a
          las clases de styless.css (p. ej. `.card p-0`, `.track bg-stone-200/80`). -->
-    <link rel="stylesheet" href="/static/styless.css">
-    <link rel="stylesheet" href="/static/tailwind.css">
+    <!-- Rutas relativas: funcionan tanto en el servidor (http://.../) como al
+         abrir el archivo directamente desde disco (file://), sin depender de
+         la raíz del dominio. -->
+    <link rel="stylesheet" href="static/styless.css">
+    <link rel="stylesheet" href="static/tailwind.css">
 </head>
 
 <body class="min-h-screen flex flex-col bg-[#f7f5f3] text-stone-800 antialiased selection:bg-brand-500/25" data-mode="simulated">
