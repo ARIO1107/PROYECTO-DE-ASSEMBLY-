@@ -802,11 +802,22 @@
         const banner = $('offline-banner');
         const text = $('offline-banner-text');
         if (!banner) return;
-        if (text && isFile) {
-            text.innerHTML = 'Has abierto el archivo <span class="font-mono">index.html</span> directamente '
-                + '(protocolo <span class="font-mono">file://</span>). Esta aplicacion necesita su servidor: '
-                + 'ejecuta <span class="rounded bg-black/30 px-1.5 py-0.5 font-mono text-amber-100">python app.py</span> '
-                + 'y abre <span class="rounded bg-black/30 px-1.5 py-0.5 font-mono text-amber-100">http://localhost:8000</span>.';
+
+        const isLocalhost = /^(localhost|127(?:\.\d{1,3}){3}|\[::1\])$/i.test(location.hostname);
+        if (text) {
+            if (isFile) {
+                text.innerHTML = 'Has abierto el archivo <span class="font-mono">index.html</span> directamente '
+                    + '(protocolo <span class="font-mono">file://</span>). Esta aplicacion necesita su servidor: '
+                    + 'ejecuta <span class="rounded bg-black/30 px-1.5 py-0.5 font-mono text-amber-100">python app.py</span> '
+                    + 'y abre <span class="rounded bg-black/30 px-1.5 py-0.5 font-mono text-amber-100">http://localhost:8000</span>.';
+            } else if (isLocalhost) {
+                text.innerHTML = 'No se pudo conectar con el servidor local. Comprueba que '
+                    + '<span class="rounded bg-amber-200/60 px-1.5 py-0.5 font-mono text-amber-900">python app.py</span> '
+                    + 'sigue en ejecucion y recarga la pagina.';
+            } else {
+                text.innerHTML = 'No se pudo conectar con el servidor de la aplicacion (API). '
+                    + 'Recarga la pagina en unos segundos; si el problema continua, revisa los logs del deployment en Vercel.';
+            }
         }
         banner.classList.remove('hidden');
     }
