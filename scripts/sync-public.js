@@ -27,6 +27,11 @@ const publicIndex = path.join(root, 'public', 'index.html');
 const templateIndex = path.join(root, 'templates', 'index.html');
 copyFile(templateIndex, publicIndex);
 
+// 2b. index.html en la raíz: red de seguridad por si Vercel usa "." como
+// Output Directory en lugar de "public". Así "/" y "/static/..." (que ya
+// existen en la raíz) funcionan sin depender de la detección del framework.
+copyFile(templateIndex, path.join(root, 'index.html'));
+
 // 3. templates/static sincronizado (por si en Vercel el usuario configuró Root Directory como templates)
 const templateStatic = path.join(root, 'templates', 'static');
 fs.mkdirSync(templateStatic, { recursive: true });
@@ -35,3 +40,4 @@ copyFile(path.join(root, 'static', 'styless.css'), path.join(templateStatic, 'st
 copyFile(path.join(root, 'static', 'styless.css'), path.join(templateStatic, 'styles.css'));
 
 console.log('Sincronización de recursos completada para Vercel, Render y local.');
+

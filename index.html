@@ -1,0 +1,2479 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BotMeter · Detector de bots en comentarios</title>
+    <meta name="description" content="Analisis heuristico de comentarios de YouTube, TikTok, Instagram, X, Facebook y mas redes para estimar la presencia de bots.">
+    <meta name="color-scheme" content="light">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23ff5c35'/%3E%3Cpath d='M21 19h22l-9 26h-7l-6-19h-3v-5h9l2 8 2-8z' fill='white'/%3E%3C/svg%3E">
+
+    <!-- Tipografías: Outfit (titulares) + Plus Jakarta Sans (interfaz) + JetBrains Mono (monoespaciado) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Estilos compilados con Tailwind v3 CLI (npm run build -> static/tailwind.css).
+         Orden importa: styless.css (sistema visual propio) PRIMERO y tailwind.css
+         DESPUES, igual que con el Play CDN, porque las utilidades deben ganar a
+         las clases de styless.css (p. ej. `.card p-0`, `.track bg-stone-200/80`). -->
+    <link rel="stylesheet" href="/static/styless.css">
+    <link rel="stylesheet" href="/static/tailwind.css">
+</head>
+
+<body class="min-h-screen flex flex-col bg-[#f7f5f3] text-stone-800 antialiased selection:bg-brand-500/25" data-mode="simulated">
+
+<!-- Skip link: navegacion por teclado al contenido principal (WCAG 2.4.1) -->
+<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-brand-700 focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg">Saltar al contenido principal</a>
+
+<div aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div class="mesh-gradient absolute inset-0 opacity-80"></div>
+    <div class="noise-overlay absolute inset-0"></div>
+    <div class="absolute left-1/2 -top-48 h-[38rem] w-[38rem] -translate-x-1/2 rounded-full bg-brand-500/[.12] blur-[140px] animate-float"></div>
+    <div class="absolute right-[-10%] top-[15%] h-[28rem] w-[28rem] rounded-full bg-amber-400/[.1] blur-[160px] animate-float-delayed"></div>
+    <div class="absolute left-[-12%] bottom-[-20%] h-[32rem] w-[32rem] rounded-full bg-violet-400/[.08] blur-[180px] animate-float-slow"></div>
+    <div class="absolute right-[20%] bottom-[10%] h-[22rem] w-[22rem] rounded-full bg-cyan-400/[.07] blur-[150px] animate-float"></div>
+</div>
+
+<!-- ===================== NAVBAR ===================== -->
+<header class="sticky top-0 z-30 border-b border-stone-200/60 bg-white/70 backdrop-blur-2xl supports-[backdrop-filter]:bg-white/60">
+    <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-2.5">
+        <div id="header-home" role="button" tabindex="0" class="flex items-center gap-2.5 cursor-pointer select-none rounded-lg pr-2 transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-700/40">
+            <div class="grid h-8 w-8 place-items-center rounded-md bg-brand-500 shadow-sm shadow-brand-500/20 ring-1 ring-inset ring-brand-400/25">
+                <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none"><path d="M7 7h10v4H7zM7 13h7v4H7z" stroke="white" stroke-width="2" stroke-linejoin="round"/></svg>
+            </div>
+            <div>
+                <h1 class="text-sm font-semibold tracking-tight text-stone-900 font-display">BotMeter</h1>
+                <p class="text-[11px] leading-tight text-stone-500">Detección de bots en comentarios</p>
+            </div>
+        </div>
+        <nav class="hidden items-center gap-1 md:flex">
+            <button type="button" data-nav="youtube" class="nav-link rounded-md px-2.5 py-1 text-[13px] font-medium text-stone-600 transition hover:bg-stone-100/80 hover:text-stone-900 active:scale-[.98]">YouTube</button>
+            <button type="button" data-nav="others" class="nav-link rounded-md px-2.5 py-1 text-[13px] font-medium text-stone-600 transition hover:bg-stone-100/80 hover:text-stone-900 active:scale-[.98]">Otras redes</button>
+        </nav>
+        <div class="flex items-center gap-2">
+            <span id="mode-badge" class="hidden items-center gap-1.5 rounded-full border border-amber-300/80 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                <span class="h-1.5 w-1.5 rounded-full bg-amber-500 breath"></span>
+                <span id="mode-badge-text">Modo simulación</span>
+            </span>
+        </div>
+    </div>
+</header>
+
+<main id="main" class="mx-auto max-w-7xl px-5 pb-16 pt-10 flex-1 w-full min-h-0">
+
+    <!-- Aviso de conexion: solo aparece si la pagina no puede hablar con el servidor -->
+    <div id="offline-banner" class="hidden mb-6">
+        <div class="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-900">
+            <p class="text-base font-semibold text-amber-900">La aplicación no está conectada al servidor</p>
+            <p id="offline-banner-text" class="mt-1.5 leading-relaxed text-amber-800">
+                Ejecuta <span class="rounded bg-amber-200/60 px-1.5 py-0.5 font-mono text-amber-900">python app.py</span>
+                y abre <span class="rounded bg-amber-200/60 px-1.5 py-0.5 font-mono text-amber-900">http://localhost:8000</span>
+                en el navegador. No abras el archivo <span class="font-mono">index.html</span> directamente:
+                sin el servidor, el análisis no puede funcionar.
+            </p>
+        </div>
+    </div>
+
+    <!-- ==================================================================
+         VISTAS DE LA SPA.
+         view-welcome : selector de plataforma + demo en vivo.
+         view-youtube : guia paso a paso + formulario de URL.
+         view-others  : redes soportadas, carga de CSV/JSON
+         ================================================================== -->
+
+    <!-- ---------------- VISTA 1 · BIENVENIDA ---------------- -->
+    <div id="view-welcome" class="space-y-6">
+        <section class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-gradient-to-br from-white via-white to-orange-50/50 shadow-[0_1px_1px_rgba(0,0,0,0.01),0_40px_80px_-60px_rgba(28,25,23,0.4)] anim-slide before:absolute before:inset-0 before:rounded-[inherit] before:p-[1px] before:bg-gradient-to-br before:from-brand-500/30 before:via-amber-400/20 before:to-violet-400/15 before:-z-10 before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude]">
+            <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+                <div class="absolute -top-40 right-[-20%] h-[28rem] w-[28rem] rounded-full bg-brand-500/[.12] blur-[140px] animate-float"></div>
+                <div class="absolute -bottom-52 left-[-10%] h-[26rem] w-[26rem] rounded-full bg-amber-400/[.16] blur-[160px] animate-float-delayed"></div>
+                <div class="absolute top-[30%] left-[40%] h-[18rem] w-[18rem] rounded-full bg-violet-400/[.12] blur-[140px] animate-float-slow"></div>
+            </div>
+            <div class="relative grid gap-10 p-8 sm:p-10 lg:grid-cols-[1.1fr_.9fr] lg:items-center lg:p-12 xl:p-14">
+                <div class="flex flex-col gap-6">
+                    <div>
+                        <span class="inline-flex items-center gap-2 rounded-full border border-stone-200/80 bg-white/90 px-2.5 py-0.5 text-xs font-medium text-stone-700 shadow-sm shadow-stone-900/2">
+                            <span class="h-1.5 w-1.5 rounded-full bg-brand-500"></span>
+                            Detector heurístico de comentarios automatizados
+                        </span>
+                        <h2 class="mt-6 max-w-3xl font-display text-4xl font-bold leading-[1.01] tracking-tight text-stone-900 sm:text-5xl lg:text-6xl xl:text-7xl">
+                            Descubre bots en comentarios con <span class="text-brand-700">BotMeter</span>
+                        </h2>
+                        <p class="mt-5 max-w-xl text-lg leading-relaxed text-stone-600">
+                            Analiza comentarios públicos con un motor heurístico transparente. Identifica patrones automatizados sin complejidad innecesaria.
+                        </p>
+                    </div>
+
+                <div id="platform-grid" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <button type="button" id="pick-youtube" data-platform="" data-target="youtube"
+                            class="group relative overflow-hidden flex items-center gap-4 rounded-xl border border-stone-200 bg-white/95 p-4 text-left shadow-sm shadow-stone-900/2 transition duration-500 ease-out hover:-translate-y-1 hover:border-red-300 hover:shadow-lg hover:shadow-red-500/10 active:scale-[.99] before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/40 before:to-transparent before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700">
+                        <span class="grid h-10 w-10 place-items-center rounded-lg bg-red-500/10 ring-1 ring-inset ring-red-500/15 transition group-hover:scale-105">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="#FF0000"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                        </span>
+                        <div>
+                            <span class="font-display text-sm font-semibold text-stone-900">YouTube</span>
+                            <p class="mt-0.5 text-xs text-stone-500">Pega la URL pública del video</p>
+                        </div>
+                        <svg class="ml-auto h-4 w-4 text-stone-400 transition group-hover:translate-x-1 group-hover:text-stone-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    </button>
+                    <button type="button" id="pick-others" data-platform="tiktok" data-target="others"
+                            class="group relative overflow-hidden flex items-center gap-4 rounded-xl border border-stone-200 bg-white/95 p-4 text-left shadow-sm shadow-stone-900/2 transition duration-500 ease-out hover:-translate-y-1 hover:border-brand-300 hover:shadow-lg hover:shadow-brand-500/10 active:scale-[.99] before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/40 before:to-transparent before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700">
+                        <span class="grid h-10 w-10 place-items-center rounded-lg bg-stone-900/5 ring-1 ring-inset ring-stone-900/10 transition group-hover:scale-105">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        </span>
+                        <div>
+                            <span class="font-display text-sm font-semibold text-stone-900">Otras redes sociales</span>
+                            <p class="mt-0.5 text-xs text-stone-500">Sube CSV o JSON</p>
+                        </div>
+                        <svg class="ml-auto h-4 w-4 text-stone-400 transition group-hover:translate-x-1 group-hover:text-stone-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="relative hidden lg:flex lg:items-center lg:justify-center">
+                <div class="relative w-full max-w-md">
+                    <div class="absolute -inset-6 rounded-[2rem] bg-gradient-to-br from-white/80 to-stone-50/60 blur-2xl"></div>
+                    <div class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_40px_80px_-60px_rgba(28,25,23,0.5)]">
+                        <div class="flex items-center justify-between border-b border-stone-100 px-5 py-3">
+                            <div class="flex items-center gap-2">
+                                <span class="h-2 w-2 rounded-full bg-rose-400"></span>
+                                <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+                                <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+                            </div>
+                            <p class="text-[11px] text-stone-400">BotMeter · Vista previa</p>
+                        </div>
+                        <div class="space-y-3 p-5">
+                            <div class="flex items-center justify-between rounded-lg border border-stone-100 bg-stone-50/60 px-3 py-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="h-2 w-2 rounded-full bg-rose-500"></span>
+                                    <span class="text-xs font-medium text-stone-700">Sospecha alta</span>
+                                </div>
+                                <span class="text-xs tabular-nums text-stone-500">92%</span>
+                            </div>
+                            <div class="flex items-center justify-between rounded-lg border border-stone-100 bg-white px-3 py-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="h-2 w-2 rounded-full bg-amber-500"></span>
+                                    <span class="text-xs font-medium text-stone-700">Dudoso</span>
+                                </div>
+                                <span class="text-xs tabular-nums text-stone-500">64%</span>
+                            </div>
+                            <div class="flex items-center justify-between rounded-lg border border-stone-100 bg-white px-3 py-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                                    <span class="text-xs font-medium text-stone-700">Seguro</span>
+                                </div>
+                                <span class="text-xs tabular-nums text-stone-500">18%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- --- Llamada a la demo en vivo (solo desde la bienvenida) --- -->
+        <section class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_30px_60px_-50px_rgba(28,25,23,0.4)] anim-scale" style="animation-delay:.16s">
+            <div aria-hidden="true" class="pointer-events-none absolute inset-0 bg-[radial-gradient(700px_200px_at_80%_-10%,rgba(255,92,53,0.04),transparent_70%)]"></div>
+            <div class="relative flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8 lg:p-9">
+                <div class="max-w-xl">
+                    <p class="text-[10px] font-semibold uppercase tracking-widest text-brand-700">Demo interactiva</p>
+                    <h3 class="mt-1 font-display text-xl font-bold text-stone-900 sm:text-2xl">Simular un ataque de bots en directo</h3>
+                    <p class="mt-2 text-sm leading-relaxed text-stone-600">
+                        Genera un ataque sintético y lo emite comentario a comentario. Usa el mismo
+                        motor (las mismas 9 heurísticas) que el análisis real: no es un video grabado,
+                        es el motor funcionando.
+                    </p>
+                </div>
+                <div class="shrink-0 w-full sm:w-auto">
+                    <button type="button" id="demo-btn"
+                            class="group relative overflow-hidden flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-brand-600 via-brand-700 to-rose-600 px-6 py-2.5 text-sm font-semibold text-white shadow-[0_10px_40px_-15px_rgba(225,29,72,0.9)] ring-1 ring-inset ring-white/10 transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_60px_-20px_rgba(225,29,72,0.95)] active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50 before:absolute before:inset-0 before:bg-gradient-to-r before:from-white/0 before:via-white/25 before:to-white/0 before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700">
+                        <span id="demo-btn-dot" class="relative h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_0_6px_rgba(255,255,255,0.12)]"></span>
+                        <span id="demo-btn-label" class="relative">Lanzar demo en directo</span>
+                        <svg class="relative h-3.5 w-3.5 transition group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    </button>
+                    <p class="mt-2 text-center text-[10px] text-stone-400">
+                        No requiere URL ni clave de API · no gasta cuota
+                    </p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- ---------------- VISTA 2 · YOUTUBE ---------------- -->
+    <div id="view-youtube" class="hidden">
+        <section class="card anim-up p-6 sm:p-8 lg:p-10">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <span class="grid h-10 w-10 place-items-center rounded-lg bg-red-500/10 ring-1 ring-inset ring-red-500/20">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="#FF0000"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                    </span>
+                    <div>
+                        <h2 class="font-display text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl">Analizar un video de YouTube</h2>
+                        <p class="mt-0.5 text-xs text-stone-500">Comentarios públicos de cualquier video <span id="mode-note" class="hidden">· Modo API oficial</span></p>
+                    </div>
+                </div>
+                <button type="button" id="youtube-back"
+                        class="rounded-md border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:bg-stone-50 active:scale-[.98]">
+                    Volver al inicio
+                </button>
+            </div>
+
+            <!-- Instrucciones de uso -->
+            <div class="mt-6 flex items-start gap-2.5 rounded-lg border border-stone-200 bg-stone-50/70 px-3.5 py-3 text-xs leading-relaxed text-stone-600">
+                <svg class="mt-0.5 h-4 w-4 shrink-0 text-stone-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                <span>
+                    Pega la <strong class="font-semibold text-stone-800">URL del video</strong> (basta con la barra del navegador)
+                    y pulsa <strong class="font-semibold text-stone-800">Analizar</strong>. Se leen hasta
+                    <strong class="font-semibold text-stone-800">10.000 comentarios públicos</strong> con la API oficial de YouTube.
+                    <span class="text-stone-500">Los videos deben ser públicos y tener los comentarios abiertos.</span>
+                </span>
+            </div>
+
+            <form id="analyze-form" class="mt-6 flex flex-col gap-3 sm:flex-row">
+                <div class="relative flex-1">
+                    <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400">
+                        <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8zM9.5 15.5v-7l6.5 3.5-6.5 3.5z"/></svg>
+                    </span>
+                    <label for="url" class="sr-only">URL del video a analizar</label>
+                    <input id="url" name="url" type="text" required spellcheck="false"
+                           value="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                           placeholder="https://www.youtube.com/watch?v=..."
+                           class="w-full rounded-lg border border-stone-200 bg-white py-2.5 pl-10 pr-3 text-sm text-stone-900 placeholder-stone-400 outline-none transition focus:border-brand-700 focus:ring-1 focus:ring-brand-700/30">
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                    <button type="submit" id="submit-btn"
+                            class="flex items-center gap-2 rounded-md bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-brand-700/20 transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[.98]">
+                        <span id="btn-label">Analizar</span>
+                        <span id="btn-spinner" class="hidden spinner"></span>
+                    </button>
+                    <button type="button" id="results-clear-btn"
+                            class="flex items-center gap-2 rounded-md border border-stone-200 bg-white px-3.5 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50 active:scale-[.98]">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        <span>Limpiar</span>
+                    </button>
+                </div>
+            </form>
+
+            <div id="yt-preview" class="hidden mt-4 flex items-center gap-3.5 rounded-xl border border-stone-200 bg-stone-50/70 p-3">
+                <img id="yt-thumb" alt="Miniatura del video de YouTube" width="149" height="84"
+                     loading="lazy" decoding="async"
+                     class="h-[5.25rem] w-[9.3rem] shrink-0 rounded-lg bg-stone-200 object-cover">
+                <div class="min-w-0">
+                    <p class="text-[10px] uppercase tracking-widest text-stone-500">Vista previa del video</p>
+                    <p id="yt-preview-id" class="mt-0.5 truncate font-mono text-xs font-semibold text-stone-700"></p>
+                    <p class="mt-0.5 text-[11px] text-stone-500">Miniatura oficial de YouTube</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- ---------------- VISTA 3 · OTRAS REDES SOCIALES ---------------- -->
+    <div id="view-others" class="hidden">
+        <section class="card anim-up p-6 sm:p-8 lg:p-9">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <span class="grid h-10 w-10 place-items-center rounded-lg bg-stone-900/5 ring-1 ring-inset ring-stone-900/10">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    </span>
+                    <div>
+                        <h2 class="font-display text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl">Analizar otra red social</h2>
+                        <p class="mt-0.5 text-xs text-stone-500">Analiza comentarios en formato CSV o JSON de cualquier red social <span id="others-sub" class="hidden">TikTok</span></p>
+                    </div>
+                </div>
+                <button type="button" id="others-back"
+                        class="rounded-md border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:bg-stone-50 active:scale-[.98]">
+                    Volver al inicio
+                </button>
+            </div>
+
+            <!-- Instrucciones de uso -->
+            <div class="mt-6 flex items-start gap-2.5 rounded-lg border border-stone-200 bg-stone-50/70 px-3.5 py-3 text-xs leading-relaxed text-stone-600">
+                <svg class="mt-0.5 h-4 w-4 shrink-0 text-stone-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                <span>
+                    Descarga los comentarios en <strong class="font-semibold text-stone-800">CSV o JSON</strong> con la
+                    herramienta de abajo, arrastra el archivo a la zona de carga y pulsa
+                    <strong class="font-semibold text-stone-800">Analizar archivo</strong>. Se procesan hasta
+                    <strong class="font-semibold text-stone-800">10.000 comentarios</strong> por archivo
+                    (<span class="text-stone-500">máximo 16 MB</span>).
+                </span>
+            </div>
+
+            <!-- Metodo universal -->
+            <div class="mt-4 rounded-lg border border-stone-200 bg-white p-4">
+                <p class="flex items-center gap-2.5 font-display text-sm font-semibold text-stone-900">
+                    <span class="grid h-7 w-7 place-items-center rounded-md bg-stone-100 text-stone-700">
+                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/></svg>
+                    </span>
+                    Método universal (cualquier red social)
+                </p>
+                <p class="mt-1.5 text-xs leading-relaxed text-stone-600">
+                    Consigue el archivo de comentarios con esta herramienta web. Sirve para cualquier app o red social:
+                </p>
+                <a href="https://es.exportcomments.com/" target="_blank" rel="noopener"
+                   class="mt-2 inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-medium text-stone-700 underline decoration-stone-300 underline-offset-2 transition hover:text-stone-900">
+                    <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    es.exportcomments.com
+                </a>
+            </div>
+
+            <div class="mt-7">
+                <p class="text-[10px] uppercase tracking-widest text-stone-500">Cómo subir el archivo</p>
+                <form id="upload-form" class="mt-4">
+                    <div id="drop-zone" class="dropzone w-full" tabindex="0" role="button"
+                             aria-label="Arrastra aquí tu archivo CSV o JSON, o pulsa para seleccionarlo">
+                            <input id="file-input" type="file" accept=".csv,.json,text/csv,application/json"
+                                   class="absolute h-0 w-0 opacity-0" aria-hidden="true" tabindex="-1">
+                            <span class="grid h-9 w-9 place-items-center rounded-lg bg-stone-100 text-stone-700">
+                                <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+                            </span>
+                            <span class="text-sm font-medium text-stone-800">
+                                Arrastra aquí tu archivo o <span class="text-stone-900 underline decoration-stone-300 underline-offset-2">selecciona uno</span>
+                            </span>
+                            <span id="file-name" class="max-w-full truncate font-mono text-[11px] text-stone-500">Ningún archivo seleccionado</span>
+                            <span id="file-meta" class="text-[11px] text-stone-400">CSV o JSON · máximo 16 MB · hasta 10.000 comentarios</span>
+                        </div>
+
+                    <div id="file-preview" class="hidden mt-3 flex items-center gap-3.5 rounded-xl border border-stone-200 bg-stone-50/70 p-3">
+                        <span class="relative grid h-[5.25rem] w-[4.2rem] shrink-0 place-items-center rounded-lg border border-stone-200 bg-white text-stone-500 shadow-sm">
+                            <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <span id="file-preview-ext" class="absolute -bottom-1.5 -right-1.5 rounded-md bg-brand-500 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white shadow">CSV</span>
+                        </span>
+                        <div class="min-w-0">
+                            <p class="text-[10px] uppercase tracking-widest text-stone-500">Archivo seleccionado</p>
+                            <p id="file-preview-name" class="mt-0.5 truncate text-xs font-semibold text-stone-800"></p>
+                            <p id="file-preview-size" class="mt-0.5 text-[11px] text-stone-500"></p>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+                        <button type="submit" id="upload-btn" disabled
+                                class="flex items-center justify-center gap-2 rounded-md bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-brand-700/20 transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[.98]">
+                            <span id="upload-label">Analizar archivo</span>
+                            <span id="upload-spinner" class="hidden spinner"></span>
+                        </button>
+                        <button type="button" id="upload-clear-btn"
+                                class="flex items-center justify-center gap-2 rounded-md border border-stone-200 bg-white px-3.5 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50 active:scale-[.98]">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                            <span>Limpiar resultados</span>
+                        </button>
+                    </div>
+                </form>
+
+                <p class="mt-3 text-[11px] text-stone-500">
+                    Reconoce las columnas por su nombre: <span class="font-mono text-stone-700">autor/usuario</span> ·
+                    <span class="font-mono text-stone-700">texto/comment</span> ·
+                    <span class="font-mono text-stone-700">fecha</span> ·
+                    <span class="font-mono text-stone-700">likes</span> ·
+                    <span class="font-mono text-stone-700">replies</span>.
+                    El análisis es idéntico al de YouTube: mismas 40 features y mismas 9 heurísticas.
+                </p>
+            </div>
+        </section>
+    </div>
+
+    <!-- ===================== ERROR ===================== -->
+    <div id="error-box" class="mt-6 hidden rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-800"></div>
+
+    <!-- ===================== AVISO ===================== -->
+    <div id="warning-box" class="mt-6 hidden rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800"></div>
+
+    <!-- ===================== LOADER ===================== -->
+    <section id="loader" class="card anim-up mt-6 hidden" style="animation-delay:.04s">
+        <div class="flex flex-col items-center gap-4 py-4 text-center sm:flex-row sm:text-left">
+            <div class="relative grid h-14 w-14 shrink-0 place-items-center">
+                <div class="absolute inset-0 rounded-full bg-brand-500/15 halo" style="--rg: 255, 92, 53"></div>
+                <svg class="h-8 w-8 animate-spin text-brand-500" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-opacity=".2" stroke-width="2.5"/>
+                    <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div class="min-w-0 flex-1">
+                <p class="text-[10px] uppercase tracking-widest text-stone-500">Procesando</p>
+                <p id="loader-phase" class="mt-1 truncate text-sm font-medium text-stone-900 font-display">Conectando con YouTube API...</p>
+                <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-stone-100">
+                    <div id="loader-bar" class="h-full w-0 rounded-full bg-gradient-to-r from-brand-500 to-brand-600 transition-[width] duration-700 ease-out"></div>
+                </div>
+            </div>
+            <p id="loader-pct" class="text-2xl font-semibold tabular-nums text-stone-800 font-display">0%</p>
+        </div>
+    </section>
+
+    <!-- ===================== MURO EN VIVO ===================== -->
+    <section id="demo-panel" class="mt-6 hidden">
+        <div class="relative overflow-hidden rounded-2xl border border-rose-200/70 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_40px_80px_-60px_rgba(225,29,72,0.18)] anim-up">
+            <div aria-hidden="true" class="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_280px_at_90%_-10%,rgba(244,63,94,0.05),transparent_70%)]"></div>
+            <div class="relative p-6 sm:p-8">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <span class="h-2.5 w-2.5 rounded-full bg-rose-500 breath"></span>
+                    <div>
+                        <p class="text-sm font-bold text-stone-900 font-display">Muro de moderación en directo</p>
+                        <p id="demo-status" class="text-[11px] text-stone-500">Conectando con el stream...</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="demo-clear"
+                            class="flex items-center gap-1.5 rounded-lg border border-stone-200 bg-stone-50 px-3.5 py-2 text-xs font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-100 active:scale-95"
+                            title="Limpiar y reiniciar el simulador">
+                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        <span>Limpiar</span>
+                    </button>
+                    <button type="button" id="demo-stop"
+                            class="rounded-lg border border-stone-200 bg-stone-50 px-3.5 py-2 text-xs font-semibold text-stone-700 transition hover:border-rose-300 hover:text-rose-700 active:scale-[.97]">
+                        Detener
+                    </button>
+                </div>
+            </div>
+
+            <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div class="rounded-xl border border-stone-200/80 bg-white/90 p-4 shadow-sm shadow-stone-900/2">
+                    <p class="text-[10px] uppercase tracking-wider text-stone-500">Recibidos</p>
+                    <p id="demo-stat-total" class="mt-1 text-2xl font-bold tabular-nums text-stone-900 font-display">0</p>
+                </div>
+                <div class="rounded-xl border border-stone-200/80 bg-white/90 p-4 shadow-sm shadow-stone-900/2">
+                    <p class="text-[10px] uppercase tracking-wider text-stone-500">Sospechosos</p>
+                    <p id="demo-stat-bots" class="mt-1 text-2xl font-bold tabular-nums text-amber-700 font-display">0</p>
+                </div>
+                <div class="rounded-xl border border-stone-200/80 bg-white/90 p-4 shadow-sm shadow-stone-900/2">
+                    <p class="text-[10px] uppercase tracking-wider text-stone-500">Score medio</p>
+                    <p id="demo-stat-avg" class="mt-1 text-2xl font-bold tabular-nums text-stone-900 font-display">0</p>
+                </div>
+                <div class="rounded-xl border border-stone-200/80 bg-white/90 p-4 shadow-sm shadow-stone-900/2">
+                    <p class="text-[10px] uppercase tracking-wider text-stone-500">Veredictos altos</p>
+                    <p id="demo-stat-high" class="mt-1 text-2xl font-bold tabular-nums text-rose-700 font-display">0</p>
+                </div>
+            </div>
+
+            <div class="mt-5 h-1 overflow-hidden rounded-full bg-stone-100">
+                <div id="demo-progress" class="h-full w-0 rounded-full bg-gradient-to-r from-rose-500 to-rose-400 transition-[width] duration-300 ease-out"></div>
+            </div>
+
+            <div id="demo-wall" class="mt-5 max-h-[26rem] space-y-2 overflow-y-auto pr-1"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== RESULTADOS ===================== -->
+    <section id="results" class="mt-8 hidden space-y-6">
+
+        <!-- --- Header de resultados --- -->
+        <header class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_30px_60px_-50px_rgba(28,25,23,0.4)] anim-up">
+            <div aria-hidden="true" class="pointer-events-none absolute inset-0 bg-[radial-gradient(800px_240px_at_80%_-10%,rgba(255,92,53,0.03),transparent_70%)]"></div>
+            <div class="relative flex flex-wrap items-center justify-between gap-4 p-6 sm:p-8">
+                <div>
+                    <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-500">Resultados del análisis</p>
+                    <h3 class="mt-1 font-display text-xl font-semibold text-stone-900 sm:text-2xl">Veredicto de autenticidad</h3>
+                    <p id="results-source-summary" class="mt-1 text-sm text-stone-600">Resumen claro para comprender la autenticidad de los comentarios</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 gap-5 lg:grid-cols-12">
+        <!-- --- Veredicto principal (Estimado de bots) --- -->
+        <article id="verdict-card" class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_30px_60px_-50px_rgba(28,25,23,0.4)] anim-up lg:col-span-12 before:absolute before:inset-0 before:rounded-[inherit] before:p-[1px] before:bg-gradient-to-br before:from-brand-500/25 before:via-amber-400/18 before:to-violet-400/12 before:-z-10 before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude]" data-risk="low">
+            <div aria-hidden="true" class="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_260px_at_80%_-10%,rgba(255,92,53,0.04),transparent_70%)]"></div>
+            <div class="relative grid gap-8 p-6 sm:p-8 lg:grid-cols-[1.1fr_1fr] lg:items-center">
+                <div class="flex flex-col gap-6">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-500">Estimado de bots</p>
+                            <h4 class="mt-1 font-display text-lg font-semibold text-stone-900">Análisis de autenticidad</h4>
+                        </div>
+                        <span id="verdict-risk-pill" class="shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full border">Riesgo Bajo</span>
+                    </div>
+
+                    <div class="flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:gap-10">
+                        <div class="relative h-44 w-44 shrink-0">
+                            <div class="absolute -inset-4 rounded-full bg-gradient-to-br from-brand-500/10 to-amber-400/10 blur-xl"></div>
+                            <svg viewBox="0 0 120 120" class="relative h-full w-full -rotate-90">
+                                <defs>
+                                    <linearGradient id="gauge-grad" x1="0" y1="0" x2="1" y2="1">
+                                        <stop id="gauge-stop-a" offset="0%" stop-color="#059669"/>
+                                        <stop id="gauge-stop-b" offset="100%" stop-color="#10b981"/>
+                                    </linearGradient>
+                                </defs>
+                                <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(0,0,0,.04)" stroke-width="10"/>
+                                <circle id="gauge-arc" cx="60" cy="60" r="52" fill="none" stroke="url(#gauge-grad)" stroke-width="10"
+                                        stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"
+                                        style="transition: stroke-dashoffset 1.15s cubic-bezier(.16,1,.3,1); filter: drop-shadow(0 0 18px rgba(16, 185, 129, 0.22));"/>
+                            </svg>
+                            <div class="absolute inset-0 grid place-items-center">
+                                <div class="text-center">
+                                    <span id="bot-percent" class="block text-5xl font-bold tabular-nums text-stone-900 font-display">0%</span>
+                                    <span class="text-[10px] uppercase tracking-wider text-stone-400">probabilidad</span>
+                                    <span id="confidence" class="mt-0.5 block text-[11px] font-medium text-stone-500">0% precisión</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-1 space-y-4 text-center sm:text-left">
+                            <div id="risk-badge" class="risk-chip inline-flex rounded-xl border px-4 py-2" data-risk="low">
+                                <span id="risk-label" class="text-xs font-semibold uppercase tracking-wider">—</span>
+                            </div>
+                            <p id="risk-action" class="max-w-xl text-sm leading-relaxed text-stone-600"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex h-full flex-col gap-4 rounded-2xl border border-stone-100 bg-stone-50/60 p-6">
+                    <div>
+                        <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-500">Clasificación de comentarios</p>
+                        <p class="mt-1 text-sm text-stone-600">Cómo se dividen según su nivel de sospecha</p>
+                    </div>
+                    <div class="space-y-4 flex-1">
+                        <div>
+                            <div class="mb-1.5 flex justify-between text-xs">
+                                <span class="flex items-center gap-1.5 text-rose-700 font-medium">
+                                    <span class="h-2 w-2 rounded-full bg-rose-500"></span>
+                                    Sospecha Alta (Bots casi seguros)
+                                </span>
+                                <span id="bar-high-label" class="tabular-nums font-semibold text-stone-700">0</span>
+                            </div>
+                            <div class="track"><div id="bar-high" class="fill" style="background-image:linear-gradient(90deg,#f87171,#ef4444)"></div></div>
+                        </div>
+                        <div>
+                            <div class="mb-1.5 flex justify-between text-xs">
+                                <span class="flex items-center gap-1.5 text-amber-700 font-medium">
+                                    <span class="h-2 w-2 rounded-full bg-amber-500"></span>
+                                    Sospecha Media (Dudosos)
+                                </span>
+                                <span id="bar-medium-label" class="tabular-nums font-semibold text-stone-700">0</span>
+                            </div>
+                            <div class="track"><div id="bar-medium" class="fill" style="background-image:linear-gradient(90deg,#fbbf24,#f59e0b)"></div></div>
+                        </div>
+                        <div>
+                            <div class="mb-1.5 flex justify-between text-xs">
+                                <span class="flex items-center gap-1.5 text-emerald-700 font-medium">
+                                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                                    Comentarios Seguros (Reales)
+                                </span>
+                                <span id="bar-low-label" class="tabular-nums font-semibold text-stone-700">0</span>
+                            </div>
+                            <div class="track"><div id="bar-low" class="fill" style="background-image:linear-gradient(90deg,#34d399,#10b981)"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <!-- --- Métricas clave --- -->
+        <article class="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_1px_rgba(0,0,0,0.01),0_30px_60px_-50px_rgba(28,25,23,0.4)] anim-up lg:col-span-12 before:absolute before:inset-0 before:rounded-[inherit] before:p-[1px] before:bg-gradient-to-br before:from-brand-500/22 before:via-amber-400/16 before:to-violet-400/10 before:-z-10 before:[-webkit-mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[-webkit-mask-composite:xor] before:[mask-composite:exclude]" style="animation-delay:.06s">
+            <div aria-hidden="true" class="pointer-events-none absolute inset-0 bg-[radial-gradient(700px_200px_at_50%_-10%,rgba(255,92,53,0.02),transparent_70%)]"></div>
+            <div class="relative p-6 sm:p-8">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-500">Métricas clave</p>
+                        <p class="mt-1 text-sm text-stone-600">Indicadores esenciales explicados de forma sencilla</p>
+                    </div>
+                </div>
+                <div id="kpi-grid" class="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5"></div>
+            </div>
+        </article>
+        </div>
+
+        <!-- --- Hallazgos del análisis (desplegable) --- -->
+        <details class="card group anim-up lg:col-span-2" style="animation-delay:.18s">
+            <summary class="flex cursor-pointer items-center justify-between select-none">
+                <div class="flex items-center gap-3">
+                    <span class="grid h-8 w-8 place-items-center rounded-lg bg-brand-500/10 text-brand-700">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+                    </span>
+                    <div>
+                        <p class="text-sm font-bold text-stone-900 font-display">Hallazgos del análisis</p>
+                        <p class="text-xs text-stone-500">Lo más importante que se descubrió en la conversación</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="hidden rounded-full border border-brand-500/20 bg-brand-500/10 px-2.5 py-1 text-[11px] font-semibold text-brand-700 sm:inline">Resumen</span>
+                    <svg class="h-4 w-4 text-stone-400 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+            </summary>
+            <div class="mt-4 pt-4 border-t border-stone-100">
+                <ul id="findings-list" class="space-y-2.5 text-xs sm:text-sm leading-relaxed text-stone-700"></ul>
+
+                <!-- Fuente de datos simplificada -->
+                <div class="mt-5 pt-3.5 border-t border-stone-100 flex flex-wrap items-center justify-between gap-2 text-xs text-stone-500">
+                    <div>
+                        <span class="text-stone-400">Origen: </span>
+                        <span id="video-title" class="font-medium text-stone-800">—</span>
+                        <span id="video-id" class="ml-1 text-[11px] font-mono text-stone-500"></span>
+                    </div>
+                    <div id="video-meta" class="text-stone-500"></div>
+                    <div id="api-meta" class="hidden"></div>
+                </div>
+            </div>
+        </details>
+
+        <!-- --- Comentarios sospechosos (desplegable) --- -->
+        <details class="card group anim-up p-0 lg:col-span-3" style="animation-delay:.22s">
+            <summary class="flex cursor-pointer flex-wrap items-center justify-between gap-3 px-6 py-4 select-none">
+                <div class="flex items-center gap-3">
+                    <span class="grid h-8 w-8 place-items-center rounded-lg bg-amber-500/10 text-amber-600">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </span>
+                    <div>
+                        <p class="text-sm font-bold text-stone-900 font-display">Comentarios más sospechosos</p>
+                        <p class="text-xs text-stone-500">Comentarios detectados con mayor probabilidad de ser automatizados y por qué</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button id="toggle-all" type="button" onclick="event.stopPropagation()" class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-semibold text-brand-700 transition hover:border-brand-500 hover:bg-white active:scale-[.97]">
+                        Ver todos
+                    </button>
+                    <svg class="h-4 w-4 text-stone-400 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+            </summary>
+            <div class="border-t border-stone-100">
+                <div id="comments-list" class="divide-y divide-stone-100"></div>
+            </div>
+        </details>
+
+        <!-- --- Detalles técnicos avanzados --- -->
+        <details class="card group anim-up lg:col-span-3 p-4 border border-stone-200/80 bg-stone-50/50" style="animation-delay:.26s">
+            <summary class="flex cursor-pointer items-center justify-between text-xs font-semibold text-stone-600 transition hover:text-stone-900">
+                <span class="flex items-center gap-2">
+                    <svg class="h-4 w-4 text-stone-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
+                    Ver detalles técnicos avanzados (algoritmo, 9 heurísticas e histograma)
+                </span>
+                <svg class="h-4 w-4 text-stone-400 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <div class="mt-5 space-y-6 pt-4 border-t border-stone-200/80">
+                <div>
+                    <div class="flex items-baseline justify-between">
+                        <p class="text-[10px] uppercase tracking-widest text-stone-500">Histograma estadístico de scores</p>
+                        <p class="text-[10px] text-stone-400">10 rangos de 10 puntos (0-100)</p>
+                    </div>
+                    <div id="histogram" class="mt-3 flex h-32 items-end gap-1.5"></div>
+                    <div class="mt-2 flex justify-between text-[10px] text-stone-400">
+                        <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex flex-wrap items-baseline justify-between gap-2">
+                        <p class="text-[10px] uppercase tracking-widest text-stone-500">Desglose de las 9 heurísticas ponderadas</p>
+                        <p class="text-[10px] text-stone-400">Pesos ponderados del motor heurístico</p>
+                    </div>
+                    <div id="signals-list" class="mt-3 grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2 lg:grid-cols-3"></div>
+                </div>
+            </div>
+        </details>
+    </section>
+
+    <p id="analysis-id" class="mt-5 text-center text-[11px] text-stone-500"></p>
+
+    <section id="placeholder" class="hidden"></section>
+</main>
+
+<footer class="border-t border-stone-200 bg-white/70 py-10 mt-auto backdrop-blur-sm">
+    <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-5 text-[11px] text-stone-500 sm:flex-row">
+        <span class="flex items-center gap-2">
+            <span class="grid h-5 w-5 place-items-center rounded-md bg-brand-500 shadow-sm shadow-brand-500/20">
+                <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none"><path d="M7 7h10v4H7zM7 13h7v4H7z" stroke="white" stroke-width="2" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="font-semibold text-stone-700">BotMeter</span>
+        </span>
+        <span>Estimación heurística orientativa. No es una verificación de identidad.</span>
+    </div>
+</footer>
+
+<!-- ===================== ASISTENTE IA (robot de la esquina) =====================
+     Oculto por defecto: JS lo muestra solo si /api/config dice ai.enabled.
+     Burbuja con resumen automatico tras cada analisis + chat de preguntas. -->
+<div id="ai-widget" class="fixed bottom-5 right-5 z-40 flex-col items-end gap-3">
+
+    <section id="ai-panel" aria-label="Asistente boti" class="hidden w-[22.5rem] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl shadow-stone-900/10 anim-pop">
+        <header class="flex items-center justify-between gap-3 border-b border-stone-100 bg-stone-50/90 px-4 py-3">
+            <div class="flex items-center gap-2.5">
+                <span class="grid h-8 w-8 place-items-center rounded-lg bg-brand-500/15 text-brand-700">
+                    <svg class="h-4.5 w-4.5" width="18" height="18" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M16 4v3.5"/><circle cx="16" cy="3.2" r="1.6" fill="currentColor" stroke="none"/>
+                        <rect x="5.5" y="8" width="21" height="15.5" rx="5"/>
+                        <path d="M16 23.5V27"/><path d="M11 27h10"/>
+                        <circle cx="12" cy="15" r="1.8" fill="currentColor" stroke="none"/>
+                        <circle cx="20" cy="15" r="1.8" fill="currentColor" stroke="none"/>
+                        <path d="M12.5 19.5h7"/>
+                    </svg>
+                </span>
+                <div>
+                    <p class="text-sm font-bold leading-tight text-stone-900 font-display">boti</p>
+                    <p class="text-[10px] leading-tight text-stone-500 flex items-center gap-1">
+                        <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                        Voz amigable en español
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <button type="button" id="ai-voice-test" aria-label="Probar voz en español" title="Probar voz en español"
+                        class="grid h-7 w-7 place-items-center rounded-lg border border-stone-200 bg-white text-stone-500 shadow-sm transition hover:border-brand-500 hover:text-brand-700 active:scale-[.97]">
+                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                </button>
+                <button type="button" id="ai-voice" aria-label="Silenciar la voz del asistente" title="Voz activada"
+                        class="grid h-7 w-7 place-items-center rounded-lg border border-stone-200 bg-white text-stone-500 shadow-sm transition hover:border-brand-500 hover:text-brand-700 active:scale-[.97]">
+                    <svg id="ai-voice-on" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                    <svg id="ai-voice-off" class="hidden h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+                </button>
+                <button type="button" id="ai-minimize" aria-label="Minimizar asistente"
+                        class="grid h-7 w-7 place-items-center rounded-lg border border-stone-200 bg-white text-stone-500 shadow-sm transition hover:border-stone-300 hover:text-stone-800 active:scale-[.97]">
+                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg>
+                </button>
+            </div>
+        </header>
+
+        <div id="ai-messages" class="flex max-h-[22rem] min-h-[7.5rem] flex-col gap-2.5 overflow-y-auto px-4 py-4" aria-live="polite" role="log"></div>
+
+        <div id="ai-suggestions" class="flex flex-wrap gap-2 px-4 pb-1">
+            <button type="button" class="ai-chip active:scale-[.97]" data-q="¿Qué significa el porcentaje de bots?">% de bots</button>
+            <button type="button" class="ai-chip active:scale-[.97]" data-q="¿Cómo se calcula el nivel de riesgo?">Nivel de riesgo</button>
+            <button type="button" class="ai-chip active:scale-[.97]" data-q="¿Qué debería hacer como moderador?">Soy moderador</button>
+        </div>
+
+        <form id="ai-form" class="flex items-end gap-2 border-t border-stone-100 bg-stone-50/50 px-3 py-3">
+            <textarea id="ai-input" rows="1" maxlength="500" placeholder="Pregúntale lo que quieras: la app, los resultados..."
+                      aria-label="Escribe tu pregunta para el asistente"
+                      class="field flex-1 !text-xs !bg-white"></textarea>
+            <button type="submit" id="ai-send" aria-label="Enviar pregunta"
+                    class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-700 text-white shadow-sm shadow-brand-700/30 transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[.97]">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/></svg>
+            </button>
+        </form>
+    </section>
+
+    <button type="button" id="ai-open" aria-label="Abrir asistente boti"
+            class="relative grid h-14 w-14 place-items-center rounded-full border border-stone-200 bg-white text-brand-500 shadow-xl shadow-stone-900/10 transition hover:border-brand-500/40 hover:text-brand-700 active:scale-95">
+        <svg class="h-7 w-7" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M16 4v3.5"/><circle cx="16" cy="3.2" r="1.6" fill="currentColor" stroke="none"/>
+            <rect x="5.5" y="8" width="21" height="15.5" rx="5"/>
+            <path d="M16 23.5V27"/><path d="M11 27h10"/>
+            <circle cx="12" cy="15" r="1.8" fill="currentColor" stroke="none"/>
+            <circle cx="20" cy="15" r="1.8" fill="currentColor" stroke="none"/>
+            <path d="M12.5 19.5h7"/>
+        </svg>
+        <span id="ai-gear" class="hidden absolute -left-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full border border-amber-300 bg-white text-amber-600 shadow-md">
+            <svg class="ai-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                <circle cx="12" cy="12" r="3"/>
+            </svg>
+        </span>
+        <span id="ai-unread" class="hidden absolute right-0.5 top-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-brand-500"></span>
+    </button>
+</div>
+
+<script>
+    // ==================================================================
+    // Logica del frontend (JS vanilla: cero build step).
+    //
+    // REGLA DE ORO: `$` es `document.getElementById`, NO un selector CSS.
+    // Los identificadores van SIN '#'. Pasar '#algo' devuelve null y revienta
+    // el render. Hay 11 comprobaciones automaticas que vigilan esto.
+    // ==================================================================
+    const $ = (id) => document.getElementById(id);
+
+    const GAUGE_CIRCUMFERENCE = 326.7;   // 2 * PI * 52
+    const DEMO_WALL_MAX = 40;            // nodos retenidos en el muro en vivo
+
+    const RISK_HEX = {
+        critical: '#f87171',
+        high: '#fb923c',
+        medium: '#fbbf24',
+        low: '#34d399'
+    };
+
+    const SIGNAL_GRADIENT = {
+        spam_lexicon: 'linear-gradient(90deg,#f43f5e,#fb7185)',
+        identity_pattern: 'linear-gradient(90deg,#1d4ed8,#3b82f6)',
+        generic_content: 'linear-gradient(90deg,#0ea5e9,#38bdf8)',
+        text_noise: 'linear-gradient(90deg,#64748b,#94a3b8)',
+        temporal: 'linear-gradient(90deg,#f59e0b,#fbbf24)',
+        duplication: 'linear-gradient(90deg,#d946ef,#e879f9)',
+        emojis: 'linear-gradient(90deg,#10b981,#34d399)',
+        formatting: 'linear-gradient(90deg,#14b8a6,#2dd4bf)',
+        engagement: 'linear-gradient(90deg,#ff5c35,#ff7a4d)'
+    };
+
+    // ------------------------------------------------------------------
+    // Hidratacion de la cabecera desde /api/config.
+    // La plantilla es estatica (se ve bien aun abierta como archivo, sin
+    // pasar por el servidor); aqui se completa la version y el modo
+    // real/simulacion en cuanto hay conexion.
+    // ------------------------------------------------------------------
+    function showOfflineBanner(isFile) {
+        const banner = $('offline-banner');
+        const text = $('offline-banner-text');
+        if (!banner) return;
+        if (text && isFile) {
+            text.innerHTML = 'Has abierto el archivo <span class="font-mono">index.html</span> directamente '
+                + '(protocolo <span class="font-mono">file://</span>). Esta aplicacion necesita su servidor: '
+                + 'ejecuta <span class="rounded bg-black/30 px-1.5 py-0.5 font-mono text-amber-100">python app.py</span> '
+                + 'y abre <span class="rounded bg-black/30 px-1.5 py-0.5 font-mono text-amber-100">http://localhost:8000</span>.';
+        }
+        banner.classList.remove('hidden');
+    }
+
+    // ==================================================================
+    // Estado del asistente IA (robot de la esquina).
+    // aiEnabled lo decide /api/config -> ai.enabled; sin clave de IA en el
+    // servidor el widget sencillamente no se muestra.
+    // ==================================================================
+    let aiEnabled = false;
+    let aiState = 'ok';            // 'ok' | 'maintenance' (sin clave o cuota)
+    let aiConfigLoaded = false;    // /api/config resuelto (o archivo sin servidor)
+    let aiLastAnalysis = null;     // subconjunto compacto del ultimo analisis
+    let aiHistory = [];            // historial corto {role, content}
+    let aiTypingTimer = null;      // temporizador de la maquina de escribir
+    let aiSummaryRunning = false;
+    let aiSummaryPending = false;
+    let aiBusy = false;            // pregunta en vuelo
+    const prefersReducedMotion =
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const configReady = (async function hydrateHeader() {
+        if (window.location.protocol === 'file:') {
+            aiConfigLoaded = true;
+            showOfflineBanner(true);
+            enterAiMaintenance();   // sin servidor no hay IA: robot en aviso
+            return;
+        }
+        try {
+            const res = await fetch('/api/config', { cache: 'no-store' });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const cfg = await res.json();
+            aiConfigLoaded = true;
+            const banner = $('offline-banner');
+            if (banner) banner.classList.add('hidden');
+            const real = !!cfg && (cfg.data_mode === 'real'
+                || (cfg.youtube_api && cfg.youtube_api.configured));
+            document.body.dataset.mode = real ? 'real' : 'simulated';
+
+            // El robot se muestra SIEMPRE: sin clave o con la cuota agotada
+            // pasa a modo mantenimiento en lugar de desaparecer.
+            const aiCfg = cfg && cfg.ai;
+            if (aiCfg && aiCfg.enabled && !aiCfg.quota_exhausted) {
+                aiEnabled = true;
+            } else {
+                enterAiMaintenance();
+            }
+
+            const badge = $('mode-badge');
+            const badgeText = $('mode-badge-text');
+            if (badge && badgeText) {
+                badgeText.textContent = real ? 'YouTube API real' : 'Modo simulacion';
+                badge.className = 'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 '
+                    + (real ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-800'
+                            : 'border-amber-500/30 bg-amber-500/10 text-amber-800');
+                const dot = badge.querySelector('span');
+                if (dot) dot.className = 'h-1.5 w-1.5 rounded-full breath '
+                    + (real ? 'bg-emerald-400' : 'bg-amber-400');
+            }
+
+            const note = $('mode-note');
+            if (note) note.classList.toggle('hidden', !real);
+        } catch (e) {
+            aiConfigLoaded = true;
+            showOfflineBanner(false);
+            enterAiMaintenance();   // servidor inaccesible: robot en aviso
+        }
+    })();
+
+    const PHASES = [
+        'Conectando con YouTube API...',
+        'Extrayendo features...',
+        'Aplicando 9 heurísticas...',
+        'Calculando riesgo...'
+    ];
+
+    /** Fases cuando no hay clave de YouTube: el simulador es determinista. */
+    const SIM_PHASES = [
+        'Generando comentarios sinteticos...',
+        'Extrayendo 40 features por comentario...',
+        'Aplicando 9 heurísticas ponderadas...',
+        'Calculando riesgo y distribucion...'
+    ];
+
+    /** Fases del mismo motor cuando la fuente es un archivo CSV/JSON subido. */
+    const UPLOAD_PHASES = [
+        'Leyendo el archivo subido...',
+        'Mapeando columnas (autor, texto, fecha, likes)...',
+        'Extrayendo 40 features...',
+        'Aplicando 9 heurísticas...',
+        'Calculando riesgo...'
+    ];
+
+    /** Fichero elegido en la vista de "otra red". Nada hasta que llega. */
+    let selectedFile = null;
+    /** true mientras el servidor responde: bloquea botones y vistas. */
+    let isBusy = false;
+
+    let phaseTimer = null;
+    let phaseIndex = 0;
+    let loaderTarget = 0;
+    let demoSource = null;
+
+    // ==================================================================
+    // Utilidades
+    // ==================================================================
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g,
+            c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function formatNumber(value) {
+        return new Intl.NumberFormat('es-ES').format(value);
+    }
+
+    function formatDate(iso) {
+        try {
+            return new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
+        } catch (e) {
+            return iso;
+        }
+    }
+
+    /** Cuenta animada de 0 al valor pedido (easeOutCubic). */
+    function animateNumber(el, to, decimals, suffix) {
+        if (!el) return;
+        const target = Number(to);
+        if (!isFinite(target)) { el.textContent = String(to); return; }
+        const duration = 950;
+        const started = performance.now();
+        const step = (now) => {
+            const p = Math.min(1, (now - started) / duration);
+            const eased = 1 - Math.pow(1 - p, 3);
+            el.textContent = (target * eased).toFixed(decimals || 0) + (suffix || '');
+            if (p < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    }
+
+    /** Escribe el ancho de una barra. Sin esto, un id mal escrito rompe el render. */
+    function setBar(id, pct) {
+        const bar = $(id);
+        if (bar) bar.style.width = Math.max(0, Math.min(100, pct || 0)) + '%';
+    }
+
+    function setText(id, value) {
+        const el = $(id);
+        if (el) el.textContent = value;
+    }
+
+    function plural(n, singular, pluralForm) {
+        return formatNumber(n) + ' ' + (n === 1 ? singular : pluralForm);
+    }
+
+    // ==================================================================
+    // Analisis normal (compartido por la URL de YouTube y por el archivo subido)
+    // ==================================================================
+    /**
+     * POST y devuelve el payload ya validado.
+     * El cuerpo se lee como texto y se convierte a mano: si el servidor
+     * devuelve HTML (error 500 de un proxy, pagina en blanco) o una
+     * respuesta vacia, el parseo JSON lanza "Unexpected end of JSON input"
+     * y se pierde el motivo real del fallo.
+     */
+    async function postAnalysis(path, options) {
+        let response;
+        try {
+            response = await fetch(path, options);
+        } catch (networkError) {
+            // `fetch` lanza TypeError ("Failed to fetch") cuando no puede
+            // alcanzar el servidor: archivo abierto sin servidor, app caida o
+            // host/red inalcanzable. Se traduce a una accion concreta.
+            showOfflineBanner(window.location.protocol === 'file:');
+            throw new Error('No se pudo conectar con el servidor (Failed to fetch). '
+                + 'Comprueba que la app esta corriendo (python app.py) y que abriste la pagina en '
+                + 'http://localhost:8000, no el archivo index.html directamente.');
+        }
+
+        const raw = await response.text();
+        let payload = null;
+        let parseError = null;
+        try {
+            payload = raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            parseError = e;
+        }
+
+        if (!response.ok) {
+            let msg = 'El servidor respondio ' + response.status;
+            if (payload && payload.detail) {
+                msg = typeof payload.detail === 'string'
+                    ? payload.detail
+                    : JSON.stringify(payload.detail);
+            } else if (parseError || !raw) {
+                msg += ' con la respuesta vacia. ¿El servidor se reinicio? '
+                    + 'Recarga la pagina y prueba de nuevo.';
+            }
+            throw new Error(msg);
+        }
+        if (parseError) {
+            throw new Error('La respuesta del servidor no es JSON valido. '
+                + 'Comprueba que http://' + window.location.host
+                + ' sea la app y no un proxy. Detalle: ' + parseError.message);
+        }
+        if (!payload) {
+            throw new Error('El servidor devolvio una respuesta vacia. '
+                + 'Recarga la pagina y prueba de nuevo.');
+        }
+        return payload;
+    }
+
+    $('analyze-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        clearDemo();
+        setLoading(true, 'url');
+        $('error-box').classList.add('hidden');
+        $('warning-box').classList.add('hidden');
+
+        try {
+            const payload = await postAnalysis('/api/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    url: $('url').value.trim(),
+                    comment_limit: 10000,
+                    include_comments: true
+                })
+            });
+            render(payload);
+        } catch (error) {
+            showError(error.message);
+        } finally {
+            setLoading(false);
+        }
+    });
+
+    // ==================================================================
+    // Carga de archivos multiplataforma (TikTok, Instagram, X, Facebook...)
+    // ==================================================================
+    $('upload-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        clearDemo();
+        $('error-box').classList.add('hidden');
+        $('warning-box').classList.add('hidden');
+
+        if (!selectedFile) {
+            showError('Selecciona primero un archivo CSV o JSON. Arrastralo a la '
+                + 'zona indicada o pulsa en ella para buscarlo.');
+            return;
+        }
+
+        setLoading(true, 'file');
+        try {
+            // FormData pone el Content-Type multipart solo: fijarlo a mano
+            // romperia el separador de borde que espera FastAPI. La plataforma
+            // se autodetecta en el servidor a partir del contenido del archivo.
+            const form = new FormData();
+            form.append('file', selectedFile, selectedFile.name);
+            form.append('comment_limit', '10000');
+            form.append('include_comments', 'true');
+
+            const payload = await postAnalysis('/api/analyze/upload', {
+                method: 'POST',
+                body: form
+            });
+            render(payload);
+        } catch (error) {
+            showError(error.message);
+        } finally {
+            setLoading(false);
+        }
+    });
+
+    // ==================================================================
+    // Navegacion entre vistas (SPA): bienvenida / youtube / otras redes.
+    // ==================================================================
+    function goTo(view) {
+        const views = {
+            welcome: 'view-welcome',
+            youtube: 'view-youtube',
+            others: 'view-others'
+        };
+        const target = views[view];
+        if (!target) return;
+
+        // Limpia automaticamente el simulador de ataque de bots al cambiar de pagina
+        clearDemo();
+        // Limpia automaticamente los resultados previos al cambiar de pagina
+        clearResults();
+
+        $('view-welcome').classList.add('hidden');
+        $('view-youtube').classList.add('hidden');
+        $('view-others').classList.add('hidden');
+        $(target).classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Cada red tiene su propia ventana en la vista 'others': elegir una red
+    // oculta el resto de guias y solo deja visible la de la red seleccionada.
+    const APP_NAMES = {
+        tiktok: 'TikTok', instagram: 'Instagram', x: 'X (Twitter)',
+        facebook: 'Facebook', threads: 'Threads', reddit: 'Reddit',
+        linkedin: 'LinkedIn'
+    };
+
+    function showApp(platform) {
+        if (!APP_NAMES[platform]) platform = 'tiktok';
+        const guides = document.querySelectorAll('.app-guide');
+        for (let i = 0; i < guides.length; i++) {
+            guides[i].classList.add('hidden');
+        }
+        const g = $('guide-' + platform);
+        if (g) g.classList.remove('hidden');
+        const sw = $('app-switch');
+        if (sw) sw.value = platform;
+        const os = $('others-sub');
+        if (os) os.textContent = APP_NAMES[platform];
+    }
+
+    $('youtube-back').addEventListener('click', () => goTo('welcome'));
+    $('others-back').addEventListener('click', () => goTo('welcome'));
+    const navHome = $('nav-home');
+    if (navHome) navHome.addEventListener('click', () => goTo('welcome'));
+    const headerHome = $('header-home');
+    if (headerHome) headerHome.addEventListener('click', () => goTo('welcome'));
+
+    // Enlaces discretos del navbar + CTA naranja "Analizar".
+    document.querySelectorAll('.nav-link[data-nav]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const target = btn.dataset.nav;
+            if (target === 'youtube') goTo('youtube');
+            else if (target === 'others') { showApp('tiktok'); goTo('others'); }
+        });
+    });
+    const navCta = $('nav-cta');
+    if (navCta) navCta.addEventListener('click', () => goTo('welcome'));
+
+    // Un unico oyente para las tarjetas de plataforma: del dataset salen el
+    // destino ('youtube' u 'others') y, en su caso, la red a abrir.
+    $('platform-grid').addEventListener('click', (event) => {
+        const card = event.target.closest('button[data-platform]');
+        if (!card) return;
+        const target = card.dataset.target || 'others';
+        if (target === 'others') {
+            showApp(card.dataset.platform);
+            goTo('others');
+            return;
+        }
+        goTo(target);
+    });
+
+    // Cambiar de red dentro de la vista 'others' si existe el selector
+    const appSwitch = $('app-switch');
+    if (appSwitch) {
+        appSwitch.addEventListener('change', (event) => {
+            showApp(event.target.value);
+        });
+    }
+
+    // ==================================================================
+    // Selector de archivo + arrastrar y soltar
+    // ==================================================================
+    function humanSize(bytes) {
+        if (!bytes && bytes !== 0) return '';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    /** Valida y adopta el archivo. Devuelve false y deja el error en pantalla. */
+    function acceptFile(file) {
+        clearFilePreview();
+        if (!file) return false;
+        const name = String(file.name || '').toLowerCase();
+
+        if (!name.endsWith('.csv') && !name.endsWith('.json')) {
+            selectedFile = null;
+            showError('Formato «' + (file.name || '?') + '» no soportado. '
+                + 'Sube un archivo CSV o JSON exportado de la red social.');
+            return false;
+        }
+        if (file.size > 16 * 1024 * 1024) {
+            selectedFile = null;
+            showError('El archivo pesa ' + humanSize(file.size)
+                + ' y el maximo aceptado es 16 MB. Analiza una muestra, no el vertido completo.');
+            return false;
+        }
+
+        selectedFile = file;
+        setText('file-name', file.name);
+        setText('file-meta', (name.endsWith('.json') ? 'JSON' : 'CSV')
+            + ' · ' + humanSize(file.size)
+            + ' · se analizaran hasta 10.000 comentarios');
+        setFilePreview(file);
+        $('drop-zone').classList.add('has-file');
+        $('upload-btn').disabled = false;
+        $('error-box').classList.add('hidden');
+        return true;
+    }
+
+    // El click sintetico de file-input burbujea hasta drop-zone: sin el guard
+    // se dispararia a si mismo en bucle infinito.
+    $('drop-zone').addEventListener('click', (event) => {
+        if (event.target === $('file-input')) return;
+        $('file-input').click();
+    });
+    $('drop-zone').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            $('file-input').click();
+        }
+    });
+    $('file-input').addEventListener('change', (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!acceptFile(file)) {
+            event.target.value = '';
+            setText('file-name', 'Ningun archivo seleccionado');
+            setText('file-meta', 'CSV o JSON · maximo 16 MB · hasta 10.000 comentarios');
+            $('drop-zone').classList.remove('has-file');
+            $('upload-btn').disabled = true;
+            selectedFile = null;
+        }
+    });
+    ['dragenter', 'dragover'].forEach(type => {
+        $('drop-zone').addEventListener(type, (event) => {
+            event.preventDefault();
+            $('drop-zone').classList.add('is-over');
+        });
+    });
+    ['dragleave', 'dragend'].forEach(type => {
+        $('drop-zone').addEventListener(type, (event) => {
+            event.preventDefault();
+            $('drop-zone').classList.remove('is-over');
+        });
+    });
+    $('drop-zone').addEventListener('drop', (event) => {
+        event.preventDefault();
+        $('drop-zone').classList.remove('is-over');
+        const file = event.dataTransfer && event.dataTransfer.files
+            && event.dataTransfer.files[0];
+        if (file) acceptFile(file);
+    });
+
+    // ==================================================================
+    // Vistas previas didacticas
+    //   - YouTube: miniatura oficial vía img.youtube.com (sin API key).
+    //   - Otras redes: card-documento del CSV/JSON seleccionado.
+    // ==================================================================
+    function parseYouTubeId(raw) {
+        const value = (raw || '').trim();
+        if (!value) return null;
+        const patterns = [
+            /(?:youtube\.com\/watch\?(?:.*&)?v=)([A-Za-z0-9_-]{11})/,
+            /(?:youtu\.be\/)([A-Za-z0-9_-]{11})/,
+            /(?:youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})/,
+            /(?:youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/,
+            /(?:youtube\.com\/live\/)([A-Za-z0-9_-]{11})/,
+            /^([A-Za-z0-9_-]{11})$/
+        ];
+        for (let i = 0; i < patterns.length; i++) {
+            const match = value.match(patterns[i]);
+            if (match) return match[1];
+        }
+        return null;
+    }
+
+    function updateYoutubePreview() {
+        const preview = $('yt-preview');
+        const img = $('yt-thumb');
+        if (!preview || !img) return;
+        const id = parseYouTubeId($('url') ? $('url').value : '');
+        if (!id) {
+            preview.classList.add('hidden');
+            return;
+        }
+        setText('yt-preview-id', 'ID del video: ' + id);
+        // Si el ID no tiene miniatura (borrado o inexistente), no insistir.
+        img.onerror = () => preview.classList.add('hidden');
+        img.src = 'https://img.youtube.com/vi/' + id + '/hqdefault.jpg';
+        preview.classList.remove('hidden');
+    }
+
+    (function bindYoutubePreview() {
+        const input = $('url');
+        if (!input) return;
+        let timer = null;
+        input.addEventListener('input', () => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(updateYoutubePreview, 300);
+        });
+        updateYoutubePreview();   // el campo ya trae un enlace de ejemplo
+    })();
+
+    function setFilePreview(file) {
+        const preview = $('file-preview');
+        if (!preview || !file) return;
+        const isJson = String(file.name || '').toLowerCase().endsWith('.json');
+        setText('file-preview-ext', isJson ? 'JSON' : 'CSV');
+        setText('file-preview-name', file.name || '');
+        setText('file-preview-size', humanSize(file.size) + ' listo para analizar');
+        preview.classList.remove('hidden');
+    }
+
+    function clearFilePreview() {
+        const preview = $('file-preview');
+        if (preview) preview.classList.add('hidden');
+    }
+
+    /** Loader con fases rotativas y barra que se acerca al 100% sin saltos falsos. */
+    function setLoading(active, mode) {
+        const source = mode || 'url';
+        const isFile = source === 'file';
+        const loader = $('loader');
+        const btn = $('submit-btn');
+        const upBtn = $('upload-btn');
+        if (!loader || !btn || !upBtn) return;
+
+        isBusy = active;
+        btn.disabled = isBusy;
+        upBtn.disabled = isBusy || !selectedFile;
+
+        $('btn-spinner').classList.toggle('hidden', !active || isFile);
+        $('upload-spinner').classList.toggle('hidden', !active || !isFile);
+        setText('btn-label', active && !isFile ? 'Analizando...' : 'Analizar');
+        setText('upload-label', active && isFile ? 'Analizando...' : 'Analizar archivo');
+
+        loader.classList.toggle('hidden', !active);
+        if (!active) { stopPhases(); return; }
+
+        const realMode = document.body.dataset.mode === 'real';
+        const phases = isFile ? UPLOAD_PHASES : (realMode ? PHASES : SIM_PHASES);
+        phaseIndex = 0;
+        setText('loader-phase', phases[0]);
+        animateNumber($('loader-pct'), 0, 0, '%');
+
+        // Cada fase sube el techo de la barra: nunca llega al 100% hasta que
+        // el servidor responde de verdad.
+        const ceilings = isFile ? [18, 44, 68, 86, 94]
+            : (realMode ? [22, 48, 74, 92] : [30, 58, 80, 94]);
+        loaderTarget = ceilings[0];
+        advancePhase();
+
+        phaseTimer = setInterval(() => {
+            phaseIndex = (phaseIndex + 1) % phases.length;
+            setText('loader-phase', phases[phaseIndex]);
+            loaderTarget = ceilings[Math.min(phaseIndex + 1, ceilings.length - 1)];
+            animateNumber($('loader-pct'), loaderTarget, 0, '%');
+            setBar('loader-bar', loaderTarget);
+        }, 1100);
+    }
+
+    function stopPhases() {
+        if (phaseTimer) { clearInterval(phaseTimer); phaseTimer = null; }
+    }
+
+    function advancePhase() {
+        animateNumber($('loader-pct'), loaderTarget, 0, '%');
+        setBar('loader-bar', loaderTarget);
+    }
+
+    function showError(message) {
+        const box = $('error-box');
+        if (!box) return;
+        box.innerHTML = '<strong>No se pudo completar el analisis.</strong><br>' + escapeHtml(message);
+        box.classList.remove('hidden');
+        $('results').classList.add('hidden');
+        $('placeholder').classList.remove('hidden');
+    }
+
+    // ==================================================================
+    // Render (compartido por /api/analyze y por el evento `done` de la demo)
+    // ==================================================================
+    function render(data, options) {
+        const opts = options || {};
+        $('placeholder').classList.add('hidden');
+
+        const warningBox = $('warning-box');
+        if (warningBox) {
+            if (data.warnings && data.warnings.length) {
+                warningBox.innerHTML = data.warnings
+                    .map(w => '<div class="mb-1 last:mb-0">' + escapeHtml(w) + '</div>').join('');
+                warningBox.classList.remove('hidden');
+            } else {
+                warningBox.classList.add('hidden');
+            }
+        }
+
+        renderVerdict(data);
+        renderDistribution(data.distribution, data.metrics.total_comments_analyzed);
+        renderKpis(data.metrics, data.feature_averages);
+        renderHistogram(data.comments);
+        renderSource(data);
+        renderSignals(data.signals);
+        renderFindings(data.findings);
+        renderComments(data.comments);
+
+        // El robot toma nota del analisis y ofrece su resumen automatico.
+        aiLastAnalysis = buildAiContext(data);
+        requestAiSummary();
+
+        setText('analysis-id', 'Analisis ' + data.analysis_id
+            + ' · generado ' + formatDate(data.generated_at));
+
+        const results = $('results');
+        results.classList.remove('hidden');
+        results.classList.remove('anim-up');
+        // Reinicia la animacion de entrada aunque venga de una segunda ronda.
+        void results.offsetWidth;
+        results.classList.add('anim-up');
+
+        if (!opts.silent) {
+            results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    function renderVerdict(data) {
+        const pct = data.metrics.bot_percentage;
+        const level = data.risk.level;
+        const hex = RISK_HEX[level] || '#ff5c35';
+
+        // Tema de riesgo propagado por atributo: el CSS hace el resto.
+        const card = $('verdict-card');
+        const badge = $('risk-badge');
+        if (card) card.dataset.risk = level;
+        if (badge) badge.dataset.risk = level;
+
+        const stopA = $('gauge-stop-a');
+        const stopB = $('gauge-stop-b');
+        if (stopA) stopA.setAttribute('stop-color', hex);
+        if (stopB) stopB.setAttribute('stop-color', hex);
+
+        const arc = $('gauge-arc');
+        if (arc) arc.style.strokeDashoffset = String(GAUGE_CIRCUMFERENCE * (1 - pct / 100));
+
+        animateNumber($('bot-percent'), pct, 1, '%');
+        animateNumber($('confidence'), data.metrics.confidence, 0, '% precisión');
+        setText('risk-label', 'Nivel de Riesgo: ' + data.risk.label);
+        setText('risk-action', data.risk.action);
+
+        const pill = $('verdict-risk-pill');
+        if (pill) {
+            pill.textContent = 'Riesgo ' + data.risk.label;
+            pill.className = 'text-[11px] font-semibold px-2.5 py-0.5 rounded-full border '
+                + (level === 'critical' ? 'border-rose-200 bg-rose-50 text-rose-700'
+                   : level === 'high' ? 'border-brand-200 bg-brand-50 text-brand-700'
+                   : level === 'medium' ? 'border-amber-200 bg-amber-50 text-amber-800'
+                   : 'border-emerald-200 bg-emerald-50 text-emerald-700');
+        }
+    }
+
+    function renderDistribution(distribution, total) {
+        [['high', 'bar-high'], ['medium', 'bar-medium'], ['low', 'bar-low']].forEach(([key, id]) => {
+            const value = distribution[key] || 0;
+            const pct = total ? (value / total) * 100 : 0;
+            setBar(id, pct);
+            setText(id + '-label', value + ' (' + pct.toFixed(0) + '%)');
+        });
+    }
+
+    function renderKpis(metrics, averages) {
+        const total = metrics.total_comments_analyzed || 0;
+        const suspectedCount = Math.round(total * (metrics.bot_percentage || 0) / 100);
+
+        const cards = [
+            {
+                label: 'Comentarios analizados',
+                value: total,
+                dec: 0,
+                hint: plural(metrics.unique_authors || 0, 'cuenta o autor único', 'cuentas o autores únicos'),
+                tone: 'text-stone-900',
+                desc: 'Muestra total examinada'
+            },
+            {
+                label: 'Estimado de bots',
+                value: metrics.bot_percentage,
+                dec: 1,
+                suffix: '%',
+                hint: plural(suspectedCount, 'comentario sospechoso', 'comentarios sospechosos'),
+                tone: metrics.bot_percentage >= 40 ? 'text-rose-600' : (metrics.bot_percentage >= 25 ? 'text-amber-600' : 'text-emerald-600'),
+                desc: 'Nivel global de sospecha'
+            },
+            {
+                label: 'Mensajes repetidos (Copia y pega)',
+                value: metrics.duplicate_ratio,
+                dec: 1,
+                suffix: '%',
+                hint: metrics.burst_detected ? 'Ráfagas coordinadas detectadas' : 'Comentarios idénticos detectados',
+                tone: metrics.burst_detected || metrics.duplicate_ratio >= 10 ? 'text-amber-600' : 'text-stone-900',
+                desc: 'Patrón típico de bots masivos'
+            },
+            {
+                label: 'Comentarios con enlaces o spam',
+                value: metrics.link_ratio,
+                dec: 1,
+                suffix: '%',
+                hint: plural(metrics.comments_with_links || 0, 'comentario con links', 'comentarios con links'),
+                tone: metrics.link_ratio >= 15 ? 'text-rose-600' : 'text-stone-900',
+                desc: 'Promociones o links externos'
+            }
+        ];
+
+        $('kpi-grid').innerHTML = cards.map((card) => `
+            <div class="rounded-xl border border-stone-200/90 bg-stone-50/70 p-4 transition hover:border-brand-300 hover:bg-white hover:shadow-sm">
+                <div class="flex items-center justify-between gap-2">
+                    <p class="text-[10px] font-semibold uppercase tracking-wider text-stone-500">${escapeHtml(card.label)}</p>
+                    <span class="text-[10px] text-stone-400">${escapeHtml(card.desc)}</span>
+                </div>
+                <p class="stat-value mt-2 text-2xl font-bold font-display tabular-nums ${card.tone}"
+                   data-to="${card.value}" data-dec="${card.dec}" data-suffix="${escapeHtml(card.suffix || '')}">0</p>
+                <p class="mt-1 text-xs text-stone-500 font-medium">${escapeHtml(String(card.hint))}</p>
+            </div>`).join('');
+
+        // Los contadores arrancan en 0 y suben: el dato "aparece" en pantalla.
+        requestAnimationFrame(() => {
+            document.querySelectorAll('#kpi-grid .stat-value').forEach(el => {
+                animateNumber(el, el.dataset.to, Number(el.dataset.dec), el.dataset.suffix);
+            });
+        });
+    }
+
+    function renderHistogram(comments) {
+        const bins = new Array(10).fill(0);
+        (comments || []).forEach(c => {
+            const idx = Math.min(9, Math.max(0, Math.floor((c.bot_score || 0) / 10)));
+            bins[idx] += 1;
+        });
+        const max = Math.max.apply(null, bins.concat([1]));
+
+        $('histogram').innerHTML = bins.map((n, i) => {
+            const height = (n / max) * 100;
+            const color = i <= 2 ? RISK_HEX.low : i <= 4 ? RISK_HEX.medium : i <= 6 ? RISK_HEX.high : RISK_HEX.critical;
+            return `
+                <div class="group relative flex h-full flex-1 flex-col justify-end" title="Scores ${i * 10}-${i * 10 + 9}: ${n} comentarios">
+                    <div class="hist-bar w-full rounded-t-md"
+                         style="height:${height}%;background-image:linear-gradient(180deg,${color},${color}55)"></div>
+                    <span class="absolute -top-6 left-1/2 hidden -translate-x-1/2 text-[10px] font-semibold bg-white border border-stone-200 px-1.5 py-0.5 rounded shadow-xs text-stone-700 group-hover:block">${n}</span>
+                </div>`;
+        }).join('');
+
+        requestAnimationFrame(() => {
+            document.querySelectorAll('#histogram .hist-bar').forEach((el, i) => {
+                el.style.transition = 'height .9s cubic-bezier(.16,1,.3,1) ' + (i * 55) + 'ms';
+            });
+        });
+    }
+
+    function renderSource(data) {
+        const s = data.source || {};
+
+        // Archivo subido (TikTok, Instagram, X...): la "URL" es el nombre del
+        // fichero y el rastro es el del parser, no el de la YouTube Data API.
+        if (s.is_upload) {
+            setText('video-title', s.title || 'Archivo subido');
+            setText('video-id', s.platform ? 'Red: ' + s.platform.toUpperCase() : 'ARCHIVO');
+            setText('video-meta', plural(s.comment_count || data.metrics.total_comments_analyzed || 0, 'comentario', 'comentarios') + ' procesados');
+            setText('results-source-summary', 'Archivo: ' + (s.title || 'CSV/JSON') + ' · ' + plural(data.metrics.total_comments_analyzed || 0, 'comentario analizado', 'comentarios analizados'));
+            renderApiMeta(data);
+            return;
+        }
+
+        const title = s.title || (s.is_demo ? 'Simulación de ataque de bots en directo' : 'Video de YouTube');
+        setText('video-title', title);
+        setText('video-id', s.is_demo ? 'DEMO EN VIVO' : (s.video_id ? 'ID ' + s.video_id : ''));
+        const parts = [];
+        if (s.channel) parts.push(s.channel);
+        parts.push(plural(data.metrics.total_comments_analyzed || 0, 'comentario analizado', 'comentarios analizados'));
+        setText('video-meta', parts.join(' · '));
+        setText('results-source-summary', title + ' · ' + plural(data.metrics.total_comments_analyzed || 0, 'comentario', 'comentarios'));
+        renderApiMeta(data);
+    }
+
+    /** Traza de la fuente: YouTube Data API v3, simulador o archivo subido. */
+    function renderApiMeta(data) {
+        const api = data.api || {};
+        const box = $('api-meta');
+        if (!box) return;
+
+        if (api.engine === 'archivo') {
+            const bits = [];
+            if (api.column_mapping && Object.keys(api.column_mapping).length) {
+                bits.push('columnas: ' + Object.keys(api.column_mapping).join(', '));
+            }
+            if (api.rows_in_file && api.rows_used && api.rows_in_file !== api.rows_used) {
+                bits.push(plural(api.rows_in_file, 'fila', 'filas') + ' en el archivo -> '
+                    + plural(api.rows_used, 'analizadas', 'analizadas'));
+            }
+            box.textContent = 'Archivo subido · ' + (api.trace || '') + ' · ' + bits.join(' · ');
+            box.classList.remove('hidden');
+            return;
+        }
+
+        if (!api.pages_fetched) { box.classList.add('hidden'); return; }
+
+        const bits = [];
+        bits.push(plural(api.pages_fetched, 'pagina', 'paginas') + ' de commentThreads.list');
+        bits.push(plural(api.top_level_comments, 'comentario', 'comentarios')
+            + ' + ' + plural(api.replies_included, 'respuesta', 'respuestas'));
+        if (api.total_comments_available) {
+            bits.push('de ' + formatNumber(api.total_comments_available) + ' disponibles'
+                + (api.coverage_ratio !== null && api.coverage_ratio !== undefined
+                    ? ' (' + api.coverage_ratio + '% de cobertura)' : ''));
+        }
+        bits.push('~' + plural(api.quota_units, 'unidad', 'unidades') + ' de cuota');
+        if (!api.replies_part_available) bits.push('sin respuestas');
+        box.textContent = 'YouTube Data API v3 · ' + bits.join(' · ');
+        box.classList.remove('hidden');
+    }
+
+    function renderSignals(signals) {
+        const list = $('signals-list');
+        if (!signals || !signals.length) {
+            list.innerHTML = '<p class="text-xs text-stone-500">Ninguna senal supero el umbral minimo.</p>';
+            return;
+        }
+        const max = signals[0].average_contribution || 1;
+        list.innerHTML = signals.map((signal, i) => {
+            const width = (signal.average_contribution / max) * 100;
+            const gradient = SIGNAL_GRADIENT[signal.key] || 'linear-gradient(90deg,#ff5c35,#ff7a4d)';
+            return `
+                <div class="anim-up" style="animation-delay:${i * 70}ms">
+                    <div class="mb-1.5 flex flex-wrap items-baseline justify-between gap-2">
+                        <span class="text-sm font-medium text-stone-800">${escapeHtml(signal.label)}</span>
+                        <span class="font-mono text-[10px] text-stone-500">${signal.average_contribution} pts · peso ${signal.weight} · ${signal.flagged} afectados</span>
+                    </div>
+                    <div class="track bg-stone-200/80">
+                        <div class="fill fill-stripe" style="background-image:${gradient}" data-width="${width}"></div>
+                    </div>
+                    <p class="mt-1.5 text-[11px] leading-relaxed text-stone-500">${escapeHtml(signal.description)}</p>
+                </div>`;
+        }).join('');
+
+        requestAnimationFrame(() => {
+            list.querySelectorAll('.fill-stripe').forEach(el => {
+                el.style.width = el.dataset.width + '%';
+            });
+        });
+    }
+
+    function renderFindings(findings) {
+        const list = $('findings-list');
+        if (!list) return;
+        if (!findings || !findings.length) {
+            list.innerHTML = '<li class="text-xs text-stone-500">No se detectaron hallazgos inusuales en este análisis.</li>';
+            return;
+        }
+        list.innerHTML = findings.map(f =>
+            `<li class="flex items-start gap-3 rounded-xl border border-stone-200/90 bg-stone-50/70 p-3 shadow-xs">
+                <span class="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand-50 border border-brand-200 text-brand-700"><svg aria-hidden="true" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+                <span class="text-xs sm:text-sm text-stone-700 leading-relaxed">${escapeHtml(f)}</span>
+            </li>`
+        ).join('');
+    }
+
+    let currentComments = [];
+    let showingAll = false;
+
+    function renderComments(comments) {
+        currentComments = comments || [];
+        showingAll = false;
+        setText('toggle-all', 'Ver todos');
+        paintComments();
+    }
+
+    function paintComments() {
+        const subset = showingAll ? currentComments : currentComments.slice(0, 8);
+        const list = $('comments-list');
+        if (!list) return;
+
+        if (!subset.length) {
+            list.innerHTML = '<div class="p-6 text-center text-xs text-stone-500">No hay comentarios para mostrar.</div>';
+            return;
+        }
+
+        const scoreColor = (score) => score >= 60
+            ? 'border-rose-200 bg-rose-50 text-rose-700'
+            : score >= 30
+                ? 'border-amber-200 bg-amber-50 text-amber-800'
+                : 'border-emerald-200 bg-emerald-50 text-emerald-700';
+
+        const scoreLabel = (score) => score >= 60 ? 'Sospecha Alta' : score >= 30 ? 'Sospecha Media' : 'Sospecha Baja';
+
+        list.innerHTML = subset.map((comment, i) => `
+            <div class="px-5 py-4 transition hover:bg-stone-50/80 anim-up" style="animation-delay:${Math.min(i, 8) * 45}ms">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold tabular-nums ${scoreColor(comment.bot_score)}">
+                            <span>${comment.bot_score}%</span>
+                            <span class="text-[10px] font-normal opacity-90 hidden sm:inline">· ${scoreLabel(comment.bot_score)}</span>
+                        </span>
+                        <span class="text-xs font-semibold text-stone-800">@${escapeHtml(comment.author)}</span>
+                        ${comment.is_reply ? '<span class="rounded bg-stone-100 border border-stone-200 px-1.5 py-0.5 text-[10px] text-stone-600">Respuesta</span>' : ''}
+                    </div>
+                    <span class="text-[11px] text-stone-400">${comment.published_at ? formatDate(comment.published_at) : ''}</span>
+                </div>
+
+                <div class="mt-2.5 rounded-xl border border-stone-200/80 bg-stone-50/70 p-3">
+                    <p class="text-sm leading-relaxed text-stone-800">${escapeHtml(comment.text_preview)}</p>
+                </div>
+
+                <div class="mt-2.5 space-y-1.5">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <span class="text-[11px] font-medium text-stone-500">Por qué parece bot:</span>
+                        ${(comment.reasons || []).map(r => `
+                            <span class="inline-flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] text-amber-800 font-medium">
+                                <span class="h-1 w-1 rounded-full bg-amber-500"></span>
+                                <span>${escapeHtml(r)}</span>
+                            </span>
+                        `).join('')}
+                    </div>
+
+                    ${(comment.features && comment.features.spam_terms && comment.features.spam_terms.length) ? `
+                        <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
+                            <span class="text-[11px] font-medium text-rose-600">Palabras sospechosas:</span>
+                            ${comment.features.spam_terms.map(t => `<span class="rounded border border-rose-200 bg-rose-50 px-2 py-0.5 font-mono text-[10px] text-rose-700">${escapeHtml(t)}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>`).join('');
+    }
+
+    $('toggle-all').addEventListener('click', () => {
+        if (!currentComments.length) return;
+        showingAll = !showingAll;
+        setText('toggle-all', showingAll ? 'Ver solo los 8 primeros' : 'Ver todos');
+        paintComments();
+    });
+
+    // ==================================================================
+    // Demo en vivo: Server-Sent Events (muro que se actualiza solo)
+    // ==================================================================
+    $('demo-btn').addEventListener('click', () => {
+        if (demoSource) { stopDemo(); return; }
+        startDemo();
+    });
+
+    $('demo-stop').addEventListener('click', () => stopDemo());
+
+    function startDemo() {
+        const panel = $('demo-panel');
+        const wall = $('demo-wall');
+        if (!panel || !wall) return;
+
+        $('error-box').classList.add('hidden');
+        wall.innerHTML = '';
+        panel.classList.remove('hidden');
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        $('demo-btn').disabled = true;
+        $('demo-btn-label').textContent = 'Demo en curso...';
+        const dot = $('demo-btn-dot');
+        if (dot) dot.classList.add('breath');
+        setText('demo-status', 'Conectando con el stream...');
+        setBar('demo-progress', 0);
+        setText('demo-stat-total', '0');
+        setText('demo-stat-bots', '0');
+        setText('demo-stat-avg', '0');
+        setText('demo-stat-high', '0');
+
+        demoSource = new EventSource('/api/demo/stream?comment_limit=100&delay=0.28');
+
+        demoSource.addEventListener('start', (event) => {
+            const data = JSON.parse(event.data);
+            setText('demo-status', 'Ataque en curso · ' + data.total + ' comentarios · ' + data.source.title);
+            if (data.warnings && data.warnings.length) {
+                const box = $('warning-box');
+                if (box) {
+                    box.innerHTML = data.warnings.map(w => '<div>' + escapeHtml(w) + '</div>').join('');
+                    box.classList.remove('hidden');
+                }
+            }
+        });
+
+        demoSource.addEventListener('comment', (event) => {
+            const data = JSON.parse(event.data);
+            pushWallCard(data.comment, data.running);
+            const pct = data.total ? (data.index / data.total) * 100 : 0;
+            setBar('demo-progress', pct);
+            setText('demo-stat-total', formatNumber(data.running.analyzed));
+            setText('demo-stat-bots', formatNumber(data.running.suspected));
+            setText('demo-stat-high', formatNumber(data.running.high));
+            animateNumber($('demo-stat-avg'), data.running.average_score, 1, '');
+            setText('demo-status', 'Procesando ' + data.index + ' de ' + data.total
+                + ' · ' + data.comment.verdict);
+        });
+
+        demoSource.addEventListener('done', (event) => {
+            const data = JSON.parse(event.data);
+            // El `done` lleva el AnalyzeResponse completo: reutiliza el render
+            // normal, con sus animaciones, sin una segunda ruta de codigo.
+            render(data);
+            setText('demo-status', 'Ataque completado · riesgo ' + data.risk.label
+                + ' · ' + data.metrics.bot_percentage + '% de bots');
+            stopDemo(true);
+        });
+
+        demoSource.onerror = () => {
+            showOfflineBanner(window.location.protocol === 'file:');
+            setText('demo-status', 'Stream interrumpido. Comprueba que la app esta corriendo '
+                + '(python app.py) y que abriste http://localhost:8000, no el archivo directamente.');
+            stopDemo();
+        };
+    }
+
+    function pushWallCard(comment, running) {
+        const wall = $('demo-wall');
+        if (!wall) return;
+        const isBot = comment.bot_score >= 30;
+        const tone = isBot
+            ? 'border-rose-200 bg-rose-50/70'
+            : 'border-emerald-200 bg-emerald-50/70';
+        const chip = isBot ? 'text-rose-700' : 'text-emerald-700';
+
+        const card = document.createElement('div');
+        card.className = 'anim-pop rounded-xl border px-4 py-3 transition shadow-xs ' + tone;
+        card.innerHTML = `
+            <div class="flex items-start gap-3">
+                <span class="mt-0.5 min-w-[2.9rem] rounded-md bg-white border border-stone-200 px-2 py-0.5 text-center font-mono text-xs font-semibold tabular-nums ${chip}">
+                    ${comment.bot_score}
+                </span>
+                <div class="min-w-0 flex-1">
+                    <p class="truncate text-[11px] text-stone-500">
+                        <span class="text-stone-800 font-medium">@${escapeHtml(comment.author)}</span>
+                        ${comment.is_reply ? ' · respuesta' : ''}
+                    </p>
+                    <p class="mt-0.5 truncate text-sm text-stone-800">${escapeHtml(comment.text_preview)}</p>
+                    <p class="mt-1 text-[10px] font-medium ${chip}">${escapeHtml((comment.reasons || [])[0] || '')}</p>
+                </div>
+                <span class="shrink-0 text-[10px] tabular-nums text-stone-400">${running.analyzed}</span>
+            </div>`;
+
+        wall.insertBefore(card, wall.firstChild);
+        while (wall.childElementCount > DEMO_WALL_MAX) {
+            wall.removeChild(wall.lastElementChild);
+        }
+    }
+
+    function stopDemo(completed) {
+        if (demoSource) {
+            demoSource.close();
+            demoSource = null;
+        }
+        const btn = $('demo-btn');
+        if (btn) btn.disabled = false;
+        setText('demo-btn-label', completed ? 'Lanzar otra demo' : 'Lanzar demo en directo');
+        const dot = $('demo-btn-dot');
+        if (dot) dot.classList.remove('breath');
+        setBar('demo-progress', completed ? 100 : 0);
+    }
+
+    /**
+     * Limpia y resetea por completo el simulador de ataque de bots.
+     */
+    function clearDemo() {
+        stopDemo(false);
+        const panel = $('demo-panel');
+        if (panel) panel.classList.add('hidden');
+        const wall = $('demo-wall');
+        if (wall) wall.innerHTML = '';
+        setText('demo-stat-total', '0');
+        setText('demo-stat-bots', '0');
+        setText('demo-stat-avg', '0');
+        setText('demo-stat-high', '0');
+        setBar('demo-progress', 0);
+        setText('demo-status', 'Simulación detenida');
+        setText('demo-btn-label', 'Lanzar demo en directo');
+        const dot = $('demo-btn-dot');
+        if (dot) dot.classList.remove('breath');
+        const btn = $('demo-btn');
+        if (btn) btn.disabled = false;
+    }
+
+    /**
+     * Limpia y oculta el panel de resultados, avisos y errores.
+     */
+    function clearResults() {
+        const results = $('results');
+        if (results) results.classList.add('hidden');
+        const analysisId = $('analysis-id');
+        if (analysisId) analysisId.textContent = '';
+        const errorBox = $('error-box');
+        if (errorBox) errorBox.classList.add('hidden');
+        const warningBox = $('warning-box');
+        if (warningBox) warningBox.classList.add('hidden');
+    }
+
+    const demoClearBtn = $('demo-clear');
+    if (demoClearBtn) {
+        demoClearBtn.addEventListener('click', () => {
+            clearDemo();
+            clearResults();
+        });
+    }
+
+    const resultsClearBtn = $('results-clear-btn');
+    if (resultsClearBtn) {
+        resultsClearBtn.addEventListener('click', () => {
+            clearResults();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
+    const uploadClearBtn = $('upload-clear-btn');
+    if (uploadClearBtn) {
+        uploadClearBtn.addEventListener('click', () => {
+            clearResults();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
+    // ==================================================================
+    // ASISTENTE IA · robot boti (esquina inferior derecha)
+    //   - Resumen automatico tras cada analisis (POST /api/ai/summary).
+    //   - Chat de preguntas sobre la app o los datos (POST /api/ai/ask).
+    // Todo con guards: un elemento ausente nunca rompe el resto del script.
+    // ==================================================================
+
+    /** Subconjunto compacto del analisis: metrics, riesgo, hallazgos, top-K. */
+    function buildAiContext(data) {
+        const metrics = data.metrics || {};
+        const source = data.source || {};
+        return {
+            metrics: {
+                total_comments_analyzed: metrics.total_comments_analyzed,
+                bot_percentage: metrics.bot_percentage,
+                unique_authors: metrics.unique_authors,
+                duplicate_ratio: metrics.duplicate_ratio,
+                link_ratio: metrics.link_ratio,
+                confidence: metrics.confidence
+            },
+            risk: data.risk || {},
+            distribution: data.distribution || {},
+            findings: (data.findings || []).slice(0, 6),
+            source: { title: source.title, channel: source.channel },
+            comments: (data.comments || []).slice(0, 8).map(c => ({
+                bot_score: c.bot_score,
+                author: c.author,
+                text_preview: c.text_preview,
+                reasons: (c.reasons || []).slice(0, 3)
+            }))
+        };
+    }
+
+    function openAiPanel() {
+        const widget = $('ai-widget');
+        if (widget) widget.classList.remove('hidden');
+        const panel = $('ai-panel');
+        if (panel) panel.classList.remove('hidden');
+        const unread = $('ai-unread');
+        if (unread) unread.classList.add('hidden');
+    }
+
+    function closeAiPanel() {
+        const panel = $('ai-panel');
+        if (panel) panel.classList.add('hidden');
+    }
+
+    function scrollAiMessages() {
+        const box = $('ai-messages');
+        if (box) box.scrollTop = box.scrollHeight;
+    }
+
+    function addAiMessage(role, text, extraClass) {
+        const box = $('ai-messages');
+        if (!box) return null;
+        const el = document.createElement('div');
+        el.className = 'ai-msg '
+            + (role === 'user' ? 'ai-msg-user' : 'ai-msg-robot')
+            + (extraClass ? ' ' + extraClass : '');
+        el.textContent = text || '';
+        box.appendChild(el);
+        scrollAiMessages();
+        return el;
+    }
+
+    // ==================================================================
+    // Voz del asistente boti: amigable, cálida y en ESPAÑOL.
+    // Solución híbrida:
+    // 1) Si el navegador/SO dispone de una voz femenina o natural en español
+    //    (Google, Dalia, Helena, Sabina, Paulina...), se usa con pitch cálido.
+    // 2) Si en Windows el SO solo tiene voces en inglés (Microsoft David/Mark/Zira),
+    //    NUNCA se llama a David. En su lugar, reproduce audio fluido en streaming
+    //    desde /api/tts?text= con voz humana amigable en español.
+    // ==================================================================
+    let aiVoiceEnabled = true;
+    try {
+        aiVoiceEnabled = sessionStorage.getItem('bw_ai_voice') !== 'off';
+    } catch (e) { aiVoiceEnabled = true; }
+    let aiPreferredVoice = null;
+    let aiAudioPlayer = null;
+
+    // Voces femeninas y naturales conocidas en español
+    const AI_FEMALE_VOICE_HINTS = [
+        'salma', 'dalia', 'sabina', 'helena', 'elena', 'monica', 'mónica',
+        'paulina', 'lucia', 'lucía', 'paloma', 'laura', 'elvira', 'carmen',
+        'marisol', 'esperanza', 'google español', 'google spanish', 'natural', 'neural'
+    ];
+
+    // Nombres de voces expresamente masculinas o en inglés para descartar
+    const MALE_VOICE_BLOCKLIST = [
+        'david', 'mark', 'george', 'alvaro', 'álvaro', 'jorge', 'raul', 'raúl',
+        'carlos', 'diego', 'pablo', 'mateo', 'male', 'hombre'
+    ];
+
+    /**
+     * Elige una voz ESPAÑOLA, estrictamente femenina o natural y NUNCA robótica/varonil/inglesa.
+     */
+    function pickAiVoice() {
+        if (!('speechSynthesis' in window)) return null;
+        const voices = window.speechSynthesis.getVoices();
+        if (!voices || !voices.length) return null;
+
+        // Solo voces declaradas en español (es, es-ES, es-MX, es-US, es-419...)
+        const esVoices = voices.filter(v => {
+            const lang = (v.lang || '').toLowerCase();
+            const name = (v.name || '').toLowerCase();
+            const isEs = lang.startsWith('es') || lang.includes('es-') || lang.includes('es_');
+            if (!isEs) return false;
+            // Descartar si el nombre es expresamente masculino o en inglés
+            return !MALE_VOICE_BLOCKLIST.some(m => name.includes(m));
+        });
+
+        if (!esVoices.length) return null;
+
+        // 1) Voces femeninas preferidas conocidas
+        for (const hint of AI_FEMALE_VOICE_HINTS) {
+            const hit = esVoices.find(v => (v.name || '').toLowerCase().includes(hint));
+            if (hit) return hit;
+        }
+
+        // 2) Voces Google / Neural / Natural en español
+        const naturalVoice = esVoices.find(v => /(google|natural|neural)/i.test(v.name || ''));
+        if (naturalVoice) return naturalVoice;
+
+        // 3) Primera voz disponible en español (después de filtrar varoniles)
+        return esVoices[0] || null;
+    }
+
+    function refreshAiVoices() {
+        aiPreferredVoice = pickAiVoice();
+    }
+    if ('speechSynthesis' in window) {
+        refreshAiVoices();
+        window.speechSynthesis.onvoiceschanged = refreshAiVoices;
+    }
+
+    function stopAiSpeech() {
+        if ('speechSynthesis' in window) {
+            try { window.speechSynthesis.cancel(); } catch (e) { /* sin soporte */ }
+        }
+        if (aiAudioPlayer) {
+            try {
+                aiAudioPlayer.pause();
+                aiAudioPlayer.currentTime = 0;
+            } catch (e) {}
+            aiAudioPlayer = null;
+        }
+    }
+
+    /**
+     * Limpia el texto de markdown, enlaces y signos antes de la locución.
+     */
+    function cleanTextForSpeech(raw) {
+        if (!raw) return '';
+        return String(raw)
+            .replace(/https?:\/\/\S+/gi, '')
+            .replace(/[*_#`~>\[\]\(\)]/g, ' ')
+            .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    /**
+     * Habla en voz alta en español amigable.
+     * Si no hay voz nativa española en el sistema, recurre al endpoint /api/tts.
+     */
+    function speakAi(text) {
+        if (!aiVoiceEnabled || !text) return;
+        const spoken = cleanTextForSpeech(text);
+        if (!spoken) return;
+
+        stopAiSpeech();
+
+        // 1. Si el navegador dispone de una voz genuinamente española y femenina/natural:
+        if ('speechSynthesis' in window) {
+            if (!aiPreferredVoice) aiPreferredVoice = pickAiVoice();
+            if (aiPreferredVoice && /^es([-_]|$)/i.test(aiPreferredVoice.lang || '')) {
+                try {
+                    const u = new SpeechSynthesisUtterance(spoken);
+                    u.voice = aiPreferredVoice;
+                    u.lang = aiPreferredVoice.lang;
+                    u.rate = 0.98;   // ritmo pausado y natural
+                    u.pitch = 1.10;  // tono cálido, amigable
+                    u.volume = 1.0;
+                    window.speechSynthesis.speak(u);
+                    return;
+                } catch (e) {
+                    /* fallback al streaming del servidor */
+                }
+            }
+        }
+
+        // 2. Fallback streaming del backend: voz humana femenina en español
+        try {
+            const streamUrl = '/api/tts?text=' + encodeURIComponent(spoken);
+            aiAudioPlayer = new Audio(streamUrl);
+            aiAudioPlayer.volume = 1.0;
+            aiAudioPlayer.play().catch(() => {
+                // Autoplay puede requerir interacción previa del usuario
+            });
+        } catch (e) {
+            /* no romper el chat */
+        }
+    }
+
+    function syncAiVoiceButton() {
+        const on = $('ai-voice-on');
+        const off = $('ai-voice-off');
+        const btn = $('ai-voice');
+        if (on) on.classList.toggle('hidden', !aiVoiceEnabled);
+        if (off) off.classList.toggle('hidden', aiVoiceEnabled);
+        if (btn) {
+            btn.title = aiVoiceEnabled ? 'Voz activada' : 'Voz silenciada';
+            btn.setAttribute('aria-label',
+                aiVoiceEnabled ? 'Silenciar la voz del asistente' : 'Activar la voz del asistente');
+        }
+    }
+
+    function setAiVoice(enabled) {
+        aiVoiceEnabled = enabled;
+        try { sessionStorage.setItem('bw_ai_voice', enabled ? 'on' : 'off'); } catch (e) { /* privado */ }
+        if (!enabled) stopAiSpeech();
+        syncAiVoiceButton();
+    }
+
+    /** Bocadillo de "escribiendo..." con tres puntos animados. */
+    function addAiTyping() {
+        const box = $('ai-messages');
+        if (!box) return null;
+        const el = document.createElement('div');
+        el.className = 'ai-msg ai-msg-robot';
+        el.innerHTML = '<span class="ai-dots"><span></span><span></span><span></span></span>';
+        box.appendChild(el);
+        scrollAiMessages();
+        return el;
+    }
+
+    function removeAiNode(node) {
+        if (node && node.parentNode) node.parentNode.removeChild(node);
+    }
+
+    function stopTypewriter() {
+        if (aiTypingTimer) { clearInterval(aiTypingTimer); aiTypingTimer = null; }
+    }
+
+    /**
+     * Efecto maquina de escribir: el robot "habla" caracter a caracter.
+     * Con prefers-reduced-motion el texto aparece completo de golpe.
+     */
+    function typewrite(el, text, onDone) {
+        stopTypewriter();
+        if (!el) { if (onDone) onDone(); return; }
+        if (prefersReducedMotion) {
+            el.textContent = text;
+            if (onDone) onDone();
+            return;
+        }
+        let i = 0;
+        el.textContent = '';
+        el.classList.add('ai-typing-caret');
+        aiTypingTimer = setInterval(() => {
+            i = Math.min(text.length, i + 2);
+            el.textContent = text.slice(0, i);
+            scrollAiMessages();
+            if (i >= text.length) {
+                stopTypewriter();
+                el.classList.remove('ai-typing-caret');
+                if (onDone) onDone();
+            }
+        }, 16);
+    }
+
+    function pushAiHistory(role, content) {
+        aiHistory.push({ role: role, content: content });
+        if (aiHistory.length > 12) aiHistory = aiHistory.slice(-12);
+    }
+
+    const BOTI_GREETING = '¡Hola! Soy boti, tu asistente de BotMeter. Puedo explicarte los resultados de un análisis, cómo funciona la app o cualquier otra cosa que quieras preguntar. ¡Adelante!';
+
+    /** Saludo de bienvenida solo si la conversacion esta vacia. */
+    function ensureAiGreeting() {
+        const box = $('ai-messages');
+        if (!box || !aiEnabled || box.childElementCount > 0) return;
+        addAiMessage('robot', BOTI_GREETING);
+        if (aiVoiceEnabled) {
+            speakAi(BOTI_GREETING);
+        }
+    }
+
+    function setAiBusy(busy) {
+        aiBusy = busy;
+        const send = $('ai-send');
+        if (send) send.disabled = busy;
+        const input = $('ai-input');
+        if (input) input.disabled = busy;
+    }
+
+    /**
+     * Modo mantenimiento: el robot NUNCA desaparece. Se queda en su esquina
+     * con animacion de taller (engranaje girando + balanceo) y el chat queda
+     * en solo lectura hasta que vuelva la clave o la cuota diaria.
+     */
+    function enterAiMaintenance() {
+        aiState = 'maintenance';
+        aiEnabled = false;
+        stopTypewriter();
+        const widget = $('ai-widget');
+        if (widget) widget.classList.add('ai-maintenance');
+        const gear = $('ai-gear');
+        if (gear) gear.classList.remove('hidden');
+        const input = $('ai-input');
+        if (input) {
+            input.disabled = true;
+            input.placeholder = 'boti está en mantenimiento...';
+        }
+        const send = $('ai-send');
+        if (send) send.disabled = true;
+        const suggestions = $('ai-suggestions');
+        if (suggestions) suggestions.classList.add('hidden');
+    }
+
+    /** Aviso de mantenimiento; solo una vez por conversacion. */
+    function showAiMaintenanceNotice() {
+        const box = $('ai-messages');
+        if (!box) return;
+        const last = box.lastElementChild;
+        if (last && last.dataset.maint === '1') return;
+        const message = addAiMessage('robot',
+            'Estoy en mantenimiento: se agotaron las consultas gratuitas de hoy '
+            + 'o aun no hay clave configurada en el servidor. Volvere en cuanto '
+            + 'se restablezca; el resto de BotMeter sigue funcionando con normalidad.',
+            'ai-msg-error');
+        if (message) message.dataset.maint = '1';
+        speakAi('Estoy en mantenimiento. Volveré en cuanto se restablezca; '
+            + 'el resto de BotMeter sigue funcionando con normalidad.');
+    }
+
+    /** Resumen automatico tras cada analisis (YouTube, archivo o demo). */
+    async function requestAiSummary() {
+        if (!aiLastAnalysis) return;
+        // Si el analisis llego antes que /api/config, esperar su resolucion.
+        if (!aiConfigLoaded) {
+            try { await configReady; } catch (e) { /* sin servidor: sin IA */ }
+        }
+        // En mantenimiento no se autoabre el panel: solo avisa al pulsarle.
+        if (aiState === 'maintenance' || !aiEnabled) return;
+        if (aiSummaryRunning) { aiSummaryPending = true; return; }
+        aiSummaryRunning = true;
+
+        openAiPanel();
+        const typing = addAiTyping();
+        try {
+            const response = await fetch('/api/ai/summary', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ analysis: aiLastAnalysis })
+            });
+            const payload = await response.json().catch(() => null);
+            removeAiNode(typing);
+
+            if (payload && payload.enabled) {
+                const text = payload.summary
+                    + (payload.recommendations ? '\n\n' + payload.recommendations : '');
+                const message = addAiMessage('robot', '');
+                if (message) typewrite(message, text, () => {
+                    pushAiHistory('assistant', text);
+                    if (aiVoiceEnabled) {
+                        speakAi(text);
+                    }
+                });
+            } else {
+                if (payload && /configurado|configurada|limite gratuito|mantenimiento/i.test(payload.error || '')) {
+                    enterAiMaintenance();
+                    showAiMaintenanceNotice();
+                    return;
+                }
+                addAiMessage('robot',
+                    (payload && payload.error)
+                    || 'El asistente no está disponible ahora mismo.',
+                    'ai-msg-error');
+            }
+        } catch (e) {
+            removeAiNode(typing);
+            addAiMessage('robot',
+                'No se pudo contactar con el asistente. Inténtalo de nuevo más tarde.',
+                'ai-msg-error');
+        } finally {
+            aiSummaryRunning = false;
+            if (aiSummaryPending) { aiSummaryPending = false; requestAiSummary(); }
+        }
+    }
+
+    /** Pregunta del chat: envia hilo corto + analisis si lo hay. */
+    async function askAi(question) {
+        if (aiState === 'maintenance') {
+            openAiPanel();
+            showAiMaintenanceNotice();
+            return;
+        }
+        if (!aiEnabled || aiBusy || !question) return;
+
+        const history = aiHistory.slice(-6);
+        pushAiHistory('user', question);
+        addAiMessage('user', question);
+        const suggestions = $('ai-suggestions');
+        if (suggestions) suggestions.classList.add('hidden');
+
+        setAiBusy(true);
+        const typing = addAiTyping();
+        try {
+            const response = await fetch('/api/ai/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    question: question,
+                    analysis: aiLastAnalysis,
+                    history: history
+                })
+            });
+            const payload = await response.json().catch(() => null);
+            removeAiNode(typing);
+
+            if (payload && payload.enabled) {
+                const message = addAiMessage('robot', '');
+                if (message) {
+                    typewrite(message, payload.answer, () => {
+                        pushAiHistory('assistant', payload.answer);
+                        if (aiVoiceEnabled) {
+                            speakAi(payload.answer);
+                        }
+                    });
+                }
+            } else {
+                if (payload && /configurado|configurada|limite gratuito|mantenimiento/i.test(payload.error || '')) {
+                    enterAiMaintenance();
+                    showAiMaintenanceNotice();
+                    return;
+                }
+                addAiMessage('robot',
+                    (payload && payload.error)
+                    || 'No se pudo responder ahora mismo. Inténtalo de nuevo.',
+                    'ai-msg-error');
+            }
+        } catch (e) {
+            removeAiNode(typing);
+            addAiMessage('robot',
+                'No se pudo contactar con el asistente. Revisa que la app siga activa.',
+                'ai-msg-error');
+        } finally {
+            setAiBusy(false);
+            const input = $('ai-input');
+            if (input) input.focus();
+        }
+    }
+
+    // --- Eventos del asistente (todos con guard) -----------------------
+    const aiOpenBtn = $('ai-open');
+    if (aiOpenBtn) {
+        aiOpenBtn.addEventListener('click', () => {
+            openAiPanel();
+            if (aiState === 'maintenance') showAiMaintenanceNotice();
+            else ensureAiGreeting();
+            const input = $('ai-input');
+            if (input && !input.disabled) input.focus();
+        });
+    }
+
+    const aiMinimizeBtn = $('ai-minimize');
+    if (aiMinimizeBtn) aiMinimizeBtn.addEventListener('click', closeAiPanel);
+
+    // Boton de voz: alterna hablar/silenciar. Por defecto la voz esta activa.
+    const aiVoiceBtn = $('ai-voice');
+    if (aiVoiceBtn) {
+        syncAiVoiceButton();
+        aiVoiceBtn.addEventListener('click', () => setAiVoice(!aiVoiceEnabled));
+    }
+    // Boton de prueba de voz amigable en español
+    const aiVoiceTestBtn = $('ai-voice-test');
+    if (aiVoiceTestBtn) {
+        aiVoiceTestBtn.addEventListener('click', () => {
+            // Speak the last bot message if available, else greeting
+            const box = $('ai-messages');
+            let textToSpeak = BOTI_GREETING;
+            if (box) {
+                const msgs = box.querySelectorAll('.ai-msg-robot');
+                if (msgs.length > 0) {
+                    textToSpeak = msgs[msgs.length - 1].textContent || BOTI_GREETING;
+                }
+            }
+            speakAi(textToSpeak);
+        });
+    }
+    // Al minimizar, cortamos la locucion en curso (no molesta al navegar).
+    if (aiMinimizeBtn) aiMinimizeBtn.addEventListener('click', stopAiSpeech);
+
+    const aiForm = $('ai-form');
+    if (aiForm) {
+        aiForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const input = $('ai-input');
+            if (!input) return;
+            const question = input.value.trim();
+            if (!question) return;
+            input.value = '';
+            input.style.height = 'auto';
+            askAi(question);
+        });
+    }
+
+    const aiInput = $('ai-input');
+    if (aiInput) {
+        // Enter envia; Shift+Enter mete salto de linea.
+        aiInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                const form = $('ai-form');
+                if (form) form.requestSubmit();
+            }
+        });
+        // El textarea crece con el texto (hasta un toque).
+        aiInput.addEventListener('input', () => {
+            aiInput.style.height = 'auto';
+            aiInput.style.height = Math.min(aiInput.scrollHeight, 96) + 'px';
+        });
+    }
+
+    // Sugerencias: un unico oyente delegado en el contenedor.
+    const aiSuggestions = $('ai-suggestions');
+    if (aiSuggestions) {
+        aiSuggestions.addEventListener('click', (event) => {
+            const chip = event.target.closest('.ai-chip');
+            if (!chip) return;
+            const question = chip.dataset.q || chip.textContent.trim();
+            if (question) askAi(question);
+        });
+    }
+
+    // Presentacion automatica: el robot se muestra solo al cargar, una vez
+    // por sesion (sessionStorage evita que vuelva a abrirse en cada recarga
+    // de la misma pestana; el usuario siempre puede minimizarlo). En
+    // mantenimiento tambien se presenta, explicando el estado.
+    (function scheduleAiGreeting() {
+        let already = false;
+        try { already = !!sessionStorage.getItem('bw_ai_greeted'); } catch (e) { already = false; }
+        if (already) return;
+        setTimeout(async () => {
+            try { await configReady; } catch (e) { /* sin servidor */ }
+            if (!aiEnabled && aiState !== 'maintenance') return;
+            const box = $('ai-messages');
+            // Si ya hay contenido (p.ej. el resumen de un analisis), no
+            // duplicamos: el panel ya estaria abierto con su mensaje.
+            if (box && box.childElementCount > 0) {
+                try { sessionStorage.setItem('bw_ai_greeted', '1'); } catch (e) {}
+                return;
+            }
+            openAiPanel();
+            if (aiState === 'maintenance') showAiMaintenanceNotice();
+            else ensureAiGreeting();
+            try { sessionStorage.setItem('bw_ai_greeted', '1'); } catch (e) {}
+        }, 1600);
+    })();
+</script>
+</body>
+</html>
